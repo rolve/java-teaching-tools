@@ -28,9 +28,7 @@ public class TestRunner {
         });
         core.run(Class.forName(testClass));
 
-        System.setOut(stdOut);
-
         all.removeAll(failed);
-        all.stream().forEach(System.out::println);
+        all.stream().forEach(stdOut::println);
     }
 }
