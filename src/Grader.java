@@ -25,8 +25,8 @@ public class Grader {
     private static final Pattern lines = Pattern.compile("\r?\n");
 
     private static final Set<Task> TASKS = new HashSet<Task>() {{
-        add(new Task("Aufgabe1", VerzahnungenGradingTest.class, 117 * 3/5));
-        //put("Aufgabe2", PrimfaktorenGradingTest.class);
+        //add(new Task("Aufgabe1", VerzahnungenGradingTest.class, 117 * 3/5));
+        add(new Task("Aufgabe2", PrimfaktorenGradingTest.class, 56 * 4/5));
         //add(new Task("Aufgabe3", Bienen.class, "analyze", BienenGradingTest.class));
         //put("Aufgabe4", TreeGradingTest.class);
         //put("Aufgabe5", EbnfGradingTest.class);
@@ -48,7 +48,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(d -> d.getFileName().toString().startsWith("129.132.9."))
+                //.filter(d -> d.getFileName().toString().startsWith("129.132.200.43"))
                 .collect(Collectors.toList());
         for (Path solution : solutions) {
             grade(solution);
@@ -80,7 +80,9 @@ public class Grader {
     }
 
     private boolean compileProject(Path projectPath) throws IOException {
-        Process javac = new ProcessBuilder("javac", "-d", "bin", "-encoding", "UTF8", "src/*")
+        String junitJars = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
+                Paths.get("lib","hamcrest.jar").toAbsolutePath();
+        Process javac = new ProcessBuilder("javac", "-d", "bin", "-encoding", "UTF8", "-cp", junitJars , "src/*")
                 .redirectOutput(Redirect.INHERIT)
                 .redirectError(Redirect.INHERIT)
                 .directory(projectPath.toFile()).start();
