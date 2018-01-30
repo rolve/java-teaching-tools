@@ -8,11 +8,10 @@ import java.lang.ProcessBuilder.Redirect;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -24,12 +23,12 @@ public class Grader {
 
     private static final Pattern lines = Pattern.compile("\r?\n");
 
-    private static final Set<Task> TASKS = new HashSet<Task>() {{
-        //add(new Task("Aufgabe1", VerzahnungenGradingTest.class, 117 * 3/5));
+    private static final List<Task> TASKS = new ArrayList<Task>() {{
+        add(new Task("Aufgabe1", VerzahnungenGradingTest.class, 117 * 3/5));
         add(new Task("Aufgabe2", PrimfaktorenGradingTest.class, 56 * 4/5));
-        //add(new Task("Aufgabe3", Bienen.class, "analyze", BienenGradingTest.class));
-        //put("Aufgabe4", TreeGradingTest.class);
-        //put("Aufgabe5", EbnfGradingTest.class);
+        add(new Task("Aufgabe3", BienenGradingTest.class, 247 * 2/5));
+        add(new Task("Aufgabe4", TreeGradingTest.class, 325 * 9/10));
+        add(new Task("Aufgabe5", EbnfGradingTest.class, 100000000));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -48,7 +47,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(d -> d.getFileName().toString().startsWith("129.132.200.43"))
+                //.filter(d -> d.getFileName().toString().startsWith("129.132.200.161"))
                 .collect(Collectors.toList());
         for (Path solution : solutions) {
             grade(solution);
@@ -80,9 +79,10 @@ public class Grader {
     }
 
     private boolean compileProject(Path projectPath) throws IOException {
-        String junitJars = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
-                Paths.get("lib","hamcrest.jar").toAbsolutePath();
-        Process javac = new ProcessBuilder("javac", "-d", "bin", "-encoding", "UTF8", "-cp", junitJars , "src/*")
+        String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
+                Paths.get("lib","hamcrest.jar").toAbsolutePath() + File.pathSeparator +
+                Paths.get("inspector.jar").toAbsolutePath();
+        Process javac = new ProcessBuilder("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath , "src/*")
                 .redirectOutput(Redirect.INHERIT)
                 .redirectError(Redirect.INHERIT)
                 .directory(projectPath.toFile()).start();
@@ -97,7 +97,7 @@ public class Grader {
                 .map(s -> s.substring(0, s.length() - 5))
                 .collect(joining(","));
         String agentArg = "-javaagent:inspector.jar=" + task.instrThreshold + "," + classes;
-        
+
         JavaProcessBuilder jUnitBuilder = new JavaProcessBuilder(TestRunner.class, task.testClass.getName());
         jUnitBuilder.classpath(projectPath.resolve("bin") + File.pathSeparator + jUnitBuilder.classpath())
                 .vmArgs("-Dfile.encoding=UTF8", agentArg)

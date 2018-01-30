@@ -40,14 +40,33 @@ public class CodeInspector implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
             ProtectionDomain protectionDomain, byte[] classfile) throws IllegalClassFormatException {
-        if(classes.contains(className)) {
-            ClassReader reader = new ClassReader(classfile);
-            ClassNode classNode = new ClassNode();
-            reader.accept(classNode, 0);
-            collectMethods(classNode);
-            checkThreshold();
+        try {
+            if(classes.contains(className)) {
+                ClassReader reader = new ClassReader(classfile);
+                ClassNode classNode = new ClassNode();
+                reader.accept(classNode, 0);
+                
+                collectAnnotations(classNode);
+                collectMethods(classNode);
+                checkThreshold();
+            }
+            return classfile;
+        } catch(Throwable t) {
+            t.printStackTrace();
+            throw t;
         }
-        return classfile;
+    }
+
+    private void collectAnnotations(ClassNode classNode) {
+        if (classNode.visibleAnnotations != null) {
+            classNode.visibleAnnotations.stream()
+                    .filter(a -> a.desc.contains("Deductions"))
+                    .flatMap(a -> a.values.stream())
+                    .filter(v -> v instanceof List)
+                    .flatMap(v -> ((List<?>) v).stream())
+                    .map(msg -> "fix: " + msg)
+                    .forEach(stdOut::println);
+        }
     }
 
     private void collectMethods(ClassNode classNode) {
