@@ -1,4 +1,5 @@
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 import java.io.File;
@@ -13,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
@@ -47,8 +47,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(d -> d.getFileName().toString().startsWith("129.132.200.161"))
-                .collect(Collectors.toList());
+                .collect(toList());
         for (Path solution : solutions) {
             grade(solution);
         }
@@ -66,7 +65,7 @@ public class Grader {
     }
 
     private void gradeTask(Path solution, Task task) throws IOException {
-        Path projectPath = solution.resolve("results-clean/" + task.projectName);
+        Path projectPath = solution.resolve(task.projectName);
         String student = solution.getFileName().toString();
 
         results.get(task.projectName).addStudent(student);
@@ -100,8 +99,7 @@ public class Grader {
 
         JavaProcessBuilder jUnitBuilder = new JavaProcessBuilder(TestRunner.class, task.testClass.getName());
         jUnitBuilder.classpath(projectPath.resolve("bin") + File.pathSeparator + jUnitBuilder.classpath())
-                .vmArgs("-Dfile.encoding=UTF8", agentArg)
-                .autoExit();
+                .vmArgs("-Dfile.encoding=UTF8", agentArg);
 
         Process jUnit = jUnitBuilder.build()
                 .redirectError(Redirect.INHERIT)

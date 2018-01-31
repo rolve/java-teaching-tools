@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashSet;
 import java.util.Set;
@@ -10,10 +11,13 @@ import org.junit.runner.notification.RunListener;
 import org.junit.runners.model.TestTimedOutException;
 
 public class TestRunner {
-    public static void main(String[] args) throws ClassNotFoundException {
+    public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
         Set<String> all = new HashSet<>();
         Set<String> failed = new HashSet<>();
+
+        // Close standard input in case some solutions read from it
+        System.in.close();
 
         PrintStream stdOut = System.out;
         System.setOut(System.err);
