@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -81,7 +82,14 @@ public class Grader {
         String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
                 Paths.get("lib","hamcrest.jar").toAbsolutePath() + File.pathSeparator +
                 Paths.get("inspector.jar").toAbsolutePath();
-        Process javac = new ProcessBuilder("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath , "src/*")
+        
+        List<String> builderArgs = new ArrayList<>(Arrays.asList("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
+        builderArgs.addAll(Files.list(projectPath.resolve("src"))
+        		.map(Path::toString)
+        		.filter(f -> f.endsWith(".java"))
+        		.collect(toList()));
+        
+        Process javac = new ProcessBuilder(builderArgs)
                 .redirectOutput(Redirect.INHERIT)
                 .redirectError(Redirect.INHERIT)
                 .directory(projectPath.toFile()).start();
