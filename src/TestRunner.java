@@ -27,6 +27,7 @@ public class TestRunner {
             public void testFinished(Description description) {
                 all.add(description.getMethodName());
             }
+            
             public void testFailure(Failure failure) throws Exception {
                 failed.add(failure.getDescription().getMethodName());
                 System.err.println(failure);
@@ -43,5 +44,6 @@ public class TestRunner {
 
         all.removeAll(failed);
         all.stream().forEach(stdOut::println);
+        stdOut.flush();
     }
 }

@@ -48,9 +48,13 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
+                .sorted()
                 .collect(toList());
-        for (Path solution : solutions) {
-            grade(solution);
+        
+        for (int i = 0; i < solutions.size(); i++) {
+        	Path solution = solutions.get(i);
+            System.out.println("Grading " + solution.getFileName() + " " + (i+1) + "/" + solutions.size());
+			grade(solution);
         }
 
         for (Entry<String, Results> entry : results.entrySet()) {
@@ -59,7 +63,6 @@ public class Grader {
     }
 
     private void grade(Path solution) throws IOException {
-        System.out.println("Grading " + solution.getFileName());
         for (Task task : TASKS) {
             gradeTask(solution, task);
         }
