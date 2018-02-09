@@ -1,7 +1,9 @@
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.junit.ComparisonFailure;
 import org.junit.runner.Description;
@@ -20,23 +22,32 @@ public class TestRunner {
         System.in.close();
 
         PrintStream stdOut = System.out;
-        System.setOut(System.err);
+        PrintStream stdErr = System.err;
+        System.setOut(new PrintStream(new OutputStream() {
+            public void write(int b) {}
+        }));
+        System.setErr(new PrintStream(new OutputStream() {
+            public void write(int b) {}
+        }));
 
         JUnitCore core = new JUnitCore();
         core.addListener(new RunListener() {
             public void testFinished(Description description) {
                 all.add(description.getMethodName());
             }
-            
+
             public void testFailure(Failure failure) throws Exception {
                 failed.add(failure.getDescription().getMethodName());
-                System.err.println(failure);
+                stdErr.println(failure);
 
                 Throwable exception = failure.getException();
                 if(!(exception instanceof ComparisonFailure ||
                         exception instanceof AssertionError ||
                         exception instanceof TestTimedOutException)) {
-                    exception.printStackTrace();
+                    exception.setStackTrace(Stream.of(exception.getStackTrace())
+                            .distinct().toArray(StackTraceElement[]::new));
+                    exception.printStackTrace(stdErr);
+                            
                 }
             }
         });
@@ -45,5 +56,6 @@ public class TestRunner {
         all.removeAll(failed);
         all.stream().forEach(stdOut::println);
         stdOut.flush();
+        stdErr.flush();
     }
 }
