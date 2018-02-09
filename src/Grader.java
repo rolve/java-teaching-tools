@@ -24,12 +24,14 @@ public class Grader {
 
     private static final Pattern lines = Pattern.compile("\r?\n");
 
-    private static final List<Task> TASKS = new ArrayList<Task>() {{
-        add(new Task("Aufgabe1", VerzahnungenGradingTest.class, 117 * 3/5));
-        add(new Task("Aufgabe2", PrimfaktorenGradingTest.class, 56 * 4/5));
-        add(new Task("Aufgabe3", BienenGradingTest.class, 247 * 2/5));
-        add(new Task("Aufgabe4", TreeGradingTest.class, 325 * 9/10));
-        add(new Task("Aufgabe5", EbnfGradingTest.class, 100000000));
+    @SuppressWarnings("serial")
+	private static final List<Task> TASKS = new ArrayList<Task>() {{
+        add(new Task("Aufgabe1", AbstandGradingTest.class, 99999 * 3/5));
+        add(new Task("Aufgabe2", KombinationenGradingTest.class, 99999 * 3/5));
+        add(new Task("Aufgabe3", WarenanalyseGradingTest.class, 99999 * 3/5));
+        add(new Task("Aufgabe4a", CityBuilderGradingTest.class, 99999 * 3/5));
+        add(new Task("Aufgabe4b", CityDeadEndsGradingTest.class, 99999 * 3/5));
+        add(new Task("Aufgabe4c", CityReachableSquaresGradingTest.class, 99999 * 3/5));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -55,6 +57,7 @@ public class Grader {
         	Path solution = solutions.get(i);
             System.out.println("Grading " + solution.getFileName() + " " + (i+1) + "/" + solutions.size());
 			grade(solution);
+			System.out.println();
         }
 
         for (Entry<String, Results> entry : results.entrySet()) {
@@ -69,7 +72,7 @@ public class Grader {
     }
 
     private void gradeTask(Path solution, Task task) throws IOException {
-        Path projectPath = solution.resolve(task.projectName);
+        Path projectPath = solution.resolve("results-clean").resolve(task.projectName);
         String student = solution.getFileName().toString();
 
         results.get(task.projectName).addStudent(student);
