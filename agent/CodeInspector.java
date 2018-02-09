@@ -1,3 +1,6 @@
+import static java.lang.Integer.parseInt;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 
 import java.io.PrintStream;
@@ -8,7 +11,6 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
@@ -18,13 +20,11 @@ public class CodeInspector implements ClassFileTransformer {
 
     private static final PrintStream stdOut = System.out; // System.out will be overwritten by TestRunner
 
-    public static void premain(String agentArgs, Instrumentation inst) {
-        String[] split = agentArgs.split(",");
-        int instrThreshold = Integer.parseInt(split[0]);
-        Set<String> classes = Stream.of(split).skip(1).collect(toSet());
-        System.err.println("Inspecting classes " + classes);
+    public static void premain(String rawArgs, Instrumentation inst) {
+        String[] args = rawArgs.split(",");
+        System.err.println("Inspecting classes " + stream(args).skip(1).collect(joining(", ")));
 
-        inst.addTransformer(new CodeInspector(classes, instrThreshold));
+        inst.addTransformer(new CodeInspector(stream(args).skip(1).collect(toSet()), parseInt(args[0])));
     }
 
     private Set<String> classes;
