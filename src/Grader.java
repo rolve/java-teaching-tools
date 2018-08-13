@@ -29,9 +29,9 @@ public class Grader {
         add(new Task("Aufgabe1", AbstandGradingTest.class, 99999 * 3/5));
         add(new Task("Aufgabe2", KombinationenGradingTest.class, 99999 * 3/5));
         add(new Task("Aufgabe3", WarenanalyseGradingTest.class, 99999 * 3/5));
-        add(new Task("Aufgabe4a", CityBuilderGradingTest.class, 99999 * 3/5));
-        add(new Task("Aufgabe4b", CityDeadEndsGradingTest.class, 99999 * 3/5));
-        add(new Task("Aufgabe4c", CityReachableSquaresGradingTest.class, 99999 * 3/5));
+        add(new Task("Aufgabe4", "a", CityBuilderGradingTest.class, 99999 * 3/5));
+        add(new Task("Aufgabe4", "b", CityDeadEndsGradingTest.class, 99999 * 3/5));
+        add(new Task("Aufgabe4", "c", CityReachableSquaresGradingTest.class, 99999 * 3/5));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -40,16 +40,17 @@ public class Grader {
     }
 
     private Path root;
-    private Map<String, Results> results;
+    private Map<Task, Results> results;
 
     public Grader(Path root) {
         this.root = root;
-        results = TASKS.stream().collect(toMap(t -> t.projectName, t -> new Results()));
+        results = TASKS.stream().collect(toMap(t -> t, t -> new Results()));
     }
 
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
+                //.filter(s -> s.getFileName().toString().startsWith("aaa"))
                 .sorted()
                 .collect(toList());
         
@@ -60,8 +61,8 @@ public class Grader {
 			System.out.println();
         }
 
-        for (Entry<String, Results> entry : results.entrySet()) {
-            entry.getValue().writeTo(Paths.get(entry.getKey() + "-results.tsv"));
+        for (Entry<Task, Results> entry : results.entrySet()) {
+            entry.getValue().writeTo(Paths.get(entry.getKey().resultFileName()));
         }
     }
 
@@ -75,10 +76,10 @@ public class Grader {
         Path projectPath = solution.resolve("results-clean").resolve(task.projectName);
         String student = solution.getFileName().toString();
 
-        results.get(task.projectName).addStudent(student);
+        results.get(task).addStudent(student);
         boolean compiled = compileProject(projectPath);
         if (compiled) {
-            results.get(task.projectName).addCriterion(student, "compiles");
+            results.get(task).addCriterion(student, "compiles");
 
             runTests(task, projectPath, student);
         }
@@ -122,7 +123,7 @@ public class Grader {
         StringWriter jUnitOutput = new StringWriter();
         new LineCopier(jUnit.getInputStream(), new LineWriterAdapter(jUnitOutput)).run();
 
-        lines.splitAsStream(jUnitOutput.toString()).forEach(line -> results.get(task.projectName).addCriterion(student, line));
+        lines.splitAsStream(jUnitOutput.toString()).forEach(line -> results.get(task).addCriterion(student, line));
     }
 
     private int robustWaitFor(Process javac) {
