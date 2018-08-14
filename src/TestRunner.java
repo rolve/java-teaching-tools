@@ -11,12 +11,17 @@ import java.util.InputMismatchException;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import org.junit.ComparisonFailure;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
+import org.junit.runners.model.TestTimedOutException;
 
 public class TestRunner {
+    
+    static final Set<Class<? extends Throwable>> junitExceptions = new HashSet<>(asList(
+            ComparisonFailure.class, AssertionError.class, TestTimedOutException.class));
     
     static final Set<Class<? extends Throwable>> knownExceptions = new HashSet<>(asList(
             StackOverflowError.class, OutOfMemoryError.class, NullPointerException.class,
@@ -82,9 +87,12 @@ public class TestRunner {
     }
     
     private boolean dontPrintTrace(Throwable exception) {
+        Class<? extends Throwable> clazz = exception.getClass();
         boolean inCodeUnderTest = stream(exception.getStackTrace())
                 .map(StackTraceElement::getClassName)
                 .anyMatch(classes::contains);
-        return inCodeUnderTest && knownExceptions.contains(exception.getClass());
+        
+        return inCodeUnderTest && knownExceptions.contains(clazz) ||
+                !inCodeUnderTest && junitExceptions.contains(exception.getClass());
     }
 }
