@@ -1,15 +1,24 @@
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.InputMismatchException;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.junit.ComparisonFailure;
 import org.junit.internal.ArrayComparisonFailure;
@@ -31,6 +40,8 @@ public class TestRunner {
             IndexOutOfBoundsException.class, InputMismatchException.class,
             NoSuchElementException.class, FileNotFoundException.class,
             IllegalArgumentException.class));
+
+    private static final int REPETITIONS = 10;
     
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
@@ -48,12 +59,9 @@ public class TestRunner {
     }
 
     private void runTests() throws IOException, ClassNotFoundException {
-        Set<String> all = new HashSet<>();
-        Set<String> failed = new HashSet<>();
-
         // Close standard input in case some solutions read from it
         System.in.close();
-
+        
         PrintStream stdOut = System.out;
         PrintStream stdErr = System.err;
         System.setOut(new PrintStream(new OutputStream() {
@@ -62,29 +70,58 @@ public class TestRunner {
         System.setErr(new PrintStream(new OutputStream() {
             public void write(int b) {}
         }));
-
-        JUnitCore core = new JUnitCore();
-        core.addListener(new RunListener() {
-            public void testFinished(Description description) {
-                all.add(description.getMethodName());
-            }
-            public void testFailure(Failure failure) throws Exception {
-                failed.add(failure.getDescription().getMethodName());
-                
-                String msg = failure.toString();
-                Throwable exception = failure.getException();
-                if (dontPrintTrace(exception)) {
-                    stdErr.println(msg + " (" + exception.getClass().getName() + ")");
-                } else {
-                    stdErr.println(msg);
-                    exception.printStackTrace(stdErr);
+        
+        List<Set<String>> succeededTests = new ArrayList<>();
+        Set<String> failedTests = new HashSet<>();
+        SortedSet<String> failures = new TreeSet<>();
+        
+        for (int i = 0; i < REPETITIONS; i++) {
+            Set<String> all = new HashSet<>();
+            Set<String> failed = new HashSet<>();
+            JUnitCore core = new JUnitCore();
+            core.addListener(new RunListener() {
+                public void testFinished(Description description) {
+                    all.add(description.getMethodName());
                 }
-            }
-        });
-        core.run(Class.forName(testClass));
+                public void testFailure(Failure failure) throws Exception {
+                    String name = failure.getDescription().getMethodName();
+                    failed.add(name);
+                    failedTests.add(name);
 
-        all.removeAll(failed);
-        all.stream().forEach(stdOut::println);
+                    String msg = "    " + failure.toString();
+                    Throwable exception = failure.getException();
+                    if (dontPrintTrace(exception)) {
+                        msg += " (" + exception.getClass().getName() + ")";
+                    } else {
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        exception.printStackTrace(new PrintStream(out));
+                        msg += out;
+                    }
+                    failures.add(msg);
+                }
+            });
+            core.run(Class.forName(testClass));
+            all.removeAll(failed);
+            succeededTests.add(all);
+        }
+
+        failures.forEach(stdErr::println);
+        
+        List<Set<String>> different = succeededTests.stream().distinct().collect(toList());
+        if (different.size() > 1) {
+            Set<String> deterministic = new HashSet<>(different.get(0));
+            different.forEach(deterministic::retainAll);
+            
+            Set<String> nonDeterm = new HashSet<>(failedTests);
+            nonDeterm.removeAll(deterministic);
+            
+            stdErr.println("Non-determinism detected in tests: " + nonDeterm);
+        }
+        
+        Set<String> alwaysSucc = new HashSet<>(different.get(0));
+        alwaysSucc.removeAll(failedTests);
+        
+        alwaysSucc.forEach(stdOut::println);
         stdOut.flush();
         stdErr.flush();
     }
