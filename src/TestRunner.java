@@ -38,7 +38,7 @@ public class TestRunner {
             NoSuchElementException.class, FileNotFoundException.class,
             IllegalArgumentException.class));
 
-    private static final int REPETITIONS = 10;
+    private static final int REPETITIONS = 7;
     
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
