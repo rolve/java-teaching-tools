@@ -26,12 +26,7 @@ public class Grader {
 
     @SuppressWarnings("serial")
 	private static final List<Task> TASKS = new ArrayList<Task>() {{
-        add(new Task("Aufgabe1", AbstandGradingTest.class, 99999 * 3/5));
-        add(new Task("Aufgabe2", KombinationenGradingTest.class, 99999 * 3/5));
-        add(new Task("Aufgabe3", WarenanalyseGradingTest.class, 99999 * 3/5));
-        add(new Task("Aufgabe4", "a", CityBuilderGradingTest.class, 99999 * 3/5));
-        add(new Task("Aufgabe4", "b", CityDeadEndsGradingTest.class, 99999 * 3/5));
-        add(new Task("Aufgabe4", "c", CityReachableSquaresGradingTest.class, 99999 * 3/5));
+        add(new Task("u04", StringAdditionGradingTest.class, 99999 * 3/5));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -50,7 +45,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> s.getFileName().toString().startsWith("aaa"))
+                .filter(s -> s.getFileName().toString().startsWith("ab"))
                 .sorted()
                 .collect(toList());
         
@@ -73,7 +68,7 @@ public class Grader {
     }
 
     private void gradeTask(Path solution, Task task) throws IOException {
-        Path projectPath = solution.resolve("results-clean").resolve(task.projectName);
+        Path projectPath = solution.resolve(task.projectName);
         String student = solution.getFileName().toString();
 
         results.get(task).addStudent(student);
@@ -90,6 +85,7 @@ public class Grader {
                 Paths.get("lib","hamcrest.jar").toAbsolutePath() + File.pathSeparator +
                 Paths.get("inspector.jar").toAbsolutePath();
         
+        Files.createDirectories(projectPath.resolve("bin"));
         List<String> builderArgs = new ArrayList<>(Arrays.asList("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
         builderArgs.addAll(Files.list(projectPath.resolve("src"))
         		.map(Path::toString)
@@ -117,7 +113,7 @@ public class Grader {
         junitArgs.add(0, task.testClass.getName());
         JavaProcessBuilder jUnitBuilder = new JavaProcessBuilder(TestRunner.class, junitArgs);
         jUnitBuilder.classpath(projectPath.resolve("bin") + File.pathSeparator + jUnitBuilder.classpath())
-                .vmArgs("-Dfile.encoding=UTF8", agentArg);
+                .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow");
 
         Process jUnit = jUnitBuilder.build()
                 .redirectError(Redirect.INHERIT)
