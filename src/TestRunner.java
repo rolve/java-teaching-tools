@@ -9,16 +9,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.InputMismatchException;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import org.junit.ComparisonFailure;
 import org.junit.internal.ArrayComparisonFailure;
@@ -88,14 +85,14 @@ public class TestRunner {
                     failed.add(name);
                     failedTests.add(name);
 
-                    String msg = "    " + failure.toString();
+                    String msg = failure.toString();
                     Throwable exception = failure.getException();
                     if (dontPrintTrace(exception)) {
                         msg += " (" + exception.getClass().getName() + ")";
                     } else {
                         ByteArrayOutputStream out = new ByteArrayOutputStream();
                         exception.printStackTrace(new PrintStream(out));
-                        msg += out;
+                        msg += "\n" + out;
                     }
                     failures.add(msg);
                 }
@@ -104,8 +101,10 @@ public class TestRunner {
             all.removeAll(failed);
             succeededTests.add(all);
         }
-
-        failures.forEach(stdErr::println);
+        
+        failures.stream()
+                .map(s -> s.replaceAll("^", "    "))
+                .forEach(stdErr::println);
         
         List<Set<String>> different = succeededTests.stream().distinct().collect(toList());
         if (different.size() > 1) {
@@ -116,6 +115,7 @@ public class TestRunner {
             nonDeterm.removeAll(deterministic);
             
             stdErr.println("Non-determinism detected in tests: " + nonDeterm);
+            stdOut.println("nondeterministic");
         }
         
         Set<String> alwaysSucc = new HashSet<>(different.get(0));
