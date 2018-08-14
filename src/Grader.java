@@ -105,14 +105,17 @@ public class Grader {
     }
 
     private void runTests(Task task, Path projectPath, String student) throws IOException {
-        String classes = Files.list(projectPath.resolve("src"))
+        List<String> classes = Files.list(projectPath.resolve("src"))
                 .map(p -> p.getFileName().toString())
                 .filter(s -> s.endsWith(".java"))
                 .map(s -> s.substring(0, s.length() - 5))
-                .collect(joining(","));
-        String agentArg = "-javaagent:inspector.jar=" + task.instrThreshold + "," + classes;
+                .collect(toList());
+        String agentArg = "-javaagent:inspector.jar=" + task.instrThreshold + "," +
+                classes.stream().collect(joining(","));
 
-        JavaProcessBuilder jUnitBuilder = new JavaProcessBuilder(TestRunner.class, task.testClass.getName());
+        List<String> junitArgs = new ArrayList<>(classes);
+        junitArgs.add(0, task.testClass.getName());
+        JavaProcessBuilder jUnitBuilder = new JavaProcessBuilder(TestRunner.class, junitArgs);
         jUnitBuilder.classpath(projectPath.resolve("bin") + File.pathSeparator + jUnitBuilder.classpath())
                 .vmArgs("-Dfile.encoding=UTF8", agentArg);
 

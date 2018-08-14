@@ -1,20 +1,45 @@
+import static java.util.Arrays.asList;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.toSet;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.HashSet;
+import java.util.InputMismatchException;
+import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.stream.Stream;
 
-import org.junit.ComparisonFailure;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
-import org.junit.runners.model.TestTimedOutException;
 
 public class TestRunner {
+    
+    static final Set<Class<? extends Throwable>> knownExceptions = new HashSet<>(asList(
+            StackOverflowError.class, OutOfMemoryError.class, NullPointerException.class,
+            ArrayIndexOutOfBoundsException.class, StringIndexOutOfBoundsException.class,
+            IndexOutOfBoundsException.class, InputMismatchException.class,
+            NoSuchElementException.class, FileNotFoundException.class));
+
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
+        Set<String> classes = stream(args).skip(1).collect(toSet());
+        
+        new TestRunner(testClass, classes).runTests();
+    }
+
+    private String testClass;
+    private Set<String> classes;
+    
+    public TestRunner(String testClass, Set<String> classes) {
+        this.testClass = testClass;
+        this.classes = classes;
+    }
+
+    private void runTests() throws IOException, ClassNotFoundException {
         Set<String> all = new HashSet<>();
         Set<String> failed = new HashSet<>();
 
@@ -35,19 +60,16 @@ public class TestRunner {
             public void testFinished(Description description) {
                 all.add(description.getMethodName());
             }
-
             public void testFailure(Failure failure) throws Exception {
                 failed.add(failure.getDescription().getMethodName());
-                stdErr.println(failure);
-
+                
+                String msg = failure.toString();
                 Throwable exception = failure.getException();
-                if(!(exception instanceof ComparisonFailure ||
-                        exception instanceof AssertionError ||
-                        exception instanceof TestTimedOutException)) {
-                    exception.setStackTrace(Stream.of(exception.getStackTrace())
-                            .distinct().toArray(StackTraceElement[]::new));
+                if (dontPrintTrace(exception)) {
+                    stdErr.println(msg + " (" + exception.getClass().getName() + ")");
+                } else {
+                    stdErr.println(msg);
                     exception.printStackTrace(stdErr);
-                            
                 }
             }
         });
@@ -57,5 +79,12 @@ public class TestRunner {
         all.stream().forEach(stdOut::println);
         stdOut.flush();
         stdErr.flush();
+    }
+    
+    private boolean dontPrintTrace(Throwable exception) {
+        boolean inCodeUnderTest = stream(exception.getStackTrace())
+                .map(StackTraceElement::getClassName)
+                .anyMatch(classes::contains);
+        return inCodeUnderTest && knownExceptions.contains(exception.getClass());
     }
 }
