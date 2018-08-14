@@ -1,9 +1,9 @@
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
-import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -90,9 +90,7 @@ public class TestRunner {
                     if (dontPrintTrace(exception)) {
                         msg += " (" + exception.getClass().getName() + ")";
                     } else {
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-                        exception.printStackTrace(new PrintStream(out));
-                        msg += "\n" + out;
+                        msg += "\n" + failure.getTrace();
                     }
                     failures.add(msg);
                 }
@@ -101,9 +99,9 @@ public class TestRunner {
             all.removeAll(failed);
             succeededTests.add(all);
         }
-        
+
         failures.stream()
-                .map(s -> s.replaceAll("^", "    "))
+                .map(s -> stream(s.split("\n")).map(l -> "    " + l).collect(joining("\n")))
                 .forEach(stdErr::println);
         
         List<Set<String>> different = succeededTests.stream().distinct().collect(toList());
