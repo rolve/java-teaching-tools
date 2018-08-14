@@ -29,8 +29,9 @@ public class TestRunner {
             StackOverflowError.class, OutOfMemoryError.class, NullPointerException.class,
             ArrayIndexOutOfBoundsException.class, StringIndexOutOfBoundsException.class,
             IndexOutOfBoundsException.class, InputMismatchException.class,
-            NoSuchElementException.class, FileNotFoundException.class));
-
+            NoSuchElementException.class, FileNotFoundException.class,
+            IllegalArgumentException.class));
+    
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
         Set<String> classes = stream(args).skip(1).collect(toSet());
@@ -96,6 +97,6 @@ public class TestRunner {
                 .anyMatch(classes::contains);
         
         return inCodeUnderTest && knownExceptions.contains(clazz) ||
-                !inCodeUnderTest && junitExceptions.contains(clazz);
+                junitExceptions.contains(clazz);
     }
 }
