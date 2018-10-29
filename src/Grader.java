@@ -11,10 +11,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
@@ -45,7 +49,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                .filter(s -> s.getFileName().toString().startsWith("ab"))
+                //.filter(s -> s.getFileName().toString().startsWith("anarnold"))
                 .sorted()
                 .collect(toList());
         
@@ -87,17 +91,47 @@ public class Grader {
         
         Files.createDirectories(projectPath.resolve("bin"));
         List<String> builderArgs = new ArrayList<>(Arrays.asList("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
-        builderArgs.addAll(Files.list(projectPath.resolve("src"))
+        
+        Set<String> files = Files.list(projectPath.resolve("src"))
         		.map(Path::toString)
         		.filter(f -> f.endsWith(".java"))
-        		.collect(toList()));
+        		.collect(Collectors.toSet());
+		
+        while(true) {
+        	ArrayList<String> args = new ArrayList<>(builderArgs);
+	        args.addAll(files);
+	        
+	        Process javac = new ProcessBuilder(args)
+	        		.redirectErrorStream(true)
+	                .directory(projectPath.toFile())
+	                .start();
+	        
+	        StringWriter writer = new StringWriter();
+			new LineCopier(javac.getInputStream(), new LineWriterAdapter(writer)).call();
+			
+			if (robustWaitFor(javac) == 0)
+				return true;
+			 
+			String err = writer.toString();
+			Pattern errorPattern = Pattern.compile("/.*/([^/]+\\.java):\\d+: error:",
+					Pattern.CASE_INSENSITIVE);
+			
+			Matcher matcher = errorPattern.matcher(err);
+			if (matcher.find()) {
+				String faultyFile = projectPath
+						.resolve("src")
+						.resolve(matcher.group(1))
+						.toString();
+				files.remove(faultyFile);
+				
+				System.err.printf("%s appears to be faulty. Ignoring it for compilation.\n", faultyFile);
+			} else {
+				System.err.println(err);
+				break;
+			}
+        }
         
-        Process javac = new ProcessBuilder(builderArgs)
-                .redirectOutput(Redirect.INHERIT)
-                .redirectError(Redirect.INHERIT)
-                .directory(projectPath.toFile()).start();
-        int returnCode = robustWaitFor(javac);
-        return returnCode == 0;
+		return false;
     }
 
     private void runTests(Task task, Path projectPath, String student) throws IOException {
