@@ -5,15 +5,17 @@ public class Task {
     public final String projectName;
     public final String suffix;
     public final Class<?> testClass;
+    public final Class<?> classUnderTest;
     public final int instrThreshold;
 
-    public Task(String projectName, Class<?> testClass, int instrThreshold) {
-        this(projectName, "", testClass, instrThreshold);
+    public Task(String projectName, Class<?> classUnderTest, Class<?> testClass, int instrThreshold) {
+        this(projectName, "", classUnderTest, testClass, instrThreshold);
     }
 
-    public Task(String projectName, String suffix, Class<?> testClass, int instrThreshold) {
-        this.projectName = requireNonNull(projectName);
+    public Task(String projectName, String suffix, Class<?> classUnderTest, Class<?> testClass, int instrThreshold) {
+		this.projectName = requireNonNull(projectName);
         this.suffix = requireNonNull(suffix);
+        this.classUnderTest = requireNonNull(classUnderTest);
         this.testClass = requireNonNull(testClass);
         this.instrThreshold = instrThreshold;
     }

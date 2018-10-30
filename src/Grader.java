@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,7 +29,7 @@ public class Grader {
 
     @SuppressWarnings("serial")
 	private static final List<Task> TASKS = new ArrayList<Task>() {{
-        add(new Task("u04", StringAdditionGradingTest.class, 99999 * 3/5));
+        add(new Task("u04", StringAddition.class, StringAdditionGradingTest.class, 99999 * 3/5));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -49,7 +48,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> s.getFileName().toString().startsWith("anarnold"))
+                //.filter(s -> s.getFileName().toString().startsWith("adiego"))
                 .sorted()
                 .collect(toList());
         
@@ -76,7 +75,7 @@ public class Grader {
         String student = solution.getFileName().toString();
 
         results.get(task).addStudent(student);
-        boolean compiled = compileProject(projectPath);
+        boolean compiled = compileProject(projectPath, task.classUnderTest.getName());
         if (compiled) {
             results.get(task).addCriterion(student, "compiles");
 
@@ -84,12 +83,19 @@ public class Grader {
         }
     }
 
-    private boolean compileProject(Path projectPath) throws IOException {
+    private boolean compileProject(Path projectPath, String classUnderTest) throws IOException {
         String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
                 Paths.get("lib","hamcrest.jar").toAbsolutePath() + File.pathSeparator +
                 Paths.get("inspector.jar").toAbsolutePath();
         
-        Files.createDirectories(projectPath.resolve("bin"));
+		// remove any pre-compiled class files from bin/
+        Path binPath = projectPath.resolve("bin");
+		Files.createDirectories(binPath);
+		Files.list(binPath)
+			.map(Path::toFile)
+			.filter(File::isFile)
+			.forEach(f -> f.delete());
+        
         List<String> builderArgs = new ArrayList<>(Arrays.asList("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
         
         Set<String> files = Files.list(projectPath.resolve("src"))
@@ -111,25 +117,41 @@ public class Grader {
 			
 			if (robustWaitFor(javac) == 0)
 				return true;
-			 
+			
 			String err = writer.toString();
 			Pattern errorPattern = Pattern.compile("/.*/([^/]+\\.java):\\d+: error:",
 					Pattern.CASE_INSENSITIVE);
 			
 			Matcher matcher = errorPattern.matcher(err);
-			if (matcher.find()) {
-				String faultyFile = projectPath
+			String faultyFile = null;
+			while (matcher.find()) {
+				faultyFile = matcher.group(1);
+				// never remove class under test
+				if (faultyFile.equals(classUnderTest + ".java")) {
+					System.err.println("Error in class under test:");
+					faultyFile = null;
+					continue;
+				} else {
+					// found one.
+					break;
+				}
+			}
+			
+			if (faultyFile != null) {
+				faultyFile = projectPath
 						.resolve("src")
-						.resolve(matcher.group(1))
+						.resolve(faultyFile)
 						.toString();
 				files.remove(faultyFile);
 				
-				System.err.printf("%s appears to be faulty. Ignoring it for compilation.\n", faultyFile);
+				System.err.printf("%s appears to be faulty. Ignoring it for compilation: %s\n", faultyFile, err);
 			} else {
 				System.err.println(err);
 				break;
 			}
         }
+        
+        System.err.flush();
         
 		return false;
     }
