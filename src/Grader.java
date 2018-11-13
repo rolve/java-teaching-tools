@@ -9,6 +9,7 @@ import java.lang.ProcessBuilder.Redirect;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -30,7 +31,8 @@ public class Grader {
 
     @SuppressWarnings("serial")
 	private static final List<Task> TASKS = new ArrayList<Task>() {{
-        add(new Task("u04", StringAddition.class, StringAdditionGradingTest.class, 99999 * 3/5));
+        add(new Task("u04", StringAddition.class, StringAdditionGradingTest.class, 99999 * 3/5,
+        		Set.of("StringAdditionGradingTest.java", "ByteCodeParseGradingTest.java", "HardTimeout.java")));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -49,7 +51,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> Set.of("jjacober").contains(s.getFileName().toString()))
+                //.filter(s -> Set.of("jarjum").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
         
@@ -76,7 +78,7 @@ public class Grader {
         String student = solution.getFileName().toString();
 
         results.get(task).addStudent(student);
-        boolean compiled = compileProject(projectPath, task.classUnderTest.getName());
+        boolean compiled = compileProject(projectPath, task);
         if (compiled) {
             results.get(task).addCriterion(student, "compiles");
 
@@ -84,9 +86,10 @@ public class Grader {
         }
     }
 
-    private boolean compileProject(Path projectPath, String classUnderTest) throws IOException {
+    private boolean compileProject(Path projectPath, Task task) throws IOException {
         String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
                 Paths.get("lib","hamcrest.jar").toAbsolutePath() + File.pathSeparator +
+                Paths.get("lib","asm-7.0.jar").toAbsolutePath() + File.pathSeparator +
                 Paths.get("inspector.jar").toAbsolutePath();
         
 		// remove any pre-compiled class files from bin/
@@ -97,9 +100,16 @@ public class Grader {
 			.filter(File::isFile)
 			.forEach(f -> f.delete());
         
+		// Copy GradingTests class into student's src/
+		Path srcPath = projectPath.resolve("src").toAbsolutePath();
+		for (String f : task.filesToCopy) {
+			Path filePath = Paths.get("tests", f).toAbsolutePath();
+			Files.copy(filePath, srcPath.resolve(f), StandardCopyOption.REPLACE_EXISTING);
+		}
+		
         List<String> builderArgs = new ArrayList<>(Arrays.asList("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
         
-        Set<String> files = Files.list(projectPath.resolve("src"))
+        Set<String> files = Files.list(srcPath)
         		.map(Path::toString)
         		.filter(f -> f.endsWith(".java"))
         		.collect(Collectors.toSet());
@@ -116,48 +126,47 @@ public class Grader {
 	        StringWriter writer = new StringWriter();
 			new LineCopier(javac.getInputStream(), new LineWriterAdapter(writer)).call();
 			
-			if (robustWaitFor(javac) == 0)
+			if (robustWaitFor(javac) == 0) {
+				// compilation succeeded, we are fine now.
+				System.err.flush();
 				return true;
+			}
 			
 			String err = writer.toString();
-			Set<String> erroneousFiles = extractFilesFromCompileErrors(err);
-			if (erroneousFiles.remove(classUnderTest + ".java")) {
+			Set<String> faultyFiles = extractFilesFromCompileErrors(err);
+			if (faultyFiles.remove(task.classUnderTest.getName() + ".java")) {
 				// never remove class under test from compile arguments
 				System.err.println("Class under test has errors.");
 			}
-			
-			if (erroneousFiles.isEmpty()) {
-				// no files left to remove
-				System.err.println(err);
-				break;
+			if (faultyFiles.removeAll(task.filesToCopy)) {
+				// copy-in files should *never* have errors
+				System.err.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
 			}
 			
-			String faultyFile = erroneousFiles.stream().findFirst().get();
 			
+			if (faultyFiles.isEmpty()) {
+				// no files left to remove. unable to compile.
+				System.err.println(err);
+				System.err.flush();
+				return false;
+			}
+			
+			String faultyFile = faultyFiles.stream().findFirst().get();
 			System.err.printf("%s appears to be faulty. Ignoring it for compilation: %s\n", faultyFile, err);
-			
-			faultyFile = projectPath
-					.resolve("src")
-					.resolve(faultyFile)
-					.toString();
-			files.remove(faultyFile);
+			files.remove(srcPath.resolve(faultyFile).toString());
         }
-        
-        System.err.flush();
-        
-		return false;
     }
 
 	private Set<String> extractFilesFromCompileErrors(String err) {
 		Pattern errorPattern = Pattern.compile("/.*/([^/]+\\.java):\\d+: error:",
 				Pattern.CASE_INSENSITIVE);
 		
-		Set<String> erroneousFiles = new HashSet<>();
+		Set<String> faultyFiles = new HashSet<>();
 		Matcher matcher = errorPattern.matcher(err);
 		while (matcher.find()) {
-			erroneousFiles.add(matcher.group(1));
+			faultyFiles.add(matcher.group(1));
 		}
-		return erroneousFiles;
+		return faultyFiles;
 	}
 
     private void runTests(Task task, Path projectPath, String student) throws IOException {

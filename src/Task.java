@@ -1,5 +1,7 @@
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
+
 public class Task {
 
     public final String projectName;
@@ -7,17 +9,19 @@ public class Task {
     public final Class<?> testClass;
     public final Class<?> classUnderTest;
     public final int instrThreshold;
+	public final  Set<String> filesToCopy;
 
-    public Task(String projectName, Class<?> classUnderTest, Class<?> testClass, int instrThreshold) {
-        this(projectName, "", classUnderTest, testClass, instrThreshold);
+    public Task(String projectName, Class<?> classUnderTest, Class<?> testClass, int instrThreshold, Set<String> filesToCopy) {
+        this(projectName, "", classUnderTest, testClass, instrThreshold, filesToCopy);
     }
 
-    public Task(String projectName, String suffix, Class<?> classUnderTest, Class<?> testClass, int instrThreshold) {
+    public Task(String projectName, String suffix, Class<?> classUnderTest, Class<?> testClass, int instrThreshold, Set<String> filesToCopy) {
 		this.projectName = requireNonNull(projectName);
         this.suffix = requireNonNull(suffix);
         this.classUnderTest = requireNonNull(classUnderTest);
         this.testClass = requireNonNull(testClass);
         this.instrThreshold = instrThreshold;
+        this.filesToCopy = requireNonNull(filesToCopy);
     }
 
     public String resultFileName() {
