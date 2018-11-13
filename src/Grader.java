@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -48,7 +49,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> s.getFileName().toString().startsWith("adiego"))
+                //.filter(s -> Set.of("jjacober").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
         
@@ -119,42 +120,45 @@ public class Grader {
 				return true;
 			
 			String err = writer.toString();
-			Pattern errorPattern = Pattern.compile("/.*/([^/]+\\.java):\\d+: error:",
-					Pattern.CASE_INSENSITIVE);
-			
-			Matcher matcher = errorPattern.matcher(err);
-			String faultyFile = null;
-			while (matcher.find()) {
-				faultyFile = matcher.group(1);
-				// never remove class under test
-				if (faultyFile.equals(classUnderTest + ".java")) {
-					System.err.println("Error in class under test:");
-					faultyFile = null;
-					continue;
-				} else {
-					// found one.
-					break;
-				}
+			Set<String> erroneousFiles = extractFilesFromCompileErrors(err);
+			if (erroneousFiles.remove(classUnderTest + ".java")) {
+				// never remove class under test from compile arguments
+				System.err.println("Class under test has errors.");
 			}
 			
-			if (faultyFile != null) {
-				faultyFile = projectPath
-						.resolve("src")
-						.resolve(faultyFile)
-						.toString();
-				files.remove(faultyFile);
-				
-				System.err.printf("%s appears to be faulty. Ignoring it for compilation: %s\n", faultyFile, err);
-			} else {
+			if (erroneousFiles.isEmpty()) {
+				// no files left to remove
 				System.err.println(err);
 				break;
 			}
+			
+			String faultyFile = erroneousFiles.stream().findFirst().get();
+			
+			System.err.printf("%s appears to be faulty. Ignoring it for compilation: %s\n", faultyFile, err);
+			
+			faultyFile = projectPath
+					.resolve("src")
+					.resolve(faultyFile)
+					.toString();
+			files.remove(faultyFile);
         }
         
         System.err.flush();
         
 		return false;
     }
+
+	private Set<String> extractFilesFromCompileErrors(String err) {
+		Pattern errorPattern = Pattern.compile("/.*/([^/]+\\.java):\\d+: error:",
+				Pattern.CASE_INSENSITIVE);
+		
+		Set<String> erroneousFiles = new HashSet<>();
+		Matcher matcher = errorPattern.matcher(err);
+		while (matcher.find()) {
+			erroneousFiles.add(matcher.group(1));
+		}
+		return erroneousFiles;
+	}
 
     private void runTests(Task task, Path projectPath, String student) throws IOException {
         List<String> classes = Files.list(projectPath.resolve("src"))
