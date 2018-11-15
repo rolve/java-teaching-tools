@@ -36,7 +36,8 @@ public class TestRunner {
             ArrayIndexOutOfBoundsException.class, StringIndexOutOfBoundsException.class,
             IndexOutOfBoundsException.class, InputMismatchException.class,
             NoSuchElementException.class, FileNotFoundException.class,
-            IllegalArgumentException.class));
+            IllegalArgumentException.class, NumberFormatException.class,
+            ArithmeticException.class));
 
     private static final int REPETITIONS = 7;
     

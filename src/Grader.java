@@ -1,3 +1,4 @@
+import static java.nio.file.Files.createDirectories;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -30,11 +31,23 @@ public class Grader {
     private static final Pattern lines = Pattern.compile("\r?\n");
 
     @SuppressWarnings("serial")
-	private static final List<Task> TASKS = new ArrayList<Task>() {{
+    private static final List<Task> TASKS = new ArrayList<Task>() {{
 //        add(new Task("u04", StringAddition.class, StringAdditionGradingTest.class, 99999 * 3/5,
 //        		Set.of("StringAdditionGradingTest.java", "ByteCodeParseGradingTest.java", "HardTimeout.java")));
-        add(new Task("u06", Tal.class, TalGradingTest.class, 99999 * 3/5,
-        		Set.of("TalGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u05", Vermietung.class, VermietungGradingTest.class, 99999 * 3/5,
+//                Set.of("VermietungGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u06", Tal.class, TalGradingTest.class, 99999 * 3/5,
+//        		Set.of("TalGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u07", Verzahnung.class, VerzahnungGradingTest.class, 99999 * 3/5,
+//        		Set.of("VerzahnungGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u08", LinkedIntList.class, LinkedIntListGradingTest.class, 99999 * 3 / 5,
+//              Set.of("LinkedIntListGradingTest.java", "HardTimeout.java")));
+//          add(new Task("u09", KlassenGradingTest.class, KlassenGradingTest.class, 99999 * 3 / 5,
+//                  Set.of("KlassenGradingTest.java", "HardTimeout.java")));
+        add(new Task("u10", Rechner.class, RechnerGradingTest.class, 99999 * 3 / 5,
+                Set.of("RechnerGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u11", Bienen.class, BienenGradingTest.class, 99999 * 3 / 5,
+//                Set.of("BienenGradingTest.java", "HardTimeout.java")));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -53,7 +66,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> Set.of("aburov").contains(s.getFileName().toString()))
+                //.filter(s -> Set.of("dfadeev").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
         
@@ -62,8 +75,12 @@ public class Grader {
             System.out.println("Grading " + solution.getFileName() + " " + (i+1) + "/" + solutions.size());
 			grade(solution);
 			System.out.println();
+			
+			writeResultsToFile();
         }
+    }
 
+	private void writeResultsToFile() throws IOException {
         for (Entry<Task, Results> entry : results.entrySet()) {
             entry.getValue().writeTo(Paths.get(entry.getKey().resultFileName()));
         }
@@ -104,6 +121,8 @@ public class Grader {
         
 		// Copy GradingTests class into student's src/
 		Path srcPath = projectPath.resolve("src").toAbsolutePath();
+		// Create src directory in case it doesn't exist (yes, it happened)
+		createDirectories(srcPath);
 		for (String f : task.filesToCopy) {
 			Path filePath = Paths.get("tests", f).toAbsolutePath();
 			Files.copy(filePath, srcPath.resolve(f), StandardCopyOption.REPLACE_EXISTING);
