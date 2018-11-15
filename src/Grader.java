@@ -31,8 +31,10 @@ public class Grader {
 
     @SuppressWarnings("serial")
 	private static final List<Task> TASKS = new ArrayList<Task>() {{
-        add(new Task("u04", StringAddition.class, StringAdditionGradingTest.class, 99999 * 3/5,
-        		Set.of("StringAdditionGradingTest.java", "ByteCodeParseGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u04", StringAddition.class, StringAdditionGradingTest.class, 99999 * 3/5,
+//        		Set.of("StringAdditionGradingTest.java", "ByteCodeParseGradingTest.java", "HardTimeout.java")));
+        add(new Task("u06", Tal.class, TalGradingTest.class, 99999 * 3/5,
+        		Set.of("TalGradingTest.java", "HardTimeout.java")));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -51,7 +53,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> Set.of("jarjum").contains(s.getFileName().toString()))
+                //.filter(s -> Set.of("aburov").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
         
@@ -158,7 +160,7 @@ public class Grader {
     }
 
 	private Set<String> extractFilesFromCompileErrors(String err) {
-		Pattern errorPattern = Pattern.compile("/.*/([^/]+\\.java):\\d+: error:",
+		Pattern errorPattern = Pattern.compile("^.*[/\\\\]([^/\\\\]+\\.java):\\d+: error:",
 				Pattern.CASE_INSENSITIVE);
 		
 		Set<String> faultyFiles = new HashSet<>();
@@ -191,7 +193,9 @@ public class Grader {
         StringWriter jUnitOutput = new StringWriter();
         new LineCopier(jUnit.getInputStream(), new LineWriterAdapter(jUnitOutput)).run();
 
-        lines.splitAsStream(jUnitOutput.toString()).forEach(line -> results.get(task).addCriterion(student, line));
+        lines.splitAsStream(jUnitOutput.toString())
+        		.filter(line -> !line.isEmpty())
+				.forEach(line -> results.get(task).addCriterion(student, line));
     }
 
     private int robustWaitFor(Process javac) {
