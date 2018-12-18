@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
+import palindrome.Palindrome;
 
 public class Grader {
 
@@ -42,12 +43,14 @@ public class Grader {
 //        		Set.of("VerzahnungGradingTest.java", "HardTimeout.java")));
 //        add(new Task("u08", LinkedIntList.class, LinkedIntListGradingTest.class, 99999 * 3 / 5,
 //              Set.of("LinkedIntListGradingTest.java", "HardTimeout.java")));
-//          add(new Task("u09", KlassenGradingTest.class, KlassenGradingTest.class, 99999 * 3 / 5,
-//                  Set.of("KlassenGradingTest.java", "HardTimeout.java")));
-        add(new Task("u10", Rechner.class, RechnerGradingTest.class, 99999 * 3 / 5,
-                Set.of("RechnerGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u09", KlassenGradingTest.class, KlassenGradingTest.class, 99999 * 3 / 5,
+//              Set.of("KlassenGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u10", Rechner.class, RechnerGradingTest.class, 99999 * 3 / 5,
+//              Set.of("RechnerGradingTest.java", "HardTimeout.java")));
 //        add(new Task("u11", Bienen.class, BienenGradingTest.class, 99999 * 3 / 5,
-//                Set.of("BienenGradingTest.java", "HardTimeout.java")));
+//              Set.of("BienenGradingTest.java", "HardTimeout.java")));
+        add(new Task("u12", Palindrome.class, PalindromeGradingTest.class, 99999 * 3 / 5,
+              Set.of("PalindromeGradingTest.java", "HardTimeout.java")));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -66,7 +69,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> Set.of("dfadeev").contains(s.getFileName().toString()))
+                .filter(s -> Set.of("lehmando").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
         
@@ -130,7 +133,7 @@ public class Grader {
 		
         List<String> builderArgs = new ArrayList<>(Arrays.asList("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
         
-        Set<String> files = Files.list(srcPath)
+        Set<String> files = Files.walk(srcPath)
         		.map(Path::toString)
         		.filter(f -> f.endsWith(".java"))
         		.collect(Collectors.toSet());
@@ -155,7 +158,7 @@ public class Grader {
 			
 			String err = writer.toString();
 			Set<String> faultyFiles = extractFilesFromCompileErrors(err);
-			if (faultyFiles.remove(task.classUnderTest.getName() + ".java")) {
+			if (faultyFiles.remove(task.classUnderTest.getName().replace('.', File.separatorChar) + ".java")) {
 				// never remove class under test from compile arguments
 				System.err.println("Class under test has errors.");
 			}
@@ -177,9 +180,9 @@ public class Grader {
 			files.remove(srcPath.resolve(faultyFile).toString());
         }
     }
-
+    
 	private Set<String> extractFilesFromCompileErrors(String err) {
-		Pattern errorPattern = Pattern.compile("^.*[/\\\\]([^/\\\\]+\\.java):\\d+: error:",
+		Pattern errorPattern = Pattern.compile("^.*[/\\\\]src[/\\\\](.+\\.java):\\d+: error:",
 				Pattern.CASE_INSENSITIVE);
 		
 		Set<String> faultyFiles = new HashSet<>();

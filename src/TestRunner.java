@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.EmptyStackException;
 import java.util.HashSet;
 import java.util.InputMismatchException;
 import java.util.List;
@@ -37,7 +38,7 @@ public class TestRunner {
             IndexOutOfBoundsException.class, InputMismatchException.class,
             NoSuchElementException.class, FileNotFoundException.class,
             IllegalArgumentException.class, NumberFormatException.class,
-            ArithmeticException.class));
+            ArithmeticException.class, EmptyStackException.class));
 
     private static final int REPETITIONS = 7;
     
