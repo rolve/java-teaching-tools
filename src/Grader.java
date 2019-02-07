@@ -1,7 +1,5 @@
 import static java.nio.file.Files.createDirectories;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +23,6 @@ import java.util.stream.Collectors;
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
-import palindrome.Palindrome;
 
 public class Grader {
 
@@ -33,8 +30,22 @@ public class Grader {
 
     @SuppressWarnings("serial")
     private static final List<Task> TASKS = new ArrayList<Task>() {{
+        add(new Task("Aufgabe 1", ZeroSum.class, ZeroSumGradingTest.class, 99999, 
+                Set.of("ZeroSumGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 2", Blocks.class, BlocksGradingTest.class, 99999, 
+                Set.of("BlocksGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 3", Nesting.class, NestingGradingTest.class, 99999, 
+                Set.of("NestingGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 4", "a", Service.class, ServiceAGradingTest.class, 99999, 
+                Set.of("ServiceAGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 4", "b", Service.class, ServiceBGradingTest.class, 99999, 
+                Set.of("ServiceBGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 5", "a", LinkedRingBuffer.class, LinkedRingBufferAGradingTest.class, 99999, 
+                Set.of("LinkedRingBufferAGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 5", "b", LinkedRingBuffer.class, LinkedRingBufferBGradingTest.class, 99999, 
+                Set.of("LinkedRingBufferBGradingTest.java", "HardTimeout.java")));
 //        add(new Task("u04", StringAddition.class, StringAdditionGradingTest.class, 99999 * 3/5,
-//        		Set.of("StringAdditionGradingTest.java", "ByteCodeParseGradingTest.java", "HardTimeout.java")));
+//                Set.of("StringAdditionGradingTest.java", "ByteCodeParseGradingTest.java", "HardTimeout.java")));
 //        add(new Task("u05", Vermietung.class, VermietungGradingTest.class, 99999 * 3/5,
 //                Set.of("VermietungGradingTest.java", "HardTimeout.java")));
 //        add(new Task("u06", Tal.class, TalGradingTest.class, 99999 * 3/5,
@@ -49,8 +60,8 @@ public class Grader {
 //              Set.of("RechnerGradingTest.java", "HardTimeout.java")));
 //        add(new Task("u11", Bienen.class, BienenGradingTest.class, 99999 * 3 / 5,
 //              Set.of("BienenGradingTest.java", "HardTimeout.java")));
-        add(new Task("u12", Palindrome.class, PalindromeGradingTest.class, 99999 * 3 / 5,
-              Set.of("PalindromeGradingTest.java", "HardTimeout.java")));
+//        add(new Task("u12", Palindrome.class, PalindromeGradingTest.class, 99999 * 3 / 5,
+//              Set.of("PalindromeGradingTest.java", "HardTimeout.java")));
     }};
 
     public static void main(String[] args) throws IOException {
@@ -69,7 +80,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                .filter(s -> Set.of("lehmando").contains(s.getFileName().toString()))
+                //.filter(s -> Set.of("aaa", "000").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
         

@@ -17,6 +17,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.regex.PatternSyntaxException;
 
 import org.junit.ComparisonFailure;
 import org.junit.internal.ArrayComparisonFailure;
@@ -38,9 +39,14 @@ public class TestRunner {
             IndexOutOfBoundsException.class, InputMismatchException.class,
             NoSuchElementException.class, FileNotFoundException.class,
             IllegalArgumentException.class, NumberFormatException.class,
-            ArithmeticException.class, EmptyStackException.class));
+            ArithmeticException.class, EmptyStackException.class, 
+            PatternSyntaxException.class));
 
     private static final int REPETITIONS = 7;
+
+    // For how long we do REPETITIONS. If we were running tests for more than this time, do not
+    // attempt another repetition.
+    private static final long MAX_RUNNING_TIME = 10000; // millisecs
     
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
@@ -74,6 +80,7 @@ public class TestRunner {
         Set<String> failedTests = new HashSet<>();
         SortedSet<String> failures = new TreeSet<>();
         
+        long startTime = System.currentTimeMillis();
         for (int i = 0; i < REPETITIONS; i++) {
             Set<String> all = new HashSet<>();
             Set<String> failed = new HashSet<>();
@@ -100,6 +107,14 @@ public class TestRunner {
             core.run(Class.forName(testClass));
             all.removeAll(failed);
             succeededTests.add(all);
+            
+            if (i < REPETITIONS - 1 && System.currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
+                // this timeout is not so bad. It just means that we are not pretty sure that the
+                // tests are deterministic, since not all REPETITIONS were tried
+                stdOut.println("SOFT_TIMEOUT");
+                stdErr.println("SOFT_TIMEOUT");
+                break;
+            }
         }
 
         failures.stream()
