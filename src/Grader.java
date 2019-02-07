@@ -142,7 +142,8 @@ public class Grader {
 			Files.copy(filePath, srcPath.resolve(f), StandardCopyOption.REPLACE_EXISTING);
 		}
 		
-        List<String> builderArgs = new ArrayList<>(Arrays.asList("javac", "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
+		Path javacPath = Paths.get(System.getProperty("java.home"), "bin", "javac");
+        List<String> builderArgs = new ArrayList<>(Arrays.asList(javacPath.toString(), "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
         
         Set<String> files = Files.walk(srcPath)
         		.map(Path::toString)
