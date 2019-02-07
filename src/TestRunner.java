@@ -40,7 +40,7 @@ public class TestRunner {
             NoSuchElementException.class, FileNotFoundException.class,
             IllegalArgumentException.class, NumberFormatException.class,
             ArithmeticException.class, EmptyStackException.class, 
-            PatternSyntaxException.class));
+            PatternSyntaxException.class, IllegalStateException.class));
 
     private static final int REPETITIONS = 7;
 
