@@ -50,6 +50,7 @@ public class TestRunner {
 
     public static PrintStream out;
     public static PrintStream err;
+    public static int repetition;
 
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
@@ -69,13 +70,13 @@ public class TestRunner {
         System.setErr(new PrintStream(new OutputStream() {
             public void write(int b) {}
         }));
-        
+
         Set<String> failedTests = new HashSet<>();
         SortedSet<String> failures = new TreeSet<>();
         List<Set<String>> passedTests = new ArrayList<>();
-        
+
         long startTime = System.currentTimeMillis();
-        for (int i = 0; i < REPETITIONS; i++) {
+        for (repetition = 0; repetition < REPETITIONS; repetition++) {
             Set<String> all = new HashSet<>();
             Set<String> failed = new HashSet<>();
             JUnitCore core = new JUnitCore();
@@ -101,8 +102,8 @@ public class TestRunner {
             core.run(Class.forName(testClass));
             all.removeAll(failed);
             passedTests.add(all);
-            
-            if (i < REPETITIONS - 1 && System.currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
+
+            if (repetition < REPETITIONS - 1 && System.currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
                 // this timeout is not so bad. It just means that we are not pretty sure that the
                 // tests are deterministic, since not all REPETITIONS were tried
                 out.println("SOFT_TIMEOUT");
