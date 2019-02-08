@@ -5,6 +5,7 @@ import static java.nio.file.Files.createDirectories;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.*;
+import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.ByteArrayOutputStream;
@@ -182,20 +183,22 @@ public class Grader {
             var collector = new DiagnosticCollector<>();
             var manager = javac.getStandardFileManager(collector, null, UTF_8);
 
-            var options = asList("-cp", classpath,
+            var options = asList(
+                    "-cp", classpath,
                     "-d", projectPath.resolve("bin").toString());
             javac.getTask(null, manager, collector, options, null,
                     manager.getJavaFileObjectsFromPaths(sources)).call();
 
-            if (collector.getDiagnostics().isEmpty()) {
+            var errors = collector.getDiagnostics().stream()
+                    .filter(d -> d.getKind() == ERROR).collect(toList());
+            if (errors.isEmpty()) {
                 return true;
             }
 
-            var faultyFiles = collector.getDiagnostics().stream()
+            var faultyFiles = errors.stream()
                     .map(d -> (JavaFileObject) d.getSource())
                     .map(f -> Paths.get(f.getName()).getFileName().toString())
                     .collect(toSet());
-
 			if (faultyFiles.remove(task.classUnderTest.getName().replace('.', separatorChar) + ".java")) {
 				// never remove class under test from compile arguments
 				out.println("Class under test has errors.");
@@ -205,7 +208,7 @@ public class Grader {
 			    out.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
 			}
 
-			collector.getDiagnostics().forEach(out::println);
+			errors.forEach(out::println);
 
 			if (faultyFiles.isEmpty()) {
 				// no files left to remove. unable to compile.
