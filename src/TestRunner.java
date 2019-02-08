@@ -1,22 +1,13 @@
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.EmptyStackException;
-import java.util.HashSet;
-import java.util.InputMismatchException;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
+import java.util.function.Consumer;
 import java.util.regex.PatternSyntaxException;
 
 import org.junit.ComparisonFailure;
@@ -50,7 +41,8 @@ public class TestRunner {
 
     public static PrintStream out;
     public static PrintStream err;
-    public static int repetition;
+
+    private static int repetition;
 
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
@@ -146,5 +138,15 @@ public class TestRunner {
 
         return inCodeUnderTest && knownExceptions.contains(clazz) ||
                 junitExceptions.contains(clazz);
+    }
+
+    public static void staticCheck(Consumer<PrintStream> code) {
+        if (repetition == 0) {
+            try {
+                code.accept(err);
+            } catch (Exception e) {
+                throw new AssertionError(e);
+            }
+        }
     }
 }
