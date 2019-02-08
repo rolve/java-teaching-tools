@@ -1,10 +1,13 @@
+import static java.io.File.separatorChar;
 import static java.nio.file.Files.createDirectories;
 import static java.util.stream.Collectors.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.StringWriter;
-import java.lang.ProcessBuilder.Redirect;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -74,7 +78,7 @@ public class Grader {
 
     public Grader(Path root) {
         this.root = root;
-        results = TASKS.stream().collect(toMap(t -> t, t -> new Results()));
+        results = TASKS.stream().collect(toUnmodifiableMap(t -> t, t -> new Results()));
     }
 
     private void run() throws IOException {
@@ -83,115 +87,129 @@ public class Grader {
                 //.filter(s -> Set.of("aaa", "000").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
-        
-        for (int i = 0; i < solutions.size(); i++) {
-        	Path solution = solutions.get(i);
-            System.out.println("Grading " + solution.getFileName() + " " + (i+1) + "/" + solutions.size());
-			grade(solution);
-			System.out.println();
-			
-			writeResultsToFile();
-        }
-        
+
+        AtomicInteger i = new AtomicInteger(0);
+        solutions.stream().parallel().forEach(solution -> {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PrintStream out = new PrintStream(baos);
+
+            out.println("Grading " + solution.getFileName());
+            grade(solution, out);
+            if (Math.random() > 0.75) {
+                writeResultsToFile();
+            }
+
+            out.println("Graded " + i.incrementAndGet() + "/" + solutions.size());
+            out.println();
+            System.out.println(baos);
+        });
+
+        writeResultsToFile();
         System.out.println(solutions.size() + " solutions processed");
     }
 
-	private void writeResultsToFile() throws IOException {
+	private synchronized void writeResultsToFile() {
         for (Entry<Task, Results> entry : results.entrySet()) {
-            entry.getValue().writeTo(Paths.get(entry.getKey().resultFileName()));
+            try {
+                entry.getValue().writeTo(Paths.get(entry.getKey().resultFileName()));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         }
     }
 
-    private void grade(Path solution) throws IOException {
+    private void grade(Path solution, PrintStream out) {
         for (Task task : TASKS) {
-            gradeTask(solution, task);
+            gradeTask(solution, task, out);
         }
     }
 
-    private void gradeTask(Path solution, Task task) throws IOException {
+    private void gradeTask(Path solution, Task task, PrintStream out) {
         Path projectPath = solution.resolve(task.projectName);
         String student = solution.getFileName().toString();
 
         results.get(task).addStudent(student);
-        boolean compiled = compileProject(projectPath, task);
+        boolean compiled = compileProject(projectPath, task, out);
         if (compiled) {
             results.get(task).addCriterion(student, "compiles");
 
-            runTests(task, projectPath, student);
+            runTests(task, projectPath, student, out);
         }
     }
 
-    private boolean compileProject(Path projectPath, Task task) throws IOException {
-        String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
-                Paths.get("lib","hamcrest.jar").toAbsolutePath() + File.pathSeparator +
-                Paths.get("lib","asm-7.0.jar").toAbsolutePath() + File.pathSeparator +
-                Paths.get("inspector.jar").toAbsolutePath();
-        
-		// remove any pre-compiled class files from bin/
-        Path binPath = projectPath.resolve("bin");
-		Files.createDirectories(binPath);
-		Files.list(binPath)
-			.map(Path::toFile)
-			.filter(File::isFile)
-			.forEach(f -> f.delete());
-        
-		// Copy GradingTests class into student's src/
-		Path srcPath = projectPath.resolve("src").toAbsolutePath();
-		// Create src directory in case it doesn't exist (yes, it happened)
-		createDirectories(srcPath);
-		for (String f : task.filesToCopy) {
-			Path filePath = Paths.get("tests", f).toAbsolutePath();
-			Files.copy(filePath, srcPath.resolve(f), StandardCopyOption.REPLACE_EXISTING);
-		}
-		
-		Path javacPath = Paths.get(System.getProperty("java.home"), "bin", "javac");
-        List<String> builderArgs = new ArrayList<>(Arrays.asList(javacPath.toString(), "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
-        
-        Set<String> files = Files.walk(srcPath)
-        		.map(Path::toString)
-        		.filter(f -> f.endsWith(".java"))
-        		.collect(Collectors.toSet());
-		
-        while(true) {
-        	ArrayList<String> args = new ArrayList<>(builderArgs);
-	        args.addAll(files);
-	        
-	        Process javac = new ProcessBuilder(args)
-	        		.redirectErrorStream(true)
-	                .directory(projectPath.toFile())
-	                .start();
-	        
-	        StringWriter writer = new StringWriter();
-			new LineCopier(javac.getInputStream(), new LineWriterAdapter(writer)).call();
-			
-			if (robustWaitFor(javac) == 0) {
-				// compilation succeeded, we are fine now.
-				System.err.flush();
-				return true;
-			}
-			
-			String err = writer.toString();
-			Set<String> faultyFiles = extractFilesFromCompileErrors(err);
-			if (faultyFiles.remove(task.classUnderTest.getName().replace('.', File.separatorChar) + ".java")) {
-				// never remove class under test from compile arguments
-				System.err.println("Class under test has errors.");
-			}
-			if (faultyFiles.removeAll(task.filesToCopy)) {
-				// copy-in files should *never* have errors
-				System.err.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
-			}
-			
-			
-			if (faultyFiles.isEmpty()) {
-				// no files left to remove. unable to compile.
-				System.err.println(err);
-				System.err.flush();
-				return false;
-			}
-			
-			String faultyFile = faultyFiles.stream().findFirst().get();
-			System.err.printf("%s appears to be faulty. Ignoring it for compilation: %s\n", faultyFile, err);
-			files.remove(srcPath.resolve(faultyFile).toString());
+    private boolean compileProject(Path projectPath, Task task, PrintStream out) {
+        try {
+            String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
+                    Paths.get("lib","hamcrest.jar").toAbsolutePath() + File.pathSeparator +
+                    Paths.get("lib","asm-7.0.jar").toAbsolutePath() + File.pathSeparator +
+                    Paths.get("inspector.jar").toAbsolutePath();
+            
+    		// remove any pre-compiled class files from bin/
+            Path binPath = projectPath.resolve("bin");
+    		Files.createDirectories(binPath);
+    		Files.list(binPath)
+    			.map(Path::toFile)
+    			.filter(File::isFile)
+    			.forEach(f -> f.delete());
+            
+    		// Copy GradingTests class into student's src/
+    		Path srcPath = projectPath.resolve("src").toAbsolutePath();
+    		// Create src directory in case it doesn't exist (yes, it happened)
+    		createDirectories(srcPath);
+    		for (String f : task.filesToCopy) {
+    			Path filePath = Paths.get("tests", f).toAbsolutePath();
+    			Files.copy(filePath, srcPath.resolve(f), StandardCopyOption.REPLACE_EXISTING);
+    		}
+    		
+    		Path javacPath = Paths.get(System.getProperty("java.home"), "bin", "javac");
+            List<String> builderArgs = new ArrayList<>(Arrays.asList(javacPath.toString(),
+                    "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
+            
+            Set<String> files = Files.walk(srcPath)
+            		.map(Path::toString)
+            		.filter(f -> f.endsWith(".java"))
+            		.collect(Collectors.toSet());
+    		
+            while(true) {
+            	ArrayList<String> args = new ArrayList<>(builderArgs);
+    	        args.addAll(files);
+    	        
+    	        Process javac = new ProcessBuilder(args)
+    	        		.redirectErrorStream(true)
+    	                .directory(projectPath.toFile())
+    	                .start();
+    	        
+    	        StringWriter writer = new StringWriter();
+    			new LineCopier(javac.getInputStream(), new LineWriterAdapter(writer)).call();
+    			
+    			if (robustWaitFor(javac) == 0) {
+    				// compilation succeeded, we are fine now.
+    				return true;
+    			}
+    			
+    			String err = writer.toString();
+    			Set<String> faultyFiles = extractFilesFromCompileErrors(err);
+    			if (faultyFiles.remove(task.classUnderTest.getName().replace('.', separatorChar) + ".java")) {
+    				// never remove class under test from compile arguments
+    				out.println("Class under test has errors.");
+    			}
+    			if (faultyFiles.removeAll(task.filesToCopy)) {
+    				// copy-in files should *never* have errors
+    				out.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
+    			}
+    			
+    			if (faultyFiles.isEmpty()) {
+    				// no files left to remove. unable to compile.
+    				out.println(err);
+    				return false;
+    			}
+    			
+    			String faultyFile = faultyFiles.stream().findFirst().get();
+    			out.printf("%s appears to be faulty. Ignoring it for compilation: %s\n", faultyFile, err);
+    			files.remove(srcPath.resolve(faultyFile).toString());
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
     
@@ -207,31 +225,45 @@ public class Grader {
 		return faultyFiles;
 	}
 
-    private void runTests(Task task, Path projectPath, String student) throws IOException {
-        List<String> classes = Files.list(projectPath.resolve("src"))
-                .map(p -> p.getFileName().toString())
-                .filter(s -> s.endsWith(".java"))
-                .map(s -> s.substring(0, s.length() - 5))
-                .collect(toList());
-        String agentArg = "-javaagent:inspector.jar=" + task.instrThreshold + "," +
-                classes.stream().collect(joining(","));
-
-        List<String> junitArgs = new ArrayList<>(classes);
-        junitArgs.add(0, task.testClass.getName());
-        JavaProcessBuilder jUnitBuilder = new JavaProcessBuilder(TestRunner.class, junitArgs);
-        jUnitBuilder.classpath(projectPath.resolve("bin") + File.pathSeparator + jUnitBuilder.classpath())
-                .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow");
-
-        Process jUnit = jUnitBuilder.build()
-                .redirectError(Redirect.INHERIT)
-                .start();
-
-        StringWriter jUnitOutput = new StringWriter();
-        new LineCopier(jUnit.getInputStream(), new LineWriterAdapter(jUnitOutput)).run();
-
-        lines.splitAsStream(jUnitOutput.toString())
-        		.filter(line -> !line.isEmpty())
-				.forEach(line -> results.get(task).addCriterion(student, line));
+    private void runTests(Task task, Path projectPath, String student, PrintStream out) {
+        try {
+            List<String> classes = Files.list(projectPath.resolve("src"))
+                    .map(p -> p.getFileName().toString())
+                    .filter(s -> s.endsWith(".java"))
+                    .map(s -> s.substring(0, s.length() - 5))
+                    .collect(toList());
+            String agentArg = "-javaagent:inspector.jar=" + task.instrThreshold + "," +
+                    classes.stream().collect(joining(","));
+    
+            List<String> junitArgs = new ArrayList<>(classes);
+            junitArgs.add(0, task.testClass.getName());
+            JavaProcessBuilder jUnitBuilder = new JavaProcessBuilder(TestRunner.class, junitArgs);
+            jUnitBuilder.classpath(projectPath.resolve("bin") + File.pathSeparator + jUnitBuilder.classpath())
+                    .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow");
+    
+            Process jUnit = jUnitBuilder.build().start();
+    
+            StringWriter jUnitOutput = new StringWriter();
+            Thread outCopier = new Thread(new LineCopier(jUnit.getInputStream(),
+                    new LineWriterAdapter(jUnitOutput)));
+            Thread errCopier = new Thread(new LineCopier(jUnit.getErrorStream(),
+                    new LineWriterAdapter(out)));
+            outCopier.start();
+            errCopier.start();
+    
+            while (true) {
+                try {
+                    outCopier.join();
+                    errCopier.join();
+                    break;
+                } catch (InterruptedException e) {}
+            }
+            lines.splitAsStream(jUnitOutput.toString())
+            		.filter(line -> !line.isEmpty())
+    				.forEach(line -> results.get(task).addCriterion(student, line));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private int robustWaitFor(Process javac) {

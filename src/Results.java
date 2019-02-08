@@ -15,16 +15,16 @@ public class Results {
 
     private final Map<String, Set<String>> criteria = new HashMap<>();
 
-    public void addStudent(String student) {
+    public synchronized void addStudent(String student) {
         Object previous = criteria.put(student, new HashSet<>());
         assert previous == null : student + " already added";
     }
 
-    public void addCriterion(String student, String criterion) {
+    public synchronized void addCriterion(String student, String criterion) {
         criteria.get(student).add(criterion);
     }
 
-    public void writeTo(Path path) throws IOException {
+    public synchronized void writeTo(Path path) throws IOException {
         List<String> criteriaNames = criteriaNames();
 
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
