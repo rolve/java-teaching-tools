@@ -28,11 +28,11 @@ import org.junit.runner.notification.RunListener;
 import org.junit.runners.model.TestTimedOutException;
 
 public class TestRunner {
-    
+
     static final Set<Class<? extends Throwable>> junitExceptions = new HashSet<>(asList(
             ComparisonFailure.class, ArrayComparisonFailure.class,
             AssertionError.class, TestTimedOutException.class));
-    
+
     static final Set<Class<? extends Throwable>> knownExceptions = new HashSet<>(asList(
             StackOverflowError.class, OutOfMemoryError.class, NullPointerException.class,
             ArrayIndexOutOfBoundsException.class, StringIndexOutOfBoundsException.class,
@@ -47,28 +47,22 @@ public class TestRunner {
     // For how long we do REPETITIONS. If we were running tests for more than this time, do not
     // attempt another repetition.
     private static final long MAX_RUNNING_TIME = 10000; // millisecs
-    
+
+    public static PrintStream stdOut;
+    public static PrintStream stdErr;
+
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
         Set<String> classes = stream(args).skip(1).collect(toSet());
-        
-        new TestRunner(testClass, classes).runTests();
+        runTests(testClass, classes);
     }
 
-    private String testClass;
-    private Set<String> classes;
-    
-    public TestRunner(String testClass, Set<String> classes) {
-        this.testClass = testClass;
-        this.classes = classes;
-    }
-
-    private void runTests() throws IOException, ClassNotFoundException {
+    private static void runTests(String testClass, Set<String> classes) throws IOException, ClassNotFoundException {
         // Close standard input in case some solutions read from it
         System.in.close();
         
-        PrintStream stdOut = System.out;
-        PrintStream stdErr = System.err;
+        stdOut = System.out;
+        stdErr = System.err;
         System.setOut(new PrintStream(new OutputStream() {
             public void write(int b) {}
         }));
@@ -96,7 +90,7 @@ public class TestRunner {
 
                     String msg = failure.toString();
                     Throwable exception = failure.getException();
-                    if (dontPrintTrace(exception)) {
+                    if (dontPrintTrace(exception, classes)) {
                         msg += " (" + exception.getClass().getName() + ")";
                     } else {
                         msg += "\n" + failure.getTrace();
@@ -120,34 +114,34 @@ public class TestRunner {
         failures.stream()
                 .map(s -> stream(s.split("\n")).map(l -> "    " + l).collect(joining("\n")))
                 .forEach(stdErr::println);
-        
+
         List<Set<String>> different = succeededTests.stream().distinct().collect(toList());
         if (different.size() > 1) {
             Set<String> deterministic = new HashSet<>(different.get(0));
             different.forEach(deterministic::retainAll);
-            
+
             Set<String> nonDeterm = new HashSet<>(failedTests);
             nonDeterm.removeAll(deterministic);
-            
+
             stdErr.println("Non-determinism detected in tests: " + nonDeterm);
             stdOut.println("nondeterministic");
         }
-        
+
         Set<String> alwaysSucc = new HashSet<>(different.get(0));
         alwaysSucc.removeAll(failedTests);
-        
+
         alwaysSucc.forEach(stdOut::println);
         stdOut.flush();
         stdErr.flush();
     }
-    
-    private boolean dontPrintTrace(Throwable exception) {
+
+    private static boolean dontPrintTrace(Throwable exception, Set<String> classes) {
         Class<? extends Throwable> clazz = exception.getClass();
-        
+
         boolean inCodeUnderTest = stream(exception.getStackTrace())
                 .map(StackTraceElement::getClassName)
                 .anyMatch(classes::contains);
-        
+
         return inCodeUnderTest && knownExceptions.contains(clazz) ||
                 junitExceptions.contains(clazz);
     }
