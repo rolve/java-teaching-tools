@@ -112,10 +112,12 @@ public class TestRunner {
         if (distinctPassed.size() > 1) {
             // take the intersection of all tests that once failed tests with all tests that once
             // passed tests.
-            HashSet<String> nonDeterm = new HashSet<>(failedTests);
+            Set<String> nonDeterm = new HashSet<>(failedTests);
+            Set<String> allPassed = new HashSet<>(); 
             for (Set<String> passed : distinctPassed) {
-                nonDeterm.retainAll(passed);
+                allPassed.addAll(passed);
             }
+            nonDeterm.retainAll(allPassed);
             
             err.println("Non-determinism detected in tests: " + nonDeterm);
             out.println("nondeterministic");
