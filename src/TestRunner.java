@@ -48,8 +48,8 @@ public class TestRunner {
     // attempt another repetition.
     private static final long MAX_RUNNING_TIME = 10000; // millisecs
 
-    public static PrintStream stdOut;
-    public static PrintStream stdErr;
+    public static PrintStream out;
+    public static PrintStream err;
 
     public static void main(String[] args) throws ClassNotFoundException, IOException {
         String testClass = args[0];
@@ -61,8 +61,8 @@ public class TestRunner {
         // Close standard input in case some solutions read from it
         System.in.close();
         
-        stdOut = System.out;
-        stdErr = System.err;
+        out = System.out;
+        err = System.err;
         System.setOut(new PrintStream(new OutputStream() {
             public void write(int b) {}
         }));
@@ -70,9 +70,9 @@ public class TestRunner {
             public void write(int b) {}
         }));
         
-        List<Set<String>> succeededTests = new ArrayList<>();
         Set<String> failedTests = new HashSet<>();
         SortedSet<String> failures = new TreeSet<>();
+        List<Set<String>> passedTests = new ArrayList<>();
         
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < REPETITIONS; i++) {
@@ -100,39 +100,40 @@ public class TestRunner {
             });
             core.run(Class.forName(testClass));
             all.removeAll(failed);
-            succeededTests.add(all);
+            passedTests.add(all);
             
             if (i < REPETITIONS - 1 && System.currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
                 // this timeout is not so bad. It just means that we are not pretty sure that the
                 // tests are deterministic, since not all REPETITIONS were tried
-                stdOut.println("SOFT_TIMEOUT");
-                stdErr.println("SOFT_TIMEOUT");
+                out.println("SOFT_TIMEOUT");
+                err.println("SOFT_TIMEOUT");
                 break;
             }
         }
 
         failures.stream()
                 .map(s -> stream(s.split("\n")).map(l -> "    " + l).collect(joining("\n")))
-                .forEach(stdErr::println);
+                .forEach(err::println);
 
-        List<Set<String>> different = succeededTests.stream().distinct().collect(toList());
-        if (different.size() > 1) {
-            Set<String> deterministic = new HashSet<>(different.get(0));
-            different.forEach(deterministic::retainAll);
-
-            Set<String> nonDeterm = new HashSet<>(failedTests);
-            nonDeterm.removeAll(deterministic);
-
-            stdErr.println("Non-determinism detected in tests: " + nonDeterm);
-            stdOut.println("nondeterministic");
+        List<Set<String>> distinctPassed = passedTests.stream().distinct().collect(toList());
+        if (distinctPassed.size() > 1) {
+            // take the intersection of all tests that once failed tests with all tests that once
+            // passed tests.
+            HashSet<String> nonDeterm = new HashSet<>(failedTests);
+            for (Set<String> passed : distinctPassed) {
+                nonDeterm.retainAll(passed);
+            }
+            
+            err.println("Non-determinism detected in tests: " + nonDeterm);
+            out.println("nondeterministic");
         }
 
-        Set<String> alwaysSucc = new HashSet<>(different.get(0));
+        Set<String> alwaysSucc = new HashSet<>(distinctPassed.get(0));
         alwaysSucc.removeAll(failedTests);
 
-        alwaysSucc.forEach(stdOut::println);
-        stdOut.flush();
-        stdErr.flush();
+        alwaysSucc.forEach(out::println);
+        out.flush();
+        err.flush();
     }
 
     private static boolean dontPrintTrace(Throwable exception, Set<String> classes) {

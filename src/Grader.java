@@ -92,6 +92,8 @@ public class Grader {
 			
 			writeResultsToFile();
         }
+        
+        System.out.println(solutions.size() + " solutions processed");
     }
 
 	private void writeResultsToFile() throws IOException {
