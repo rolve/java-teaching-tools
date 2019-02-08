@@ -1,6 +1,11 @@
+import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.Files.createDirectories;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.*;
+import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -11,18 +16,17 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaFileObject;
 
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
@@ -88,7 +92,9 @@ public class Grader {
                 .sorted()
                 .collect(toList());
 
+        long startTime = System.currentTimeMillis();
         AtomicInteger i = new AtomicInteger(0);
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "4");
         solutions.stream().parallel().forEach(solution -> {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PrintStream out = new PrintStream(baos);
@@ -99,7 +105,8 @@ public class Grader {
                 writeResultsToFile();
             }
 
-            out.println("Graded " + i.incrementAndGet() + "/" + solutions.size());
+            out.println("Graded " + i.incrementAndGet() + "/" + solutions.size() +
+                    " Total Time: " + ((System.currentTimeMillis() - startTime) / 1000) + " s");
             out.println();
             System.out.println(baos);
         });
@@ -138,92 +145,78 @@ public class Grader {
     }
 
     private boolean compileProject(Path projectPath, Task task, PrintStream out) {
+        Path srcPath = projectPath.resolve("src").toAbsolutePath();
+        Set<Path> sources;
         try {
-            String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + File.pathSeparator +
-                    Paths.get("lib","hamcrest.jar").toAbsolutePath() + File.pathSeparator +
-                    Paths.get("lib","asm-7.0.jar").toAbsolutePath() + File.pathSeparator +
-                    Paths.get("inspector.jar").toAbsolutePath();
-            
-    		// remove any pre-compiled class files from bin/
+            // remove any pre-compiled class files from bin/
             Path binPath = projectPath.resolve("bin");
-    		Files.createDirectories(binPath);
-    		Files.list(binPath)
-    			.map(Path::toFile)
-    			.filter(File::isFile)
-    			.forEach(f -> f.delete());
-            
-    		// Copy GradingTests class into student's src/
-    		Path srcPath = projectPath.resolve("src").toAbsolutePath();
-    		// Create src directory in case it doesn't exist (yes, it happened)
-    		createDirectories(srcPath);
-    		for (String f : task.filesToCopy) {
-    			Path filePath = Paths.get("tests", f).toAbsolutePath();
-    			Files.copy(filePath, srcPath.resolve(f), StandardCopyOption.REPLACE_EXISTING);
-    		}
-    		
-    		Path javacPath = Paths.get(System.getProperty("java.home"), "bin", "javac");
-            List<String> builderArgs = new ArrayList<>(Arrays.asList(javacPath.toString(),
-                    "-d", "bin", "-encoding", "UTF8", "-cp", classpath));
-            
-            Set<String> files = Files.walk(srcPath)
-            		.map(Path::toString)
-            		.filter(f -> f.endsWith(".java"))
-            		.collect(Collectors.toSet());
-    		
-            while(true) {
-            	ArrayList<String> args = new ArrayList<>(builderArgs);
-    	        args.addAll(files);
-    	        
-    	        Process javac = new ProcessBuilder(args)
-    	        		.redirectErrorStream(true)
-    	                .directory(projectPath.toFile())
-    	                .start();
-    	        
-    	        StringWriter writer = new StringWriter();
-    			new LineCopier(javac.getInputStream(), new LineWriterAdapter(writer)).call();
-    			
-    			if (robustWaitFor(javac) == 0) {
-    				// compilation succeeded, we are fine now.
-    				return true;
-    			}
-    			
-    			String err = writer.toString();
-    			Set<String> faultyFiles = extractFilesFromCompileErrors(err);
-    			if (faultyFiles.remove(task.classUnderTest.getName().replace('.', separatorChar) + ".java")) {
-    				// never remove class under test from compile arguments
-    				out.println("Class under test has errors.");
-    			}
-    			if (faultyFiles.removeAll(task.filesToCopy)) {
-    				// copy-in files should *never* have errors
-    				out.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
-    			}
-    			
-    			if (faultyFiles.isEmpty()) {
-    				// no files left to remove. unable to compile.
-    				out.println(err);
-    				return false;
-    			}
-    			
-    			String faultyFile = faultyFiles.stream().findFirst().get();
-    			out.printf("%s appears to be faulty. Ignoring it for compilation: %s\n", faultyFile, err);
-    			files.remove(srcPath.resolve(faultyFile).toString());
+            Files.createDirectories(binPath);
+            Files.list(binPath)
+                .map(Path::toFile)
+                .filter(File::isFile)
+                .forEach(f -> f.delete());
+
+            // Copy GradingTests class into student's src/
+            // Create src directory in case it doesn't exist (yes, it happened)
+            createDirectories(srcPath);
+            for (String f : task.filesToCopy) {
+                Path filePath = Paths.get("tests", f).toAbsolutePath();
+                Files.copy(filePath, srcPath.resolve(f), REPLACE_EXISTING);
             }
+
+            sources = new HashSet<>(Files.walk(srcPath)
+                    .filter(f -> f.toString().endsWith(".java"))
+                    .collect(toSet()));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+
+        String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + pathSeparator +
+                Paths.get("lib","hamcrest.jar").toAbsolutePath() + pathSeparator +
+                Paths.get("lib","asm-7.0.jar").toAbsolutePath() + pathSeparator +
+                Paths.get("inspector.jar").toAbsolutePath();
+
+        var javac = getSystemJavaCompiler();
+
+        while (true) {
+            var collector = new DiagnosticCollector<>();
+            var manager = javac.getStandardFileManager(collector, null, UTF_8);
+
+            var options = asList("-cp", classpath,
+                    "-d", projectPath.resolve("bin").toString());
+            javac.getTask(null, manager, collector, options, null,
+                    manager.getJavaFileObjectsFromPaths(sources)).call();
+
+            if (collector.getDiagnostics().isEmpty()) {
+                return true;
+            }
+
+            var faultyFiles = collector.getDiagnostics().stream()
+                    .map(d -> (JavaFileObject) d.getSource())
+                    .map(f -> Paths.get(f.getName()).getFileName().toString())
+                    .collect(toSet());
+
+			if (faultyFiles.remove(task.classUnderTest.getName().replace('.', separatorChar) + ".java")) {
+				// never remove class under test from compile arguments
+				out.println("Class under test has errors.");
+			}
+			if (faultyFiles.removeAll(task.filesToCopy)) {
+				// copy-in files should *never* have errors
+			    out.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
+			}
+
+			collector.getDiagnostics().forEach(out::println);
+
+			if (faultyFiles.isEmpty()) {
+				// no files left to remove. unable to compile.
+				return false;
+			} else {
+    			var faulty = faultyFiles.stream().findFirst().get();
+    			out.printf("%s appears to be faulty. Ignoring it for compilation.\n", faulty);
+    			sources.remove(srcPath.resolve(faulty));
+			}
+        }
     }
-    
-	private Set<String> extractFilesFromCompileErrors(String err) {
-		Pattern errorPattern = Pattern.compile("^.*[/\\\\]src[/\\\\](.+\\.java):\\d+: error:",
-				Pattern.CASE_INSENSITIVE);
-		
-		Set<String> faultyFiles = new HashSet<>();
-		Matcher matcher = errorPattern.matcher(err);
-		while (matcher.find()) {
-			faultyFiles.add(matcher.group(1));
-		}
-		return faultyFiles;
-	}
 
     private void runTests(Task task, Path projectPath, String student, PrintStream out) {
         try {
@@ -264,16 +257,5 @@ public class Grader {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private int robustWaitFor(Process javac) {
-        int returnCode;
-        while (true) {
-            try {
-                returnCode = javac.waitFor();
-                break;
-            } catch(InterruptedException e) {}
-        }
-        return returnCode;
     }
 }
