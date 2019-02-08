@@ -142,11 +142,7 @@ public class TestRunner {
 
     public static void staticCheck(Consumer<PrintStream> code) {
         if (repetition == 0) {
-            try {
-                code.accept(err);
-            } catch (Exception e) {
-                throw new AssertionError(e);
-            }
+            code.accept(err);
         }
     }
 }
