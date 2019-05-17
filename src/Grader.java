@@ -39,20 +39,34 @@ public class Grader {
 
     @SuppressWarnings("serial")
     private static final List<Task> TASKS = new ArrayList<Task>() {{
-        add(new Task("Aufgabe 1", ZeroSum.class, ZeroSumGradingTest.class, 99999, 
-                Set.of("ZeroSumGradingTest.java", "HardTimeout.java")));
-        add(new Task("Aufgabe 2", Blocks.class, BlocksGradingTest.class, 99999, 
-                Set.of("BlocksGradingTest.java", "HardTimeout.java")));
-        add(new Task("Aufgabe 3", Nesting.class, NestingGradingTest.class, 99999, 
-                Set.of("NestingGradingTest.java", "HardTimeout.java")));
-        add(new Task("Aufgabe 4", "a", Service.class, ServiceAGradingTest.class, 99999, 
-                Set.of("ServiceAGradingTest.java", "HardTimeout.java")));
-        add(new Task("Aufgabe 4", "b", Service.class, ServiceBGradingTest.class, 99999, 
-                Set.of("ServiceBGradingTest.java", "HardTimeout.java")));
-        add(new Task("Aufgabe 5", "a", LinkedRingBuffer.class, LinkedRingBufferAGradingTest.class, 99999, 
-                Set.of("LinkedRingBufferAGradingTest.java", "HardTimeout.java")));
-        add(new Task("Aufgabe 5", "b", LinkedRingBuffer.class, LinkedRingBufferBGradingTest.class, 99999, 
-                Set.of("LinkedRingBufferBGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 1", Summe.class, SummeGradingTest.class, 99999, 
+                Set.of("Pair.java", "SummeGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 2", Matrix.class, MatrixGradingTest.class, 99999, 
+                Set.of("Position.java", "MatrixGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 3", BestFit.class, BestFitGradingTest.class, 99999, 
+                Set.of("BestFitGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 4", "a", Inspektor.class, InspektorAGradingTest.class, 99999, 
+                Set.of("InspektorAGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 4", "b", Inspektor.class, InspektorBGradingTest.class, 99999, 
+                Set.of("InspektorBGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 5", "a", Rezept.class, RezeptAGradingTest.class, 99999, 
+                Set.of("RezeptAGradingTest.java", "HardTimeout.java")));
+        add(new Task("Aufgabe 5", "b", Rezept.class, RezeptBGradingTest.class, 99999, 
+                Set.of("RezeptBGradingTest.java", "HardTimeout.java")));
+//        add(new Task("Aufgabe 1", ZeroSum.class, ZeroSumGradingTest.class, 99999, 
+//                Set.of("ZeroSumGradingTest.java", "HardTimeout.java")));
+//        add(new Task("Aufgabe 2", Blocks.class, BlocksGradingTest.class, 99999, 
+//                Set.of("BlocksGradingTest.java", "HardTimeout.java")));
+//        add(new Task("Aufgabe 3", Nesting.class, NestingGradingTest.class, 99999, 
+//                Set.of("NestingGradingTest.java", "HardTimeout.java")));
+//        add(new Task("Aufgabe 4", "a", Service.class, ServiceAGradingTest.class, 99999, 
+//                Set.of("ServiceAGradingTest.java", "HardTimeout.java")));
+//        add(new Task("Aufgabe 4", "b", Service.class, ServiceBGradingTest.class, 99999, 
+//                Set.of("ServiceBGradingTest.java", "HardTimeout.java")));
+//        add(new Task("Aufgabe 5", "a", LinkedRingBuffer.class, LinkedRingBufferAGradingTest.class, 99999, 
+//                Set.of("LinkedRingBufferAGradingTest.java", "HardTimeout.java")));
+//        add(new Task("Aufgabe 5", "b", LinkedRingBuffer.class, LinkedRingBufferBGradingTest.class, 99999, 
+//                Set.of("LinkedRingBufferBGradingTest.java", "HardTimeout.java")));
 //        add(new Task("u04", StringAddition.class, StringAdditionGradingTest.class, 99999 * 3/5,
 //                Set.of("StringAdditionGradingTest.java", "ByteCodeParseGradingTest.java", "HardTimeout.java")));
 //        add(new Task("u05", Vermietung.class, VermietungGradingTest.class, 99999 * 3/5,
@@ -89,7 +103,7 @@ public class Grader {
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> Set.of("aaa", "000").contains(s.getFileName().toString()))
+                //.filter(s -> Set.of("solution").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
 
@@ -197,7 +211,7 @@ public class Grader {
 
             var faultyFiles = errors.stream()
                     .map(d -> (JavaFileObject) d.getSource())
-                    .map(f -> Paths.get(f.getName()).getFileName().toString())
+                    .map(f -> srcPath.relativize(Paths.get(f.getName())).toString())
                     .collect(toSet());
 			if (faultyFiles.remove(task.classUnderTest.getName().replace('.', separatorChar) + ".java")) {
 				// never remove class under test from compile arguments
