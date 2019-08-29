@@ -95,7 +95,7 @@ public class TestRunner {
             all.removeAll(failed);
             passedTests.add(all);
 
-            if (repetition < REPETITIONS - 1 && System.currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
+            if (repetition > 0 && repetition < REPETITIONS - 1 && System.currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
                 // this timeout is not so bad. It just means that we are not pretty sure that the
                 // tests are deterministic, since not all REPETITIONS were tried
                 out.println("SOFT_TIMEOUT");
