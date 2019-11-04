@@ -28,7 +28,7 @@ public class Task {
         this.instrThreshold = instrThreshold;
 
         filesToCopy = new HashSet<>(asList(moreFilesToCopy));
-        filesToCopy.add(classUnderTest.getName());
+        filesToCopy.add(testClass.getName() + ".java");
     }
 
     public String resultFileName() {

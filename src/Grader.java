@@ -37,11 +37,17 @@ public class Grader {
 
     private static final Pattern lines = Pattern.compile("\r?\n");
 
-    @SuppressWarnings("serial")
-    private static final List<Task> TASKS = new ArrayList<Task>() {{
-        add(new Task("u05", Hotellerie.class, HotellerieTest.class, "HardTimeout.java"));
-    }};
+    /**
+     * List of grading tasks. Modify this.
+     */
+    private static final List<Task> TASKS = List.of(
+        new Task("u07", SpecialLinkedIntList.class, SplitTest.class, "HardTimeout.java", "SpecialIntNode.java")
+    );
 
+    /**
+     * Run with the "root" directory (where all student's solutions are stored) as
+     * the first argument.
+     */
     public static void main(String[] args) throws IOException {
         Path root = Paths.get(args[0]);
         new Grader(root).run();
@@ -54,17 +60,18 @@ public class Grader {
         this.root = root;
         results = TASKS.stream().collect(toUnmodifiableMap(t -> t, t -> new Results()));
     }
+    
 
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
-                .filter(s -> Set.of("stuegerm").contains(s.getFileName().toString()))
+                //.filter(s -> Set.of("yforrer").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
 
         long startTime = System.currentTimeMillis();
         AtomicInteger i = new AtomicInteger(0);
-        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "4");
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
         solutions.stream().parallel().forEach(solution -> {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PrintStream out = new PrintStream(baos);
@@ -115,16 +122,29 @@ public class Grader {
     }
 
     private boolean compileProject(Path projectPath, Task task, PrintStream out) {
-        Path srcPath = projectPath.resolve("src").toAbsolutePath();
+        var srcPath = projectPath.resolve("src").toAbsolutePath();
         Set<Path> sources;
         try {
             // remove any pre-compiled class files from bin/
-            Path binPath = projectPath.resolve("bin");
+            var binPath = projectPath.resolve("bin");
             Files.createDirectories(binPath);
             Files.list(binPath)
                 .map(Path::toFile)
                 .filter(File::isFile)
                 .forEach(f -> f.delete());
+            
+            // Copy any properties files into bin folder
+            Files.walk(srcPath)
+                 .filter(f -> f.toString().endsWith(".properties"))
+                 .forEach(f -> {
+                 	try {
+                 		Path sourcePath = srcPath.resolve(f);
+                 		Path destPath = binPath.resolve(f.getFileName());
+                 		Files.copy(sourcePath, destPath);	
+                 	} catch(IOException e) {
+                 		throw new UncheckedIOException(e);
+                 	}
+             	});
 
             // Copy GradingTests class into student's src/
             // Create src directory in case it doesn't exist (yes, it happened)
@@ -141,17 +161,19 @@ public class Grader {
             throw new UncheckedIOException(e);
         }
 
-        String classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + pathSeparator +
+        var classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + pathSeparator +
                 Paths.get("lib","hamcrest.jar").toAbsolutePath() + pathSeparator +
                 Paths.get("lib","asm-7.0.jar").toAbsolutePath() + pathSeparator +
-                Paths.get("inspector.jar").toAbsolutePath();
+                Paths.get("inspector.jar").toAbsolutePath() + pathSeparator +
+                "conf";
+        
 
         var javac = getSystemJavaCompiler();
 
         while (true) {
             var collector = new DiagnosticCollector<>();
             var manager = javac.getStandardFileManager(collector, null, UTF_8);
-
+            
             var options = asList(
                     "-cp", classpath,
                     "-d", projectPath.resolve("bin").toString());
@@ -192,30 +214,31 @@ public class Grader {
 
     private void runTests(Task task, Path projectPath, String student, PrintStream out) {
         try {
-            List<String> classes = Files.list(projectPath.resolve("src"))
+            var classes = Files.list(projectPath.resolve("src"))
                     .map(p -> p.getFileName().toString())
                     .filter(s -> s.endsWith(".java"))
                     .map(s -> s.substring(0, s.length() - 5))
                     .collect(toList());
-            String agentArg = "-javaagent:inspector.jar=" + task.instrThreshold + "," +
+            var agentArg = "-javaagent:inspector.jar=" + task.instrThreshold + "," +
                     classes.stream().collect(joining(","));
-    
-            List<String> junitArgs = new ArrayList<>(classes);
+
+            var junitArgs = new ArrayList<>(classes);
             junitArgs.add(0, task.testClass.getName());
-            JavaProcessBuilder jUnitBuilder = new JavaProcessBuilder(TestRunner.class, junitArgs);
-            jUnitBuilder.classpath(projectPath.resolve("bin") + File.pathSeparator + jUnitBuilder.classpath())
+            var jUnitBuilder = new JavaProcessBuilder(TestRunner.class, junitArgs);
+            jUnitBuilder
+                    .classpath(projectPath.resolve("bin") + pathSeparator + jUnitBuilder.classpath())
                     .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow");
-    
-            Process jUnit = jUnitBuilder.build().start();
-    
-            StringWriter jUnitOutput = new StringWriter();
-            Thread outCopier = new Thread(new LineCopier(jUnit.getInputStream(),
+
+            var jUnit = jUnitBuilder.build().start();
+
+            var jUnitOutput = new StringWriter();
+            var outCopier = new Thread(new LineCopier(jUnit.getInputStream(),
                     new LineWriterAdapter(jUnitOutput)));
-            Thread errCopier = new Thread(new LineCopier(jUnit.getErrorStream(),
+            var errCopier = new Thread(new LineCopier(jUnit.getErrorStream(),
                     new LineWriterAdapter(out)));
             outCopier.start();
             errCopier.start();
-    
+
             while (true) {
                 try {
                     outCopier.join();
