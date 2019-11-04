@@ -28,7 +28,7 @@ public class Results {
         List<String> criteriaNames = criteriaNames();
 
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
-            writer.append("Name\t").append(criteriaNames.stream().collect(joining("\t"))).append("\n");
+            writer.append("NETHZ\t").append(criteriaNames.stream().collect(joining("\t"))).append("\n");
 
             for (String student : criteria.keySet().stream().sorted().toArray(String[]::new)) {
                 Set<String> presentCriteria = criteria.get(student);
