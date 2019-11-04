@@ -1,5 +1,8 @@
+import static java.lang.Integer.MAX_VALUE;
+import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class Task {
@@ -9,19 +12,23 @@ public class Task {
     public final Class<?> testClass;
     public final Class<?> classUnderTest;
     public final int instrThreshold;
-	public final  Set<String> filesToCopy;
+    public final Set<String> filesToCopy;
 
-    public Task(String projectName, Class<?> classUnderTest, Class<?> testClass, int instrThreshold, Set<String> filesToCopy) {
-        this(projectName, "", classUnderTest, testClass, instrThreshold, filesToCopy);
+    public Task(String projectName, Class<?> classUnderTest, Class<?> testClass,
+            String... moreFilesToCopy) {
+        this(projectName, "", classUnderTest, testClass, MAX_VALUE, moreFilesToCopy);
     }
 
-    public Task(String projectName, String suffix, Class<?> classUnderTest, Class<?> testClass, int instrThreshold, Set<String> filesToCopy) {
-		this.projectName = requireNonNull(projectName);
+    public Task(String projectName, String suffix, Class<?> classUnderTest,
+            Class<?> testClass, int instrThreshold, String... moreFilesToCopy) {
+        this.projectName = requireNonNull(projectName);
         this.suffix = requireNonNull(suffix);
         this.classUnderTest = requireNonNull(classUnderTest);
         this.testClass = requireNonNull(testClass);
         this.instrThreshold = instrThreshold;
-        this.filesToCopy = requireNonNull(filesToCopy);
+
+        filesToCopy = new HashSet<>(asList(moreFilesToCopy));
+        filesToCopy.add(classUnderTest.getName());
     }
 
     public String resultFileName() {
@@ -38,21 +45,19 @@ public class Task {
 
     @Override
     public boolean equals(Object obj) {
-        if(this == obj) {
+        if (this == obj) {
             return true;
-        } else if(obj == null) {
+        } else if (obj == null) {
             return false;
-        } else if(!(obj instanceof Task)) {
+        } else if (!(obj instanceof Task)) {
             return false;
         }
         Task other = (Task) obj;
-        if(!projectName.equals(other.projectName)) {
+        if (!projectName.equals(other.projectName)) {
             return false;
-        } else if(!suffix.equals(other.suffix)) {
+        } else if (!suffix.equals(other.suffix)) {
             return false;
         }
         return true;
     }
-    
-    
 }
