@@ -28,6 +28,8 @@ import java.util.regex.Pattern;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 
+import bonus.WordService;
+import bonus.WordServiceTest;
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
@@ -40,7 +42,7 @@ public class Grader {
      * List of grading tasks. Modify this.
      */
     private static final List<Task> TASKS = List.of(
-        new Task("u07", SpecialLinkedIntList.class, SplitTest.class, "HardTimeout.java", "SpecialIntNode.java")
+        new Task("u12", WordService.class, WordServiceTest.class, "HardTimeout.java")
     );
 
     /**
