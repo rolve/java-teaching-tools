@@ -1,7 +1,6 @@
 import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.Files.createDirectories;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.*;
@@ -45,8 +44,8 @@ public class Grader {
     );
 
     /**
-     * Run with the "root" directory (where all student's solutions are stored) as
-     * the first argument.
+     * Run with the "root" directory (where all student's solutions are stored)
+     * as the first argument.
      */
     public static void main(String[] args) throws IOException {
         Path root = Paths.get(args[0]);
@@ -92,7 +91,7 @@ public class Grader {
         System.out.println(solutions.size() + " solutions processed");
     }
 
-	private synchronized void writeResultsToFile() {
+    private synchronized void writeResultsToFile() {
         for (Entry<Task, Results> entry : results.entrySet()) {
             try {
                 entry.getValue().writeTo(Paths.get(entry.getKey().resultFileName()));
@@ -121,34 +120,33 @@ public class Grader {
         }
     }
 
-    private boolean compileProject(Path projectPath, Task task, PrintStream out) {
+    private boolean compileProject(Path projectPath, Task task,
+            PrintStream out) {
         var srcPath = projectPath.resolve("src").toAbsolutePath();
         Set<Path> sources;
         try {
             // remove any pre-compiled class files from bin/
             var binPath = projectPath.resolve("bin");
             Files.createDirectories(binPath);
-            Files.list(binPath)
-                .map(Path::toFile)
-                .filter(File::isFile)
-                .forEach(f -> f.delete());
-            
+            Files.list(binPath).map(Path::toFile).filter(File::isFile)
+                    .forEach(f -> f.delete());
+
             // Copy any properties files into bin folder
+            // Create src directory in case it doesn't exist (yes, it happened)
+            Files.createDirectories(srcPath);
             Files.walk(srcPath)
-                 .filter(f -> f.toString().endsWith(".properties"))
-                 .forEach(f -> {
-                 	try {
-                 		Path sourcePath = srcPath.resolve(f);
-                 		Path destPath = binPath.resolve(f.getFileName());
-                 		Files.copy(sourcePath, destPath);	
-                 	} catch(IOException e) {
-                 		throw new UncheckedIOException(e);
-                 	}
-             	});
+                    .filter(f -> f.toString().endsWith(".properties"))
+                    .forEach(f -> {
+                        try {
+                            Path sourcePath = srcPath.resolve(f);
+                            Path destPath = binPath.resolve(f.getFileName());
+                            Files.copy(sourcePath, destPath);
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    });
 
             // Copy GradingTests class into student's src/
-            // Create src directory in case it doesn't exist (yes, it happened)
-            createDirectories(srcPath);
             for (String f : task.filesToCopy) {
                 Path filePath = Paths.get("tests", f).toAbsolutePath();
                 Files.copy(filePath, srcPath.resolve(f), REPLACE_EXISTING);
@@ -190,37 +188,39 @@ public class Grader {
                     .map(d -> (JavaFileObject) d.getSource())
                     .map(f -> srcPath.relativize(Paths.get(f.getName())).toString())
                     .collect(toSet());
-			if (faultyFiles.remove(task.classUnderTest.getName().replace('.', separatorChar) + ".java")) {
-				// never remove class under test from compile arguments
-				out.println("Class under test has errors.");
-			}
-			if (faultyFiles.removeAll(task.filesToCopy)) {
-				// copy-in files should *never* have errors
-			    out.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
-			}
+            if (task.classUnderTest.isPresent()) {
+                if (faultyFiles.remove(task.classUnderTest.get().getName().replace('.', separatorChar) + ".java")) {
+                    // never remove class under test from compile arguments
+                    out.println("Class under test has errors.");
+                }
+            }
+            if (faultyFiles.removeAll(task.filesToCopy)) {
+                // copy-in files should *never* have errors
+                out.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
+            }
 
-			errors.forEach(out::println);
+            errors.forEach(out::println);
 
-			if (faultyFiles.isEmpty()) {
-				// no files left to remove. unable to compile.
-				return false;
-			} else {
-    			var faulty = faultyFiles.stream().findFirst().get();
-    			out.printf("%s appears to be faulty. Ignoring it for compilation.\n", faulty);
-    			sources.remove(srcPath.resolve(faulty));
-			}
+            if (faultyFiles.isEmpty()) {
+                // no files left to remove. unable to compile.
+                return false;
+            } else {
+                var faulty = faultyFiles.stream().findFirst().get();
+                out.printf("%s appears to be faulty. Ignoring it for compilation.\n", faulty);
+                sources.remove(srcPath.resolve(faulty));
+            }
         }
     }
 
-    private void runTests(Task task, Path projectPath, String student, PrintStream out) {
+    private void runTests(Task task, Path projectPath, String student,
+            PrintStream out) {
         try {
             var classes = Files.list(projectPath.resolve("src"))
                     .map(p -> p.getFileName().toString())
                     .filter(s -> s.endsWith(".java"))
-                    .map(s -> s.substring(0, s.length() - 5))
-                    .collect(toList());
-            var agentArg = "-javaagent:inspector.jar=" + task.instrThreshold + "," +
-                    classes.stream().collect(joining(","));
+                    .map(s -> s.substring(0, s.length() - 5)).collect(toList());
+            var agentArg = "-javaagent:inspector.jar=" + task.instrThreshold
+                    + "," + classes.stream().collect(joining(","));
 
             var junitArgs = new ArrayList<>(classes);
             junitArgs.add(0, task.testClass.getName());
@@ -247,8 +247,8 @@ public class Grader {
                 } catch (InterruptedException e) {}
             }
             lines.splitAsStream(jUnitOutput.toString())
-            		.filter(line -> !line.isEmpty())
-    				.forEach(line -> results.get(task).addCriterion(student, line));
+                    .filter(line -> !line.isEmpty())
+                    .forEach(line -> results.get(task).addCriterion(student, line));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

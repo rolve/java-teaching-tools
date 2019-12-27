@@ -3,6 +3,7 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 public class Task {
@@ -10,7 +11,7 @@ public class Task {
     public final String projectName;
     public final String suffix;
     public final Class<?> testClass;
-    public final Class<?> classUnderTest;
+    public final Optional<Class<?>> classUnderTest;
     public final int instrThreshold;
     public final Set<String> filesToCopy;
 
@@ -23,7 +24,7 @@ public class Task {
             Class<?> testClass, int instrThreshold, String... moreFilesToCopy) {
         this.projectName = requireNonNull(projectName);
         this.suffix = requireNonNull(suffix);
-        this.classUnderTest = requireNonNull(classUnderTest);
+        this.classUnderTest = Optional.ofNullable(classUnderTest); // may be null if not needed
         this.testClass = requireNonNull(testClass);
         this.instrThreshold = instrThreshold;
 
