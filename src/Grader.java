@@ -42,7 +42,7 @@ public class Grader {
      * List of grading tasks. Modify this.
      */
     private static final List<Task> TASKS = List.of(
-        new Task("u12", WordService.class, WordServiceTest.class, "HardTimeout.java")
+        new Task("u12", WordService.class, WordServiceTest.class, "util/HardTimeout.java")
     );
 
     /**
@@ -148,15 +148,18 @@ public class Grader {
                         }
                     });
 
-            // Copy GradingTests class into student's src/
-            for (String f : task.filesToCopy) {
-                Path filePath = Paths.get("tests", f).toAbsolutePath();
-                Files.copy(filePath, srcPath.resolve(f), REPLACE_EXISTING);
+            // Copy test and additional files class into student's src/
+            for (var file : task.filesToCopy) {
+                var from = Paths.get("tests", file).toAbsolutePath();
+                var to = srcPath.resolve(file);
+                // classes (like HardTimeout) could be inside packages...
+                Files.createDirectories(to.getParent());
+                Files.copy(from, to, REPLACE_EXISTING);
             }
 
-            sources = new HashSet<>(Files.walk(srcPath)
+            sources = Files.walk(srcPath)
                     .filter(f -> f.toString().endsWith(".java"))
-                    .collect(toSet()));
+                    .collect(toCollection(HashSet::new));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
