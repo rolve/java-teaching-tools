@@ -184,9 +184,11 @@ public class Grader {
             var faultyFiles = errors.stream()
                     .map(d -> (JavaFileObject) d.getSource())
                     .map(f -> srcPath.relativize(Paths.get(f.getName())).toString())
+                    .map(s -> s.replace(separatorChar, '/'))
                     .collect(toSet());
             if (task.classUnderTest.isPresent()) {
-                if (faultyFiles.remove(task.classUnderTest.get().getName().replace('.', separatorChar) + ".java")) {
+                var cutPath = task.classUnderTest.get().getName().replace('.', '/') + ".java";
+                if (faultyFiles.remove(cutPath)) {
                     // never remove class under test from compile arguments
                     out.println("Class under test has errors.");
                 }
