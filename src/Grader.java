@@ -157,8 +157,9 @@ public class Grader {
             throw new UncheckedIOException(e);
         }
 
-        var classpath = Paths.get("lib", "junit.jar").toAbsolutePath() + pathSeparator +
-                Paths.get("lib","hamcrest.jar").toAbsolutePath() + pathSeparator +
+        var classpath =
+                Paths.get("lib", "junit-platform-console-standalone-1.5.2.jar")
+                        .toAbsolutePath() + pathSeparator +
                 Paths.get("lib","asm-7.0.jar").toAbsolutePath() + pathSeparator +
                 Paths.get("inspector.jar").toAbsolutePath() + pathSeparator +
                 "conf";
