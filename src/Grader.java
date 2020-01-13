@@ -3,25 +3,15 @@ import static java.io.File.separatorChar;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
+import static java.util.Comparator.reverseOrder;
 import static java.util.stream.Collectors.*;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.StringWriter;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -130,8 +120,11 @@ public class Grader {
             // remove any pre-compiled class files from bin/
             var binPath = projectPath.resolve("bin");
             Files.createDirectories(binPath);
-            Files.list(binPath).map(Path::toFile).filter(File::isFile)
-                    .forEach(f -> f.delete());
+            Files.walk(binPath)
+                    .skip(1) // skip bin/ folder itself
+                    .map(Path::toFile)
+                    .sorted(reverseOrder())
+                    .forEach(File::delete);
 
             // Copy any properties files into bin folder
             // Create src directory in case it doesn't exist (yes, it happened)
@@ -169,7 +162,6 @@ public class Grader {
                 Paths.get("lib","asm-7.0.jar").toAbsolutePath() + pathSeparator +
                 Paths.get("inspector.jar").toAbsolutePath() + pathSeparator +
                 "conf";
-        
 
         var javac = getSystemJavaCompiler();
 
