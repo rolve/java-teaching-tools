@@ -17,21 +17,23 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 import org.junit.runners.model.TestTimedOutException;
+import org.opentest4j.AssertionFailedError;
 
 public class TestRunner {
 
-    static final Set<Class<? extends Throwable>> junitExceptions = new HashSet<>(asList(
+    static final Set<Class<? extends Throwable>> junitExceptions = Set.of(
             ComparisonFailure.class, ArrayComparisonFailure.class,
-            AssertionError.class, TestTimedOutException.class));
+            AssertionError.class, TestTimedOutException.class,
+            AssertionFailedError.class);
 
-    static final Set<Class<? extends Throwable>> knownExceptions = new HashSet<>(asList(
+    static final Set<Class<? extends Throwable>> knownExceptions = Set.of(
             StackOverflowError.class, OutOfMemoryError.class, NullPointerException.class,
             ArrayIndexOutOfBoundsException.class, StringIndexOutOfBoundsException.class,
             IndexOutOfBoundsException.class, InputMismatchException.class,
             NoSuchElementException.class, FileNotFoundException.class,
             IllegalArgumentException.class, NumberFormatException.class,
             ArithmeticException.class, EmptyStackException.class, 
-            PatternSyntaxException.class, IllegalStateException.class));
+            PatternSyntaxException.class, IllegalStateException.class);
 
     private static final int REPETITIONS = 7;
 
