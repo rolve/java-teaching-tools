@@ -2,7 +2,11 @@ package javagrader;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
+import static org.junit.platform.engine.TestExecutionResult.Status.SUCCESSFUL;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
+import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
 import java.io.*;
 import java.util.*;
@@ -11,10 +15,10 @@ import java.util.regex.PatternSyntaxException;
 
 import org.junit.ComparisonFailure;
 import org.junit.internal.ArrayComparisonFailure;
-import org.junit.runner.Description;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.notification.Failure;
-import org.junit.runner.notification.RunListener;
+import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.launcher.TestExecutionListener;
+import org.junit.platform.launcher.TestIdentifier;
+import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.runners.model.TestTimedOutException;
 import org.opentest4j.AssertionFailedError;
 
@@ -72,29 +76,31 @@ public class TestRunner {
 
         var startTime = currentTimeMillis();
         for (repetition = 0; repetition < REPETITIONS; repetition++) {
-            var all = new HashSet<String>();
-            var failed = new HashSet<String>();
-            runTestsOnce(testClass, new RunListener() {
-                public void testFinished(Description description) {
-                    all.add(description.getMethodName());
-                }
-                public void testFailure(Failure failure) {
-                    var name = failure.getDescription().getMethodName();
-                    failed.add(name);
-                    failedTests.add(name);
-
-                    var msg = failure.toString();
-                    var exception = failure.getException();
-                    if (dontPrintTrace(exception, classes)) {
-                        msg += " (" + exception.getClass().getName() + ")";
-                    } else {
-                        msg += "\n" + failure.getTrace();
+            var passed = new HashSet<String>();
+            runTestsOnce(testClass, new TestExecutionListener() {
+                public void executionFinished(TestIdentifier id,
+                        TestExecutionResult res) {
+                    if (!id.isTest()) {
+                        return;
                     }
-                    failMsgs.add(msg);
+                    var name = id.getDisplayName();
+                    if (res.getStatus() == SUCCESSFUL) {
+                        passed.add(name);
+                    } else {
+                        failedTests.add(name);
+                        var exception = res.getThrowable().get();
+                        var msg = name + ": " + exception.getMessage()
+                                + " (" + exception.getClass().getName() + ")";
+                        if (printTrace(exception, classes)) {
+                            msg += "\n" + stream(exception.getStackTrace())
+                                    .map(e -> "        at " + e)
+                                    .collect(joining("\n"));
+                        }
+                        failMsgs.add(msg);
+                    }
                 }
             });
-            all.removeAll(failed);
-            passedSets.add(all);
+            passedSets.add(passed);
 
             if (repetition > 0 && repetition < REPETITIONS - 1
                     && currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
@@ -134,21 +140,22 @@ public class TestRunner {
         err.flush();
     }
 
-    public static void runTestsOnce(String testClass, RunListener listener) throws Exception {
-        var core = new JUnitCore();
-        core.addListener(listener);
-        core.run(Class.forName(testClass));
+    public static void runTestsOnce(String testClass, TestExecutionListener listener) throws Exception {
+        var launcher = LauncherFactory.create();
+        var request = request().selectors(selectClass(testClass)).build();
+        launcher.execute(request, listener);
     }
 
-    private static boolean dontPrintTrace(Throwable e, Set<String> classes) {
+    private static boolean printTrace(Throwable e, Set<String> classes) {
         var clazz = e.getClass();
 
         var inCodeUnderTest = stream(e.getStackTrace())
                 .map(StackTraceElement::getClassName)
                 .anyMatch(classes::contains);
 
-        return inCodeUnderTest && knownExceptions.contains(clazz)
+        var ignore = inCodeUnderTest && knownExceptions.contains(clazz)
                 || junitExceptions.contains(clazz);
+        return !ignore;
     }
 
     public static void staticCheck(Consumer<PrintStream> code) {
