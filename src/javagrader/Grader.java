@@ -1,3 +1,5 @@
+package javagrader;
+
 import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
 import static java.nio.charset.StandardCharsets.UTF_8;

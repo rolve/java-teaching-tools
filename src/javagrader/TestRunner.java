@@ -1,11 +1,9 @@
-import static java.util.Arrays.asList;
+package javagrader;
+
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.*;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.regex.PatternSyntaxException;
