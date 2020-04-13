@@ -10,7 +10,6 @@ import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.r
 
 import java.io.*;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.regex.PatternSyntaxException;
 
 import org.junit.ComparisonFailure;
@@ -71,7 +70,7 @@ public class TestRunner {
         System.setErr(nop);
 
         var passedSets = new HashSet<Set<String>>();
-        var failedTests = new HashSet<String>();
+        var everFailed = new HashSet<String>();
         var failMsgs = new TreeSet<String>();
 
         var startTime = currentTimeMillis();
@@ -87,7 +86,7 @@ public class TestRunner {
                     if (res.getStatus() == SUCCESSFUL) {
                         passed.add(name);
                     } else {
-                        failedTests.add(name);
+                        everFailed.add(name);
                         var exception = res.getThrowable().get();
                         var msg = name + ": " + exception.getMessage()
                                 + " (" + exception.getClass().getName() + ")";
@@ -121,19 +120,16 @@ public class TestRunner {
         if (passedSets.size() > 1) {
             // take the intersection of all tests that once failed tests with all
             // tests that once passed tests.
-            var nonDeterm = new HashSet<>(failedTests);
-            var allPassed = new HashSet<String>(); 
-            for (var passed : passedSets) {
-                allPassed.addAll(passed);
-            }
-            nonDeterm.retainAll(allPassed);
+            var everPassed = passedSets.stream().flatMap(Set::stream).collect(toSet());
+            var nonDeterm = new HashSet<>(everFailed);
+            nonDeterm.retainAll(everPassed);
 
             err.println("Non-determinism detected in tests: " + nonDeterm);
             out.println("nondeterministic");
         }
 
         var alwaysSucc = passedSets.iterator().next();
-        alwaysSucc.removeAll(failedTests);
+        alwaysSucc.removeAll(everFailed);
 
         alwaysSucc.forEach(out::println);
         out.flush();
