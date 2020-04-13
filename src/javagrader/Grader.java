@@ -154,13 +154,6 @@ public class Grader {
             throw new UncheckedIOException(e);
         }
 
-        var classpath =
-                Path.of("lib", "junit-platform-console-standalone-1.5.2.jar")
-                        .toAbsolutePath() + pathSeparator +
-                Path.of("lib","asm-7.0.jar").toAbsolutePath() + pathSeparator +
-                Path.of("inspector.jar").toAbsolutePath() + pathSeparator +
-                "conf";
-
         var javac = getSystemJavaCompiler();
 
         while (true) {
@@ -168,7 +161,7 @@ public class Grader {
             var manager = javac.getStandardFileManager(collector, null, UTF_8);
 
             var options = asList(
-                    "-cp", classpath,
+                    "-cp", System.getProperty("java.class.path"),
                     "-d", projectPath.resolve("bin").toString());
             javac.getTask(null, manager, collector, options, null,
                     manager.getJavaFileObjectsFromPaths(sources)).call();
@@ -221,12 +214,11 @@ public class Grader {
 
             var junitArgs = new ArrayList<>(classes);
             junitArgs.add(0, task.testClass);
-            var jUnitBuilder = new JavaProcessBuilder(TestRunner.class, junitArgs);
-            jUnitBuilder
-                    .classpath(projectPath.resolve("bin") + pathSeparator + jUnitBuilder.classpath())
-                    .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow");
-
-            var jUnit = jUnitBuilder.build().start();
+            var jUnit = new JavaProcessBuilder(TestRunner.class, junitArgs)
+                    .classpath(projectPath.resolve("bin") + pathSeparator
+                            + System.getProperty("java.class.path"))
+                    .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow")
+                    .start();
 
             var jUnitOutput = new StringWriter();
             var outCopier = new Thread(new LineCopier(jUnit.getInputStream(),
