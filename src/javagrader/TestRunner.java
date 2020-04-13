@@ -2,7 +2,7 @@ package javagrader;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toSet;
 
 import java.io.*;
 import java.util.*;
@@ -66,16 +66,15 @@ public class TestRunner {
         System.setOut(nop);
         System.setErr(nop);
 
+        var passedSets = new HashSet<Set<String>>();
         var failedTests = new HashSet<String>();
-        var failures = new TreeSet<String>();
-        var passedTests = new ArrayList<Set<String>>();
+        var failMsgs = new TreeSet<String>();
 
         var startTime = currentTimeMillis();
         for (repetition = 0; repetition < REPETITIONS; repetition++) {
             var all = new HashSet<String>();
             var failed = new HashSet<String>();
-            var core = new JUnitCore();
-            core.addListener(new RunListener() {
+            runTestsOnce(testClass, new RunListener() {
                 public void testFinished(Description description) {
                     all.add(description.getMethodName());
                 }
@@ -91,12 +90,11 @@ public class TestRunner {
                     } else {
                         msg += "\n" + failure.getTrace();
                     }
-                    failures.add(msg);
+                    failMsgs.add(msg);
                 }
             });
-            core.run(Class.forName(testClass));
             all.removeAll(failed);
-            passedTests.add(all);
+            passedSets.add(all);
 
             if (repetition > 0 && repetition < REPETITIONS - 1
                     && currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
@@ -109,18 +107,17 @@ public class TestRunner {
             }
         }
 
-        failures.stream()
+        failMsgs.stream()
                 .flatMap(s -> stream(s.split("\n")))
                 .map("    "::concat)
                 .forEach(err::println);
 
-        var distinctPassed = passedTests.stream().distinct().collect(toList());
-        if (distinctPassed.size() > 1) {
+        if (passedSets.size() > 1) {
             // take the intersection of all tests that once failed tests with all
             // tests that once passed tests.
             var nonDeterm = new HashSet<>(failedTests);
             var allPassed = new HashSet<String>(); 
-            for (var passed : distinctPassed) {
+            for (var passed : passedSets) {
                 allPassed.addAll(passed);
             }
             nonDeterm.retainAll(allPassed);
@@ -129,12 +126,18 @@ public class TestRunner {
             out.println("nondeterministic");
         }
 
-        var alwaysSucc = new HashSet<>(distinctPassed.get(0));
+        var alwaysSucc = passedSets.iterator().next();
         alwaysSucc.removeAll(failedTests);
 
         alwaysSucc.forEach(out::println);
         out.flush();
         err.flush();
+    }
+
+    public static void runTestsOnce(String testClass, RunListener listener) throws Exception {
+        var core = new JUnitCore();
+        core.addListener(listener);
+        core.run(Class.forName(testClass));
     }
 
     private static boolean dontPrintTrace(Throwable e, Set<String> classes) {
