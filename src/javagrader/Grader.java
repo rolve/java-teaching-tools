@@ -166,7 +166,7 @@ public class Grader {
         while (true) {
             var collector = new DiagnosticCollector<>();
             var manager = javac.getStandardFileManager(collector, null, UTF_8);
-            
+
             var options = asList(
                     "-cp", classpath,
                     "-d", projectPath.resolve("bin").toString());
