@@ -50,7 +50,7 @@ public class Grader {
         results = tasks.stream().collect(toMap(t -> t, t -> new Results()));
     }
 
-    private void run() throws IOException {
+    public void run() throws IOException {
         List<Path> solutions = Files.list(root)
                 .filter(Files::isDirectory)
                 //.filter(s -> Set.of("yforrer").contains(s.getFileName().toString()))

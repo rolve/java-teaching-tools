@@ -1,19 +1,18 @@
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
+import static org.objectweb.asm.Opcodes.ASM7;
 
 import java.io.PrintStream;
 import java.lang.instrument.*;
 import java.security.ProtectionDomain;
-import java.util.List;
 import java.util.Set;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.*;
 
 public class CodeInspector implements ClassFileTransformer {
 
-    private static final PrintStream stdOut = System.out; // System.out will be overwritten by TestRunner
+    private static final PrintStream STD_OUT = System.out; // System.out will be overwritten by TestRunner
 
     public static void premain(String rawArgs, Instrumentation inst) {
         String[] args = rawArgs.split(",");
@@ -34,10 +33,7 @@ public class CodeInspector implements ClassFileTransformer {
         try {
             if(classes.contains(className)) {
                 ClassReader reader = new ClassReader(classfile);
-                ClassNode classNode = new ClassNode();
-                reader.accept(classNode, 0);
-                
-                collectAnnotations(classNode);
+                reader.accept(new DeductionsScanner(), 0);
             }
             return classfile;
         } catch(Throwable t) {
@@ -46,15 +42,22 @@ public class CodeInspector implements ClassFileTransformer {
         }
     }
 
-    private void collectAnnotations(ClassNode classNode) {
-        if (classNode.visibleAnnotations != null) {
-            classNode.visibleAnnotations.stream()
-                    .filter(a -> a.desc.contains("Deductions"))
-                    .flatMap(a -> a.values.stream())
-                    .filter(v -> v instanceof List)
-                    .flatMap(v -> ((List<?>) v).stream())
-                    .map(msg -> "fix: " + msg)
-                    .forEach(stdOut::println);
+    private final class DeductionsScanner extends ClassVisitor {
+        private DeductionsScanner() {
+            super(ASM7);
+        }
+        public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+            if (!desc.contains("Deductions")) {
+                return null;
+            }
+            return new AnnotationVisitor(ASM7) {
+                public AnnotationVisitor visitArray(String name) {
+                    return this;
+                }
+                public void visit(String name, Object value) {
+                    STD_OUT.println("fix: " + value);
+                }
+            };
         }
     }
 }
