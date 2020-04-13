@@ -6,6 +6,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
 import static java.util.Comparator.reverseOrder;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.*;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
@@ -20,8 +21,6 @@ import java.util.regex.Pattern;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 
-import bonus.WordService;
-import bonus.WordServiceTest;
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
@@ -31,29 +30,25 @@ public class Grader {
     private static final Pattern lines = Pattern.compile("\r?\n");
 
     /**
-     * List of grading tasks. Modify this.
-     */
-    private static final List<Task> TASKS = List.of(
-        new Task("u12", WordService.class, WordServiceTest.class, "util/HardTimeout.java")
-    );
-
-    /**
      * Run with the "root" directory (where all student's solutions are stored)
      * as the first argument.
      */
     public static void main(String[] args) throws IOException {
-        Path root = Paths.get(args[0]);
-        new Grader(root).run();
+        var root = Path.of(args[0]);
+        var tasks = List.of(
+                new Task("u04", "OhneSieben", "OhneSiebenTest", Set.of("util/HardTimeout.java")));
+        new Grader(tasks, root).run();
     }
 
-    private Path root;
-    private Map<Task, Results> results;
+    private final List<Task> tasks;
+    private final Path root;
+    private final Map<Task, Results> results;
 
-    public Grader(Path root) {
-        this.root = root;
-        results = TASKS.stream().collect(toUnmodifiableMap(t -> t, t -> new Results()));
+    public Grader(List<Task> tasks, Path root) {
+        this.tasks = requireNonNull(tasks);
+        this.root = requireNonNull(root);
+        results = tasks.stream().collect(toMap(t -> t, t -> new Results()));
     }
-    
 
     private void run() throws IOException {
         List<Path> solutions = Files.list(root)
@@ -88,7 +83,7 @@ public class Grader {
     private synchronized void writeResultsToFile() {
         for (Entry<Task, Results> entry : results.entrySet()) {
             try {
-                entry.getValue().writeTo(Paths.get(entry.getKey().resultFileName()));
+                entry.getValue().writeTo(Path.of(entry.getKey().resultFileName()));
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
@@ -96,7 +91,7 @@ public class Grader {
     }
 
     private void grade(Path solution, PrintStream out) {
-        for (Task task : TASKS) {
+        for (Task task : tasks) {
             gradeTask(solution, task, out);
         }
     }
@@ -145,7 +140,7 @@ public class Grader {
 
             // Copy test and additional files class into student's src/
             for (var file : task.filesToCopy) {
-                var from = Paths.get("tests", file).toAbsolutePath();
+                var from = Path.of("tests", file).toAbsolutePath();
                 var to = srcPath.resolve(file);
                 // classes (like HardTimeout) could be inside packages...
                 Files.createDirectories(to.getParent());
@@ -160,10 +155,10 @@ public class Grader {
         }
 
         var classpath =
-                Paths.get("lib", "junit-platform-console-standalone-1.5.2.jar")
+                Path.of("lib", "junit-platform-console-standalone-1.5.2.jar")
                         .toAbsolutePath() + pathSeparator +
-                Paths.get("lib","asm-7.0.jar").toAbsolutePath() + pathSeparator +
-                Paths.get("inspector.jar").toAbsolutePath() + pathSeparator +
+                Path.of("lib","asm-7.0.jar").toAbsolutePath() + pathSeparator +
+                Path.of("inspector.jar").toAbsolutePath() + pathSeparator +
                 "conf";
 
         var javac = getSystemJavaCompiler();
@@ -186,11 +181,11 @@ public class Grader {
 
             var faultyFiles = errors.stream()
                     .map(d -> (JavaFileObject) d.getSource())
-                    .map(f -> srcPath.relativize(Paths.get(f.getName())).toString())
+                    .map(f -> srcPath.relativize(Path.of(f.getName())).toString())
                     .map(s -> s.replace(separatorChar, '/'))
                     .collect(toSet());
             if (task.classUnderTest.isPresent()) {
-                var cutPath = task.classUnderTest.get().getName().replace('.', '/') + ".java";
+                var cutPath = task.classUnderTest.get().replace('.', '/') + ".java";
                 if (faultyFiles.remove(cutPath)) {
                     // never remove class under test from compile arguments
                     out.println("Class under test has errors.");
@@ -225,7 +220,7 @@ public class Grader {
                     + classes.stream().collect(joining(","));
 
             var junitArgs = new ArrayList<>(classes);
-            junitArgs.add(0, task.testClass.getName());
+            junitArgs.add(0, task.testClass);
             var jUnitBuilder = new JavaProcessBuilder(TestRunner.class, junitArgs);
             jUnitBuilder
                     .classpath(projectPath.resolve("bin") + pathSeparator + jUnitBuilder.classpath())
