@@ -36,7 +36,7 @@ public class Grader {
     public static void main(String[] args) throws IOException {
         var root = Path.of(args[0]);
         var tasks = List.of(
-                new Task("u04", "OhneSieben", "OhneSiebenTest", Set.of("util/HardTimeout.java")));
+                new Task("u04", "OhneSieben", "OhneSiebenTest", Set.of()));
         new Grader(tasks, root).run();
     }
 

@@ -2,19 +2,23 @@ package javagrader;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
+import static org.junit.platform.engine.TestDescriptor.Type.TEST;
+import static org.junit.platform.engine.TestExecutionResult.failed;
 import static org.junit.platform.engine.TestExecutionResult.Status.SUCCESSFUL;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.PatternSyntaxException;
 
 import org.junit.ComparisonFailure;
 import org.junit.internal.ArrayComparisonFailure;
 import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
@@ -26,7 +30,7 @@ public class TestRunner {
     static final Set<Class<? extends Throwable>> junitExceptions = Set.of(
             ComparisonFailure.class, ArrayComparisonFailure.class,
             AssertionError.class, TestTimedOutException.class,
-            AssertionFailedError.class);
+            AssertionFailedError.class, ThreadDeath.class);
 
     static final Set<Class<? extends Throwable>> knownExceptions = Set.of(
             StackOverflowError.class, OutOfMemoryError.class,
@@ -40,14 +44,15 @@ public class TestRunner {
 
     private static final int REPETITIONS = 7;
 
-    // For how long we do REPETITIONS. If we were running tests for more than
-    // this time, do not attempt another repetition.
+    // Timeout per test. After the timeout, the test is killed forcibly.
+    private static final long TIMEOUT = 6000; // ms
+
+    // For how long we do REPETITIONS (over all tests). If we were running tests
+    // for more than this time, do not attempt another repetition.
     private static final long MAX_RUNNING_TIME = 10000; // ms
 
     public static PrintStream out;
     public static PrintStream err;
-
-    private static int repetition;
 
     public static void main(String[] args) throws Exception {
         var testClass = args[0];
@@ -73,41 +78,42 @@ public class TestRunner {
         var everFailed = new HashSet<String>();
         var failMsgs = new TreeSet<String>();
 
+        var methods = findTestMethods(testClass);
+
         var startTime = currentTimeMillis();
-        for (repetition = 0; repetition < REPETITIONS; repetition++) {
+        for (int rep = 0; rep < REPETITIONS; rep++) {
             var passed = new HashSet<String>();
-            runTestsOnce(testClass, new TestExecutionListener() {
-                public void executionFinished(TestIdentifier id,
-                        TestExecutionResult res) {
-                    if (!id.isTest()) {
-                        return;
+            for (var method : methods) {
+                var result = runTest(method);
+
+                var name = method.getMethodName();
+                if (result.getStatus() == SUCCESSFUL) {
+                    passed.add(name);
+                } else {
+                    everFailed.add(name);
+                    var exception = result.getThrowable().get();
+                    var msg = name + ": " + exception.getMessage()
+                            + " (" + exception.getClass().getName() + ")";
+                    if (printTrace(exception, classes)) {
+                        msg += "\n" + stream(exception.getStackTrace())
+                                .map(e -> "        at " + e)
+                                .collect(joining("\n"));
                     }
-                    var name = id.getDisplayName();
-                    if (res.getStatus() == SUCCESSFUL) {
-                        passed.add(name);
-                    } else {
-                        everFailed.add(name);
-                        var exception = res.getThrowable().get();
-                        var msg = name + ": " + exception.getMessage()
-                                + " (" + exception.getClass().getName() + ")";
-                        if (printTrace(exception, classes)) {
-                            msg += "\n" + stream(exception.getStackTrace())
-                                    .map(e -> "        at " + e)
-                                    .collect(joining("\n"));
-                        }
-                        failMsgs.add(msg);
+                    failMsgs.add(msg);
+                    if (result.getThrowable().get() instanceof ThreadDeath) {
+                        out.println("timeout");
                     }
                 }
-            });
+            }
             passedSets.add(passed);
 
-            if (repetition > 0 && repetition < REPETITIONS - 1
+            if (rep > 0 && rep < REPETITIONS - 1
                     && currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
                 // this timeout is not so bad. It just means that we are not so
                 // sure that the tests are deterministic, since not all
                 // REPETITIONS were tried
-                out.println("SOFT_TIMEOUT");
-                err.println("SOFT_TIMEOUT");
+                out.println("only " + rep + " repetitions");
+                err.println("only " + rep + " repetitions");
                 break;
             }
         }
@@ -136,11 +142,55 @@ public class TestRunner {
         err.flush();
     }
 
-    public static void runTestsOnce(String testClass, TestExecutionListener listener)
-            throws Exception {
+    private static List<MethodSource> findTestMethods(String testClass) {
         var launcher = LauncherFactory.create();
-        var request = request().selectors(selectClass(testClass)).build();
-        launcher.execute(request, listener);
+        var classReq = request().selectors(selectClass(testClass));
+        var testPlan = launcher.discover(classReq.build());
+        return testPlan.getRoots().stream()
+                .flatMap(id -> testPlan.getDescendants(id).stream())
+                .filter(id -> id.getType() == TEST)
+                .map(id -> (MethodSource) id.getSource().get())
+                .collect(toList());
+    }
+
+    /**
+     * Runs test in a different thread so it can be killed after some timeout.
+     * This is a very hard timeout ({@link Thread#stop()}) that should be able
+     * to handle anything the students might do.
+     */
+    private static TestExecutionResult runTest(MethodSource m) {
+        var sel = selectMethod(m.getClassName(), m.getMethodName());
+        var req = request().selectors(sel).build();
+        // create a new launcher, just in case the old one got corrupted
+        var launcher = LauncherFactory.create();
+
+        var result = new AtomicReference<TestExecutionResult>();
+        var listener = new TestExecutionListener() {
+            public void executionFinished(TestIdentifier id,
+                    TestExecutionResult res) {
+                if (id.isTest()) {
+                    result.set(res);
+                }
+            }
+        };
+
+        var thread = new Thread(() -> launcher.execute(req, listener));
+        thread.start();
+        while (true) {
+            try {
+                thread.join(TIMEOUT); // ja ja, should calculate time left
+                break;
+            } catch (InterruptedException e) {}
+        }
+        if (thread.isAlive()) {
+            thread.stop(); // <- badass
+        }
+
+        if (result.get() == null) { // quite unlikely but possible, I suppose
+            return failed(new ThreadDeath());
+        } else {
+            return result.get();
+        }
     }
 
     private static boolean printTrace(Throwable e, Set<String> classes) {
