@@ -127,7 +127,7 @@ public class TestRunner {
                 allPassed.addAll(passed);
             }
             nonDeterm.retainAll(allPassed);
-            
+
             err.println("Non-determinism detected in tests: " + nonDeterm);
             out.println("nondeterministic");
         }
@@ -140,7 +140,8 @@ public class TestRunner {
         err.flush();
     }
 
-    public static void runTestsOnce(String testClass, TestExecutionListener listener) throws Exception {
+    public static void runTestsOnce(String testClass, TestExecutionListener listener)
+            throws Exception {
         var launcher = LauncherFactory.create();
         var request = request().selectors(selectClass(testClass)).build();
         launcher.execute(request, listener);
@@ -156,11 +157,5 @@ public class TestRunner {
         var ignore = inCodeUnderTest && knownExceptions.contains(clazz)
                 || junitExceptions.contains(clazz);
         return !ignore;
-    }
-
-    public static void staticCheck(Consumer<PrintStream> code) {
-        if (repetition == 0) {
-            code.accept(err);
-        }
     }
 }
