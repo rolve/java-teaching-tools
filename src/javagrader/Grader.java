@@ -27,6 +27,10 @@ import ch.trick17.javaprocesses.util.LineWriterAdapter;
 
 public class Grader {
 
+    static {
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
+    }
+
     private static final Pattern lines = Pattern.compile("\r?\n");
 
     /**
@@ -51,18 +55,17 @@ public class Grader {
     }
 
     public void run() throws IOException {
-        List<Path> solutions = Files.list(root)
+        var solutions = Files.list(root)
                 .filter(Files::isDirectory)
                 //.filter(s -> Set.of("yforrer").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
-
-        long startTime = System.currentTimeMillis();
-        AtomicInteger i = new AtomicInteger(0);
-        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
+        
+        var startTime = System.currentTimeMillis();
+        var i = new AtomicInteger(0);
         solutions.stream().parallel().forEach(solution -> {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PrintStream out = new PrintStream(baos);
+            var baos = new ByteArrayOutputStream();
+            var out = new PrintStream(baos);
 
             out.println("Grading " + solution.getFileName());
             grade(solution, out);
@@ -81,7 +84,7 @@ public class Grader {
     }
 
     private synchronized void writeResultsToFile() {
-        for (Entry<Task, Results> entry : results.entrySet()) {
+        for (var entry : results.entrySet()) {
             try {
                 entry.getValue().writeTo(Path.of(entry.getKey().resultFileName()));
             } catch (IOException e) {
@@ -91,17 +94,17 @@ public class Grader {
     }
 
     private void grade(Path solution, PrintStream out) {
-        for (Task task : tasks) {
+        for (var task : tasks) {
             gradeTask(solution, task, out);
         }
     }
 
     private void gradeTask(Path solution, Task task, PrintStream out) {
-        Path projectPath = solution.resolve(task.projectName);
-        String student = solution.getFileName().toString();
+        var projectPath = solution.resolve(task.projectName);
+        var student = solution.getFileName().toString();
 
         results.get(task).addStudent(student);
-        boolean compiled = compileProject(projectPath, task, out);
+        var compiled = compileProject(projectPath, task, out);
         if (compiled) {
             results.get(task).addCriterion(student, "compiles");
 
