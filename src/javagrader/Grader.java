@@ -2,6 +2,7 @@ package javagrader;
 
 import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
+import static java.lang.System.currentTimeMillis;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
@@ -12,9 +13,9 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.*;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -47,6 +48,7 @@ public class Grader {
     private final List<Task> tasks;
     private final Path root;
     private final Map<Task, Results> results;
+    private Path inspector;
 
     public Grader(List<Task> tasks, Path root) {
         this.tasks = requireNonNull(tasks);
@@ -55,32 +57,46 @@ public class Grader {
     }
 
     public void run() throws IOException {
-        var solutions = Files.list(root)
+        var sols = Files.list(root)
                 .filter(Files::isDirectory)
                 //.filter(s -> Set.of("yforrer").contains(s.getFileName().toString()))
                 .sorted()
                 .collect(toList());
-        
-        var startTime = System.currentTimeMillis();
-        var i = new AtomicInteger(0);
-        solutions.stream().parallel().forEach(solution -> {
-            var baos = new ByteArrayOutputStream();
-            var out = new PrintStream(baos);
 
-            out.println("Grading " + solution.getFileName());
-            grade(solution, out);
-            if (Math.random() > 0.75) {
-                writeResultsToFile();
-            }
-
-            out.println("Graded " + i.incrementAndGet() + "/" + solutions.size() +
-                    " Total Time: " + ((System.currentTimeMillis() - startTime) / 1000) + " s");
-            out.println();
-            System.out.println(baos);
-        });
+        inspector = copyInspector();
+        try {
+            var startTime = currentTimeMillis();
+            var i = new AtomicInteger(0);
+            sols.stream().parallel().forEach(solution -> {
+                var baos = new ByteArrayOutputStream();
+                var out = new PrintStream(baos);
+    
+                out.println("Grading " + solution.getFileName());
+                grade(solution, out);
+                if (Math.random() > 0.75) {
+                    writeResultsToFile();
+                }
+    
+                out.println("Graded " + i.incrementAndGet() + "/" + sols.size() +
+                        " Total Time: " + ((currentTimeMillis() - startTime) / 1000) + " s");
+                out.println();
+                System.out.println(baos);
+            });
+        } finally {
+            Files.delete(inspector);
+        }
 
         writeResultsToFile();
-        System.out.println(solutions.size() + " solutions processed");
+        System.out.println(sols.size() + " solutions processed");
+    }
+
+    private Path copyInspector() throws IOException {
+        var path = Files.createTempFile("inspector", ".jar");
+        try (var in = Grader.class.getResourceAsStream("inspector.jar");
+                var out = Files.newOutputStream(path)) {
+            in.transferTo(out);
+        }
+        return path;
     }
 
     private synchronized void writeResultsToFile() {
@@ -212,7 +228,7 @@ public class Grader {
                     .map(p -> p.getFileName().toString())
                     .filter(s -> s.endsWith(".java"))
                     .map(s -> s.substring(0, s.length() - 5)).collect(toList());
-            var agentArg = "-javaagent:inspector.jar="
+            var agentArg = "-javaagent:" + inspector.toAbsolutePath() + "="
                     + classes.stream().collect(joining(","));
 
             var junitArgs = new ArrayList<>(classes);
