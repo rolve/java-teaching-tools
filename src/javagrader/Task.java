@@ -49,7 +49,7 @@ public class Task {
         } else if (!(obj instanceof Task)) {
             return false;
         }
-        Task other = (Task) obj;
+        var other = (Task) obj;
         if (!projectName.equals(other.projectName)) {
             return false;
         } else if (!suffix.equals(other.suffix)) {
