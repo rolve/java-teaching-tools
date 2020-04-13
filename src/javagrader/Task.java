@@ -1,6 +1,5 @@
 package javagrader;
 
-import static java.lang.Integer.MAX_VALUE;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -12,21 +11,19 @@ public class Task {
     public final String suffix;
     public final Class<?> testClass;
     public final Optional<Class<?>> classUnderTest;
-    public final int instrThreshold;
     public final Set<String> filesToCopy;
 
     public Task(String projectName, Class<?> classUnderTest, Class<?> testClass,
             String... moreFilesToCopy) {
-        this(projectName, "", classUnderTest, testClass, MAX_VALUE, moreFilesToCopy);
+        this(projectName, "", classUnderTest, testClass, moreFilesToCopy);
     }
 
     public Task(String projectName, String suffix, Class<?> classUnderTest,
-            Class<?> testClass, int instrThreshold, String... moreFilesToCopy) {
+            Class<?> testClass, String... moreFilesToCopy) {
         this.projectName = requireNonNull(projectName);
         this.suffix = requireNonNull(suffix);
         this.classUnderTest = Optional.ofNullable(classUnderTest); // may be null if not needed
         this.testClass = requireNonNull(testClass);
-        this.instrThreshold = instrThreshold;
 
         filesToCopy = new HashSet<>(asList(moreFilesToCopy));
         filesToCopy.add(testClass.getName().replace('.', '/') + ".java");

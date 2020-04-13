@@ -1,20 +1,15 @@
-import static java.lang.Integer.parseInt;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 
 import java.io.PrintStream;
-import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
-import java.lang.instrument.Instrumentation;
+import java.lang.instrument.*;
 import java.security.ProtectionDomain;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
 
 public class CodeInspector implements ClassFileTransformer {
 
@@ -22,19 +17,15 @@ public class CodeInspector implements ClassFileTransformer {
 
     public static void premain(String rawArgs, Instrumentation inst) {
         String[] args = rawArgs.split(",");
-        System.err.println("Inspecting classes " + stream(args).skip(1).collect(joining(", ")));
+        System.err.println("Inspecting classes " + stream(args).collect(joining(", ")));
 
-        inst.addTransformer(new CodeInspector(stream(args).skip(1).collect(toSet()), parseInt(args[0])));
+        inst.addTransformer(new CodeInspector(stream(args).collect(toSet())));
     }
 
     private Set<String> classes;
-    private int instrThreshold;
 
-    private List<MethodNode> methods = new ArrayList<>();
-
-    public CodeInspector(Set<String> classes, int instrThreshold) {
+    public CodeInspector(Set<String> classes) {
         this.classes = classes;
-        this.instrThreshold = instrThreshold;
     }
 
     @Override
@@ -47,8 +38,6 @@ public class CodeInspector implements ClassFileTransformer {
                 reader.accept(classNode, 0);
                 
                 collectAnnotations(classNode);
-                collectMethods(classNode);
-                checkThreshold();
             }
             return classfile;
         } catch(Throwable t) {
@@ -66,19 +55,6 @@ public class CodeInspector implements ClassFileTransformer {
                     .flatMap(v -> ((List<?>) v).stream())
                     .map(msg -> "fix: " + msg)
                     .forEach(stdOut::println);
-        }
-    }
-
-    private void collectMethods(ClassNode classNode) {
-        methods.addAll(classNode.methods);
-    }
-
-    private void checkThreshold() {
-        int instrs = methods.stream().mapToInt(m -> m.instructions.size()).sum();
-        if(instrs >= instrThreshold) {
-            stdOut.println("code size above threshold");
-        } else {
-            System.err.println("code size threshold (" + instrThreshold + ") not (yet) reached: " + instrs);
         }
     }
 }

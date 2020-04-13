@@ -221,8 +221,8 @@ public class Grader {
                     .map(p -> p.getFileName().toString())
                     .filter(s -> s.endsWith(".java"))
                     .map(s -> s.substring(0, s.length() - 5)).collect(toList());
-            var agentArg = "-javaagent:inspector.jar=" + task.instrThreshold
-                    + "," + classes.stream().collect(joining(","));
+            var agentArg = "-javaagent:inspector.jar="
+                    + classes.stream().collect(joining(","));
 
             var junitArgs = new ArrayList<>(classes);
             junitArgs.add(0, task.testClass.getName());
