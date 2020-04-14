@@ -34,17 +34,6 @@ public class Grader {
 
     private static final Pattern lines = Pattern.compile("\r?\n");
 
-    /**
-     * Run with the "root" directory (where all student's solutions are stored)
-     * as the first argument.
-     */
-    public static void main(String[] args) throws IOException {
-        var root = Path.of(args[0]);
-        var tasks = List.of(
-                new Task("u04", "OhneSieben", "OhneSiebenTest", Set.of()));
-        new Grader(tasks, root).run();
-    }
-
     private final List<Task> tasks;
     private final Path root;
     private final Map<Task, Results> results;
