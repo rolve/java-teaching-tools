@@ -46,7 +46,7 @@ public class Grader {
     }
 
     public void run() throws IOException {
-        var sols = Files.list(root)
+        var submissions = Files.list(root)
                 .filter(Files::isDirectory)
                 //.filter(s -> Set.of("yforrer").contains(s.getFileName().toString()))
                 .sorted()
@@ -56,17 +56,17 @@ public class Grader {
         try {
             var startTime = currentTimeMillis();
             var i = new AtomicInteger(0);
-            sols.stream().parallel().forEach(solution -> {
+            submissions.stream().parallel().forEach(submission -> {
                 var baos = new ByteArrayOutputStream();
                 var out = new PrintStream(baos);
     
-                out.println("Grading " + solution.getFileName());
-                grade(solution, out);
+                out.println("Grading " + submission.getFileName());
+                grade(submission, out);
                 if (Math.random() > 0.75) {
                     writeResultsToFile();
                 }
     
-                out.println("Graded " + i.incrementAndGet() + "/" + sols.size() +
+                out.println("Graded " + i.incrementAndGet() + "/" + submissions.size() +
                         " Total Time: " + ((currentTimeMillis() - startTime) / 1000) + " s");
                 out.println();
                 System.out.println(baos);
@@ -76,7 +76,7 @@ public class Grader {
         }
 
         writeResultsToFile();
-        System.out.println(sols.size() + " solutions processed");
+        System.out.println(submissions.size() + " solutions processed");
     }
 
     private Path copyInspector() throws IOException {
@@ -98,21 +98,23 @@ public class Grader {
         }
     }
 
-    private void grade(Path solution, PrintStream out) {
+    private void grade(Path submission, PrintStream out) {
         for (var task : tasks) {
-            gradeTask(solution, task, out);
+            gradeTask(submission, task, out);
         }
     }
 
-    private void gradeTask(Path solution, Task task, PrintStream out) {
-        var projectPath = solution.resolve(task.projectName);
-        var student = solution.getFileName().toString();
+    private void gradeTask(Path submission, Task task, PrintStream out) {
+        var projectPath = submission;
+        if (task.directory().isPresent()) {
+            projectPath = projectPath.resolve(task.directory().get());
+        }
+        var student = submission.getFileName().toString();
 
         results.get(task).addStudent(student);
         var compiled = compileProject(projectPath, task, out);
         if (compiled) {
             results.get(task).addCriterion(student, "compiles");
-
             runTests(task, projectPath, student, out);
         }
     }
@@ -147,7 +149,7 @@ public class Grader {
                     });
 
             // Copy test and additional files class into student's src/
-            for (var file : task.filesToCopy) {
+            for (var file : task.filesToCopy()) {
                 var from = Path.of("tests", file).toAbsolutePath();
                 var to = srcPath.resolve(file);
                 // classes (like HardTimeout) could be inside packages...
@@ -192,9 +194,9 @@ public class Grader {
                     out.println("Class under test has errors.");
                 }
             }
-            if (faultyFiles.removeAll(task.filesToCopy)) {
+            if (faultyFiles.removeAll(task.filesToCopy())) {
                 // copy-in files should *never* have errors
-                out.println("WARNING: One of " + task.filesToCopy + " had a compile error.\n");
+                out.println("WARNING: One of " + task.filesToCopy() + " had a compile error.\n");
             }
 
             errors.forEach(out::println);
