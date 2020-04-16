@@ -13,8 +13,7 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -282,13 +281,27 @@ public class Grader {
     }
 
     private void delete(Path dir, boolean leaveRoot) throws IOException {
-        // create directory if it doesn't exist (needed for walk())
-        Files.createDirectories(dir);
-        try (var walk = Files.walk(dir)) {
-            walk.skip(leaveRoot? 1 : 0)
-                .map(Path::toFile)
-                .sorted(reverseOrder())
-                .forEach(File::delete);
+        // Spuriously fails for some dirs on Windows. Weirdly, retrying helps...
+        int attempts = 10;
+        for (int i = 1; i <= attempts; i++) {
+            try {
+                // create directory if it doesn't exist (needed for walk())
+                Files.createDirectories(dir);
+                try (var walk = Files.walk(dir)) {
+                    walk.skip(leaveRoot? 1 : 0)
+                        .map(Path::toFile)
+                        .sorted(reverseOrder())
+                        .forEach(File::delete);
+                }
+                return;
+            } catch (AccessDeniedException e) {
+                if (i == attempts) {
+                    throw e;
+                }
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException ie) {}
+            }
         }
     }
 }
