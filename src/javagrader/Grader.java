@@ -206,7 +206,8 @@ public class Grader {
             }
             if (faultyFiles.removeAll(task.filesToCopy())) {
                 // copy-in files should *never* have errors
-                out.println("WARNING: One of " + task.filesToCopy() + " had a compile error.\n");
+                out.println("WARNING: One of " + task.filesToCopy()
+                        + " had a compile error.\n");
             }
 
             errors.forEach(out::println);
@@ -215,8 +216,9 @@ public class Grader {
                 // no files left to remove. unable to compile.
                 return false;
             } else {
-                var faulty = faultyFiles.stream().findFirst().get();
-                out.printf("%s appears to be faulty. Ignoring it for compilation.\n", faulty);
+                var faulty = faultyFiles.iterator().next();
+                out.printf("%s seems to be faulty. Ignoring it for compilation.\n",
+                        faulty);
                 sources.remove(srcDir.resolve(faulty));
             }
         }
@@ -225,17 +227,14 @@ public class Grader {
     private void runTests(Task task, Path projDir, String submName,
             PrintStream out) {
         try {
-            var classes = Files.list(projDir.resolve(structure.src))
-                    .map(p -> p.getFileName().toString())
-                    .filter(s -> s.endsWith(".java"))
-                    .map(s -> s.substring(0, s.length() - 5)).collect(toList());
-            var agentArg = "-javaagent:" + inspector.toAbsolutePath() + "="
-                    + classes.stream().collect(joining(","));
+            var agentArg = "-javaagent:" + inspector + "="
+                    + classesToInspect(projDir.resolve(structure.src));
 
             var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
                     .classpath(projDir.resolve(structure.bin) + pathSeparator
                             + System.getProperty("java.class.path"))
-                    .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow")
+                    .vmArgs("-Dfile.encoding=UTF8", agentArg,
+                            "-XX:-OmitStackTraceInFastThrow")
                     .start();
 
             var jUnitOutput = new StringWriter();
@@ -258,6 +257,17 @@ public class Grader {
                     .forEach(line -> results.get(task).addCriterion(submName, line));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    private String classesToInspect(Path srcDir) throws IOException {
+        try (var all = Files.walk(srcDir)) {
+            return all
+                    .map(p -> srcDir.relativize(p).toString())
+                    .filter(s -> s.endsWith(".java"))
+                    .map(s -> s.substring(0, s.length() - 5))
+                    .map(s -> s.replace(separatorChar, '.'))
+                    .collect(joining(","));
         }
     }
 }
