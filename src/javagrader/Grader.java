@@ -50,8 +50,8 @@ public class Grader {
         results = tasks.stream().collect(toMap(t -> t, t -> new Results()));
     }
 
-    public void gradeOnly(String... submissions) {
-        var set = new HashSet<>(asList(submissions));
+    public void gradeOnly(String... submNames) {
+        var set = new HashSet<>(asList(submNames));
         filter = p -> set.contains(p.getFileName().toString());
     }
 
@@ -66,12 +66,12 @@ public class Grader {
         try {
             var startTime = currentTimeMillis();
             var i = new AtomicInteger(0);
-            submissions.stream().parallel().forEach(submission -> {
+            submissions.stream().parallel().forEach(subm -> {
                 var baos = new ByteArrayOutputStream();
                 var out = new PrintStream(baos);
     
-                out.println("Grading " + submission.getFileName());
-                grade(submission, out);
+                out.println("Grading " + subm.getFileName());
+                grade(subm, out);
                 if (Math.random() > 0.75) {
                     writeResultsToFile();
                 }
@@ -86,7 +86,7 @@ public class Grader {
         }
 
         writeResultsToFile();
-        System.out.println(submissions.size() + " solutions processed");
+        System.out.println(submissions.size() + " submissions processed");
     }
 
     private Path copyInspector() throws IOException {
@@ -108,67 +108,66 @@ public class Grader {
         }
     }
 
-    private void grade(Path submission, PrintStream out) {
+    private void grade(Path subm, PrintStream out) {
         for (var task : tasks) {
-            gradeTask(submission, task, out);
+            gradeTask(subm, task, out);
         }
     }
 
-    private void gradeTask(Path submission, Task task, PrintStream out) {
-        var projectPath = submission;
+    private void gradeTask(Path subm, Task task, PrintStream out) {
+        var projDir = subm;
         if (task.directory().isPresent()) {
-            projectPath = projectPath.resolve(task.directory().get());
+            projDir = projDir.resolve(task.directory().get());
         }
-        var student = submission.getFileName().toString();
+        var submName = subm.getFileName().toString();
 
-        results.get(task).addStudent(student);
-        var compiled = compileProject(projectPath, task, out);
+        results.get(task).addSubmission(submName);
+        var compiled = compileProject(projDir, task, out);
         if (compiled) {
-            results.get(task).addCriterion(student, "compiles");
-            runTests(task, projectPath, student, out);
+            results.get(task).addCriterion(submName, "compiles");
+            runTests(task, projDir, submName, out);
         }
     }
 
-    private boolean compileProject(Path projectPath, Task task,
-            PrintStream out) {
-        var srcPath = projectPath.resolve(structure.src)
+    private boolean compileProject(Path projDir, Task task, PrintStream out) {
+        var srcDir = projDir.resolve(structure.src)
                 .toAbsolutePath();
         Set<Path> sources;
         try {
             // remove any pre-compiled class files from bin dir
-            var binPath = projectPath.resolve(structure.bin);
-            Files.createDirectories(binPath);
-            Files.walk(binPath)
-                    .skip(1) // skip bin/ folder itself
+            var binDir = projDir.resolve(structure.bin);
+            Files.createDirectories(binDir);
+            Files.walk(binDir)
+                    .skip(1) // skip bin directory itself
                     .map(Path::toFile)
                     .sorted(reverseOrder())
                     .forEach(File::delete);
 
-            // Copy any properties files into bin folder
+            // Copy any properties files into bin directory
             // Create src directory in case it doesn't exist (yes, it happened)
-            Files.createDirectories(srcPath);
-            Files.walk(srcPath)
+            Files.createDirectories(srcDir);
+            Files.walk(srcDir)
                     .filter(f -> f.toString().endsWith(".properties"))
                     .forEach(f -> {
                         try {
-                            Path sourcePath = srcPath.resolve(f);
-                            Path destPath = binPath.resolve(f.getFileName());
-                            Files.copy(sourcePath, destPath);
+                            var srcPath = srcDir.resolve(f);
+                            var dstPath = binDir.resolve(f);
+                            Files.copy(srcPath, dstPath);
                         } catch (IOException e) {
                             throw new UncheckedIOException(e);
                         }
                     });
 
-            // Copy test and additional files class into student's src/
+            // Copy test and additional files class into student's src
             for (var file : task.filesToCopy()) {
                 var from = Path.of("tests", file).toAbsolutePath();
-                var to = srcPath.resolve(file);
-                // classes (like HardTimeout) could be inside packages...
+                var to = srcDir.resolve(file);
+                // classes could be inside packages...
                 Files.createDirectories(to.getParent());
                 Files.copy(from, to, REPLACE_EXISTING);
             }
 
-            sources = Files.walk(srcPath)
+            sources = Files.walk(srcDir)
                     .filter(f -> f.toString().endsWith(".java"))
                     .collect(toCollection(HashSet::new));
         } catch (IOException e) {
@@ -183,7 +182,7 @@ public class Grader {
 
             var options = asList(
                     "-cp", System.getProperty("java.class.path"),
-                    "-d", projectPath.resolve(structure.bin).toString());
+                    "-d", projDir.resolve(structure.bin).toString());
             javac.getTask(null, manager, collector, options, null,
                     manager.getJavaFileObjectsFromPaths(sources)).call();
 
@@ -195,7 +194,7 @@ public class Grader {
 
             var faultyFiles = errors.stream()
                     .map(d -> (JavaFileObject) d.getSource())
-                    .map(f -> srcPath.relativize(Path.of(f.getName())).toString())
+                    .map(f -> srcDir.relativize(Path.of(f.getName())).toString())
                     .map(s -> s.replace(separatorChar, '/'))
                     .collect(toSet());
             if (task.classUnderTest.isPresent()) {
@@ -218,15 +217,15 @@ public class Grader {
             } else {
                 var faulty = faultyFiles.stream().findFirst().get();
                 out.printf("%s appears to be faulty. Ignoring it for compilation.\n", faulty);
-                sources.remove(srcPath.resolve(faulty));
+                sources.remove(srcDir.resolve(faulty));
             }
         }
     }
 
-    private void runTests(Task task, Path projectPath, String student,
+    private void runTests(Task task, Path projDir, String submName,
             PrintStream out) {
         try {
-            var classes = Files.list(projectPath.resolve(structure.src))
+            var classes = Files.list(projDir.resolve(structure.src))
                     .map(p -> p.getFileName().toString())
                     .filter(s -> s.endsWith(".java"))
                     .map(s -> s.substring(0, s.length() - 5)).collect(toList());
@@ -236,7 +235,7 @@ public class Grader {
             var junitArgs = new ArrayList<>(classes);
             junitArgs.add(0, task.testClass);
             var jUnit = new JavaProcessBuilder(TestRunner.class, junitArgs)
-                    .classpath(projectPath.resolve(structure.bin) + pathSeparator
+                    .classpath(projDir.resolve(structure.bin) + pathSeparator
                             + System.getProperty("java.class.path"))
                     .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow")
                     .start();
@@ -258,7 +257,7 @@ public class Grader {
             }
             lines.splitAsStream(jUnitOutput.toString())
                     .filter(line -> !line.isEmpty())
-                    .forEach(line -> results.get(task).addCriterion(student, line));
+                    .forEach(line -> results.get(task).addCriterion(submName, line));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

@@ -12,13 +12,13 @@ public class Results {
 
     private final Map<String, Set<String>> criteria = new TreeMap<>();
 
-    public synchronized void addStudent(String student) {
-        var previous = criteria.put(student, new HashSet<>());
-        assert previous == null : student + " already added";
+    public synchronized void addSubmission(String name) {
+        var previous = criteria.put(name, new HashSet<>());
+        assert previous == null : name + " already added";
     }
 
-    public synchronized void addCriterion(String student, String criterion) {
-        criteria.get(student).add(criterion);
+    public synchronized void addCriterion(String submName, String criterion) {
+        criteria.get(submName).add(criterion);
     }
 
     public synchronized void writeTo(Path path) throws IOException {
@@ -28,9 +28,9 @@ public class Results {
             writer.append("NETHZ\t");
             writer.append(crit.stream().collect(joining("\t"))).append("\n");
 
-            for (var student : criteria.keySet()) {
-                var presentCriteria = criteria.get(student);
-                writer.append(student).append("\t");
+            for (var submName : criteria.keySet()) {
+                var presentCriteria = criteria.get(submName);
+                writer.append(submName).append("\t");
                 writer.append(crit.stream()
                         .map(c -> presentCriteria.contains(c) ? "1" : "0")
                         .collect(joining("\t")));
