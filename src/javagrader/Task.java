@@ -16,8 +16,16 @@ public class Task {
     private final Set<String> filesToCopy;
     private Optional<Path> dir = Optional.empty();
 
+    public Task(Class<?> testClass) {
+        this(testClass.getName());
+    }
+
     public Task(String testClass) {
         this(testClass, null, true);
+    }
+
+    public Task(Class<?> testClass, Class<?> classUnderTest) {
+        this(testClass.getName(), classUnderTest.getName());
     }
 
     public Task(String testClass, String classUnderTest) {
