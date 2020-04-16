@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import javax.tools.DiagnosticCollector;
@@ -37,6 +38,7 @@ public class Grader {
     private final List<Task> tasks;
     private final Path root;
     private final Map<Task, Results> results;
+    private Predicate<Path> filter = p -> true;
     private Path inspector;
 
     public Grader(List<Task> tasks, Path root) {
@@ -45,10 +47,15 @@ public class Grader {
         results = tasks.stream().collect(toMap(t -> t, t -> new Results()));
     }
 
+    public void gradeOnly(String... submissions) {
+        var set = new HashSet<>(asList(submissions));
+        filter = p -> set.contains(p.getFileName().toString());
+    }
+
     public void run() throws IOException {
         var submissions = Files.list(root)
                 .filter(Files::isDirectory)
-                //.filter(s -> Set.of("yforrer").contains(s.getFileName().toString()))
+                .filter(filter)
                 .sorted()
                 .collect(toList());
 
