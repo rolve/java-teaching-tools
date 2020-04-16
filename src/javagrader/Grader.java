@@ -63,8 +63,7 @@ public class Grader {
                 .sorted()
                 .collect(toList());
 
-        inspector = copyInspector();
-        try {
+        withInspector(() -> {
             var startTime = currentTimeMillis();
             var i = new AtomicInteger(0);
             submissions.stream().parallel().forEach(subm -> {
@@ -86,23 +85,21 @@ public class Grader {
                         (currentTimeMillis() - startTime) / 1000);
                 System.out.println(bytes);
             });
-        } finally {
-            Files.delete(inspector);
-        }
+        });
 
         writeResultsToFile();
         System.out.println(submissions.size() + " submissions processed");
     }
 
-    private Path copyInspector() throws IOException {
-        var temp = Files.createTempFile("inspector", ".jar");
-        try (var in = Grader.class.getResourceAsStream("inspector.jar")) {
-            Files.copy(in, temp, REPLACE_EXISTING);
-        } catch (IOException e) {
-            Files.delete(temp);
-            throw e;
+    private void withInspector(Runnable code) throws IOException {
+        inspector = Files.createTempFile("inspector", ".jar");
+        // make sure exceptions from "code" are not suppressed:
+        try (Closeable deleter = () -> Files.delete(inspector)) {
+            try (var in = Grader.class.getResourceAsStream("inspector.jar")) {
+                Files.copy(in, inspector, REPLACE_EXISTING);
+            }
+            code.run();
         }
-        return temp;
     }
 
     private synchronized void writeResultsToFile() throws IOException {
