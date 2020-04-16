@@ -18,7 +18,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
@@ -32,8 +31,6 @@ public class Grader {
     static {
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
     }
-
-    private static final Pattern lines = Pattern.compile("\r?\n");
 
     private final List<Task> tasks;
     private final Path root;
@@ -259,7 +256,7 @@ public class Grader {
                     break;
                 } catch (InterruptedException e) {}
             }
-            lines.splitAsStream(jUnitOutput.toString())
+            jUnitOutput.toString().lines()
                     .filter(line -> !line.isEmpty())
                     .forEach(line -> results.get(task).addCriterion(submName, line));
         } catch (IOException e) {

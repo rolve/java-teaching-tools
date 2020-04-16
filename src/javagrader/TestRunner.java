@@ -1,5 +1,6 @@
 package javagrader;
 
+import static java.io.OutputStream.nullOutputStream;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
@@ -11,7 +12,6 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -46,14 +46,10 @@ public class TestRunner {
         // Close standard input in case some solutions read from it
         System.in.close();
 
-        @SuppressWarnings("resource")
-        PrintStream nop = new PrintStream(new OutputStream() {
-            public void write(int b) {}
-        });
         out = System.out;
         err = System.err;
-        System.setOut(nop);
-        System.setErr(nop);
+        System.setOut(new PrintStream(nullOutputStream()));
+        System.setErr(new PrintStream(nullOutputStream()));
 
         var passedSets = new HashSet<Set<String>>();
         var everFailed = new HashSet<String>();
