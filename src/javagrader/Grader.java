@@ -282,7 +282,7 @@ public class Grader {
 
     private void delete(Path dir, boolean leaveRoot) throws IOException {
         // Spuriously fails for some dirs on Windows. Weirdly, retrying helps...
-        int attempts = 10;
+        int attempts = 50;
         for (int i = 1; i <= attempts; i++) {
             try {
                 // create directory if it doesn't exist (needed for walk())
@@ -299,7 +299,7 @@ public class Grader {
                     throw e;
                 }
                 try {
-                    Thread.sleep(10);
+                    Thread.sleep(100);
                 } catch (InterruptedException ie) {}
             }
         }
