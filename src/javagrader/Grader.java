@@ -28,6 +28,10 @@ import ch.trick17.javaprocesses.util.LineWriterAdapter;
 
 public class Grader {
 
+    private static final Path GRADING = Path.of("grading");
+    private static final Path GRADING_SRC = GRADING.resolve("src");
+    private static final Path GRADING_BIN = GRADING.resolve("bin");
+
     static {
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
     }
@@ -64,19 +68,23 @@ public class Grader {
             var startTime = currentTimeMillis();
             var i = new AtomicInteger(0);
             submissions.stream().parallel().forEach(subm -> {
-                var baos = new ByteArrayOutputStream();
-                var out = new PrintStream(baos);
+                var bytes = new ByteArrayOutputStream();
+                var out = new PrintStream(bytes);
     
                 out.println("Grading " + subm.getFileName());
-                grade(subm, out);
-                if (Math.random() > 0.75) {
-                    writeResultsToFile();
+                try {
+                    grade(subm, out);
+                    if (Math.random() > 0.75) {
+                        writeResultsToFile();
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
                 }
-    
-                out.println("Graded " + i.incrementAndGet() + "/" + submissions.size() +
-                        " Total Time: " + ((currentTimeMillis() - startTime) / 1000) + " s");
-                out.println();
-                System.out.println(baos);
+
+                out.printf("Graded %d/%d, total time: %d s\n\n",
+                        i.incrementAndGet(), submissions.size(),
+                        (currentTimeMillis() - startTime) / 1000);
+                System.out.println(bytes);
             });
         } finally {
             Files.delete(inspector);
@@ -88,9 +96,8 @@ public class Grader {
 
     private Path copyInspector() throws IOException {
         var temp = Files.createTempFile("inspector", ".jar");
-        try (var in = Grader.class.getResourceAsStream("inspector.jar");
-                var out = Files.newOutputStream(temp)) {
-            in.transferTo(out);
+        try (var in = Grader.class.getResourceAsStream("inspector.jar")) {
+            Files.copy(in, temp, REPLACE_EXISTING);
         } catch (IOException e) {
             Files.delete(temp);
             throw e;
@@ -98,84 +105,89 @@ public class Grader {
         return temp;
     }
 
-    private synchronized void writeResultsToFile() {
+    private synchronized void writeResultsToFile() throws IOException {
         for (var entry : results.entrySet()) {
-            try {
-                entry.getValue().writeTo(Path.of(entry.getKey().resultFileName()));
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+            entry.getValue().writeTo(Path.of(entry.getKey().resultFileName()));
         }
     }
 
-    private void grade(Path subm, PrintStream out) {
+    private void grade(Path subm, PrintStream out) throws IOException {
         for (var task : tasks) {
             gradeTask(subm, task, out);
         }
     }
 
-    private void gradeTask(Path subm, Task task, PrintStream out) {
+    private void gradeTask(Path subm, Task task, PrintStream out)
+            throws IOException {
         var projDir = subm;
         if (task.directory().isPresent()) {
             projDir = projDir.resolve(task.directory().get());
         }
-        var submName = subm.getFileName().toString();
+        try {
+            var submName = subm.getFileName().toString();
+            results.get(task).addSubmission(submName);
 
-        results.get(task).addSubmission(submName);
-        var compiled = compileProject(projDir, task, out);
-        if (compiled) {
-            results.get(task).addCriterion(submName, "compiles");
-            runTests(task, projDir, submName, out);
+            prepareProject(projDir, task);
+            var compiled = compileProject(projDir, task, out);
+            if (compiled) {
+                results.get(task).addCriterion(submName, "compiles");
+                runTests(task, projDir, submName, out);
+            }
+        } finally {
+            delete(projDir.resolve(GRADING), false);
         }
     }
 
-    private boolean compileProject(Path projDir, Task task, PrintStream out) {
-        var srcDir = projDir.resolve(structure.src)
-                .toAbsolutePath();
+    private void prepareProject(Path projDir, Task task) throws IOException {
+        // Remove any grading files from previous runs
+        delete(projDir.resolve(GRADING), true);
+
+        // Copy sources
+        var origSrcDir = projDir.resolve(structure.src);
+        Files.createDirectories(origSrcDir); // yes, it happened
+        var srcDir = projDir.resolve(GRADING_SRC);
+        Files.createDirectories(srcDir);
+        try (var walk = Files.walk(origSrcDir)) {
+            for (var from : (Iterable<Path>) walk::iterator) {
+                if (from.toString().endsWith(".java")) {
+                    var to = srcDir.resolve(origSrcDir.relativize(from));
+                    Files.createDirectories(to.getParent());
+                    Files.copy(from, to);
+                }
+            }
+        }
+
+        // Copy grading files
+        for (var file : task.filesToCopy()) {
+            var from = Path.of("tests", file);
+            var to = srcDir.resolve(file);
+            Files.createDirectories(to.getParent());
+            Files.copy(from, to, REPLACE_EXISTING);
+        }
+
+        // Copy properties files into bin directory
+        var binDir = projDir.resolve(GRADING_BIN);
+        Files.createDirectories(binDir);
+        try (var walk = Files.walk(origSrcDir)) {
+            for (var from : (Iterable<Path>) walk::iterator) {
+                if (from.toString().endsWith(".properties")) {
+                    var to = binDir.resolve(origSrcDir.relativize(from));
+                    Files.createDirectories(to.getParent());
+                    Files.copy(from, to);      
+                }
+            }
+        }
+    }
+
+    private boolean compileProject(Path projDir, Task task,
+            PrintStream out) throws IOException {
+        var srcDir = projDir.resolve(GRADING_SRC);
+
         Set<Path> sources;
-        try {
-            // remove any pre-compiled class files from bin dir
-            var binDir = projDir.resolve(structure.bin);
-            Files.createDirectories(binDir);
-            try (var walk = Files.walk(binDir)) {
-                walk.skip(1) // skip bin directory itself
-                    .map(Path::toFile)
-                    .sorted(reverseOrder())
-                    .forEach(File::delete);
-            }
-
-            // Copy any properties files into bin directory
-            // Create src directory in case it doesn't exist (yes, it happened)
-            Files.createDirectories(srcDir);
-            try (var walk = Files.walk(srcDir)) {
-                walk.filter(f -> f.toString().endsWith(".properties"))
-                    .forEach(f -> {
-                        try {
-                            var srcPath = srcDir.resolve(f);
-                            var dstPath = binDir.resolve(f);
-                            Files.copy(srcPath, dstPath);
-                        } catch (IOException e) {
-                            throw new UncheckedIOException(e);
-                        }
-                });
-            }
-
-            // Copy test and additional files class into student's src
-            for (var file : task.filesToCopy()) {
-                var from = Path.of("tests", file).toAbsolutePath();
-                var to = srcDir.resolve(file);
-                // classes could be inside packages...
-                Files.createDirectories(to.getParent());
-                Files.copy(from, to, REPLACE_EXISTING);
-            }
-
-            try (var walk = Files.walk(srcDir)) {
-                sources = walk
-                        .filter(f -> f.toString().endsWith(".java"))
-                        .collect(toCollection(HashSet::new));
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        try (var walk = Files.walk(srcDir)) {
+            sources = walk
+                    .filter(p -> p.toString().endsWith(".java"))
+                    .collect(toCollection(HashSet::new));
         }
 
         var javac = getSystemJavaCompiler();
@@ -186,7 +198,7 @@ public class Grader {
 
             var options = asList(
                     "-cp", System.getProperty("java.class.path"),
-                    "-d", projDir.resolve(structure.bin).toString());
+                    "-d", projDir.resolve(GRADING_BIN).toString());
             javac.getTask(null, manager, collector, options, null,
                     manager.getJavaFileObjectsFromPaths(sources)).call();
 
@@ -229,39 +241,36 @@ public class Grader {
     }
 
     private void runTests(Task task, Path projDir, String submName,
-            PrintStream out) {
-        try {
-            var agentArg = "-javaagent:" + inspector + "="
-                    + classesToInspect(projDir.resolve(structure.src));
+            PrintStream out) throws IOException {
+        var agentArg = "-javaagent:" + inspector + "="
+                + classesToInspect(projDir.resolve(GRADING_SRC));
 
-            var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
-                    .classpath(projDir.resolve(structure.bin) + pathSeparator
-                            + System.getProperty("java.class.path"))
-                    .vmArgs("-Dfile.encoding=UTF8", agentArg,
-                            "-XX:-OmitStackTraceInFastThrow")
-                    .start();
+        var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
+                .classpath(projDir.resolve(GRADING_BIN) + pathSeparator
+                        + System.getProperty("java.class.path"))
+                .vmArgs("-Dfile.encoding=UTF8", agentArg,
+                        "-XX:-OmitStackTraceInFastThrow")
+                .start();
 
-            var jUnitOutput = new StringWriter();
-            var outCopier = new Thread(new LineCopier(jUnit.getInputStream(),
-                    new LineWriterAdapter(jUnitOutput)));
-            var errCopier = new Thread(new LineCopier(jUnit.getErrorStream(),
-                    new LineWriterAdapter(out)));
-            outCopier.start();
-            errCopier.start();
+        var jUnitOutput = new StringWriter();
+        var outCopier = new Thread(new LineCopier(jUnit.getInputStream(),
+                new LineWriterAdapter(jUnitOutput)));
+        var errCopier = new Thread(new LineCopier(jUnit.getErrorStream(),
+                new LineWriterAdapter(out)));
+        outCopier.start();
+        errCopier.start();
 
-            while (true) {
-                try {
-                    outCopier.join();
-                    errCopier.join();
-                    break;
-                } catch (InterruptedException e) {}
-            }
-            jUnitOutput.toString().lines()
-                    .filter(line -> !line.isEmpty())
-                    .forEach(line -> results.get(task).addCriterion(submName, line));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        while (true) {
+            try {
+                outCopier.join();
+                errCopier.join();
+                break;
+            } catch (InterruptedException e) {}
         }
+        jUnitOutput.toString().lines()
+                .filter(line -> !line.isEmpty())
+                .forEach(line -> results.get(task).addCriterion(submName, line));
+
     }
 
     private String classesToInspect(Path srcDir) throws IOException {
@@ -272,6 +281,17 @@ public class Grader {
                     .map(s -> s.substring(0, s.length() - 5))
                     .map(s -> s.replace(separatorChar, '.'))
                     .collect(joining(","));
+        }
+    }
+
+    private void delete(Path dir, boolean leaveRoot) throws IOException {
+        // create directory if it doesn't exist (needed for walk())
+        Files.createDirectories(dir);
+        try (var walk = Files.walk(dir)) {
+            walk.skip(leaveRoot? 1 : 0)
+                .map(Path::toFile)
+                .sorted(reverseOrder())
+                .forEach(File::delete);
         }
     }
 }
