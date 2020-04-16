@@ -17,7 +17,7 @@ public class Task {
     private Optional<Path> dir = Optional.empty();
 
     public Task(String testClass) {
-        this(testClass, null);
+        this(testClass, null, true);
     }
 
     public Task(String testClass, String classUnderTest) {
@@ -28,7 +28,7 @@ public class Task {
         this.testClass = requireNonNull(testClass);
         this.classUnderTest = Optional.ofNullable(classUnderTest); // may be null if not needed
 
-        filesToCopy = new HashSet<>(Set.of(testClass.replace('.', '/')));
+        filesToCopy = new HashSet<>(Set.of(testClass.replace('.', '/') + ".java"));
     }
 
     /**
