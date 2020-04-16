@@ -232,9 +232,7 @@ public class Grader {
             var agentArg = "-javaagent:" + inspector.toAbsolutePath() + "="
                     + classes.stream().collect(joining(","));
 
-            var junitArgs = new ArrayList<>(classes);
-            junitArgs.add(0, task.testClass);
-            var jUnit = new JavaProcessBuilder(TestRunner.class, junitArgs)
+            var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
                     .classpath(projDir.resolve(structure.bin) + pathSeparator
                             + System.getProperty("java.class.path"))
                     .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow")

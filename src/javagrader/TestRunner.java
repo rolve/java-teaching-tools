@@ -2,7 +2,8 @@ package javagrader;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.TestExecutionResult.failed;
 import static org.junit.platform.engine.TestExecutionResult.Status.SUCCESSFUL;
@@ -10,37 +11,18 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
-import java.io.*;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.PatternSyntaxException;
 
-import org.junit.ComparisonFailure;
-import org.junit.internal.ArrayComparisonFailure;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
-import org.junit.runners.model.TestTimedOutException;
-import org.opentest4j.AssertionFailedError;
 
 public class TestRunner {
-
-    static final Set<Class<? extends Throwable>> junitExceptions = Set.of(
-            ComparisonFailure.class, ArrayComparisonFailure.class,
-            AssertionError.class, TestTimedOutException.class,
-            AssertionFailedError.class, ThreadDeath.class);
-
-    static final Set<Class<? extends Throwable>> knownExceptions = Set.of(
-            StackOverflowError.class, OutOfMemoryError.class,
-            NullPointerException.class, ArrayIndexOutOfBoundsException.class,
-            StringIndexOutOfBoundsException.class,
-            IndexOutOfBoundsException.class, InputMismatchException.class,
-            NoSuchElementException.class, FileNotFoundException.class,
-            IllegalArgumentException.class, NumberFormatException.class,
-            ArithmeticException.class, EmptyStackException.class,
-            PatternSyntaxException.class, IllegalStateException.class);
 
     private static final int REPETITIONS = 7;
 
@@ -56,11 +38,10 @@ public class TestRunner {
 
     public static void main(String[] args) throws Exception {
         var testClass = args[0];
-        var classes = stream(args).skip(1).collect(toSet());
-        runTests(testClass, classes);
+        runTests(testClass);
     }
 
-    private static void runTests(String testClass, Set<String> classes)
+    private static void runTests(String testClass)
             throws Exception {
         // Close standard input in case some solutions read from it
         System.in.close();
@@ -94,11 +75,7 @@ public class TestRunner {
                     var exception = result.getThrowable().get();
                     var msg = name + ": " + exception.getMessage()
                             + " (" + exception.getClass().getName() + ")";
-                    if (printTrace(exception, classes)) {
-                        msg += "\n" + stream(exception.getStackTrace())
-                                .map(e -> "        at " + e)
-                                .collect(joining("\n"));
-                    }
+                    // TODO: Collect exception stats
                     failMsgs.add(msg);
                     if (result.getThrowable().get() instanceof ThreadDeath) {
                         out.println("timeout");
@@ -191,17 +168,5 @@ public class TestRunner {
         } else {
             return result.get();
         }
-    }
-
-    private static boolean printTrace(Throwable e, Set<String> classes) {
-        var clazz = e.getClass();
-
-        var inCodeUnderTest = stream(e.getStackTrace())
-                .map(StackTraceElement::getClassName)
-                .anyMatch(classes::contains);
-
-        var ignore = inCodeUnderTest && knownExceptions.contains(clazz)
-                || junitExceptions.contains(clazz);
-        return !ignore;
     }
 }
