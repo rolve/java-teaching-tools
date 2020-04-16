@@ -90,12 +90,15 @@ public class Grader {
     }
 
     private Path copyInspector() throws IOException {
-        var path = Files.createTempFile("inspector", ".jar");
+        var temp = Files.createTempFile("inspector", ".jar");
         try (var in = Grader.class.getResourceAsStream("inspector.jar");
-                var out = Files.newOutputStream(path)) {
+                var out = Files.newOutputStream(temp)) {
             in.transferTo(out);
+        } catch (IOException e) {
+            Files.delete(temp);
+            throw e;
         }
-        return path;
+        return temp;
     }
 
     private synchronized void writeResultsToFile() {
@@ -137,17 +140,18 @@ public class Grader {
             // remove any pre-compiled class files from bin dir
             var binDir = projDir.resolve(structure.bin);
             Files.createDirectories(binDir);
-            Files.walk(binDir)
-                    .skip(1) // skip bin directory itself
+            try (var walk = Files.walk(binDir)) {
+                walk.skip(1) // skip bin directory itself
                     .map(Path::toFile)
                     .sorted(reverseOrder())
                     .forEach(File::delete);
+            }
 
             // Copy any properties files into bin directory
             // Create src directory in case it doesn't exist (yes, it happened)
             Files.createDirectories(srcDir);
-            Files.walk(srcDir)
-                    .filter(f -> f.toString().endsWith(".properties"))
+            try (var walk = Files.walk(srcDir)) {
+                walk.filter(f -> f.toString().endsWith(".properties"))
                     .forEach(f -> {
                         try {
                             var srcPath = srcDir.resolve(f);
@@ -156,7 +160,8 @@ public class Grader {
                         } catch (IOException e) {
                             throw new UncheckedIOException(e);
                         }
-                    });
+                });
+            }
 
             // Copy test and additional files class into student's src
             for (var file : task.filesToCopy()) {
@@ -167,9 +172,11 @@ public class Grader {
                 Files.copy(from, to, REPLACE_EXISTING);
             }
 
-            sources = Files.walk(srcDir)
-                    .filter(f -> f.toString().endsWith(".java"))
-                    .collect(toCollection(HashSet::new));
+            try (var walk = Files.walk(srcDir)) {
+                sources = walk
+                        .filter(f -> f.toString().endsWith(".java"))
+                        .collect(toCollection(HashSet::new));
+            }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
