@@ -60,7 +60,7 @@ public class Task {
         var className = parts[parts.length - 1];
         var name = className + "-results.tsv";
         if (dir.isPresent()) {
-            name = dir.get().toString().replace(separator, "-") + name;
+            name = dir.get().toString().replace(separator, "-") + "-" + name;
         }
         return name;
     }

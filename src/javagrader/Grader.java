@@ -37,13 +37,16 @@ public class Grader {
 
     private final List<Task> tasks;
     private final Path root;
+    private final ProjectStructure structure;
+
     private final Map<Task, Results> results;
     private Predicate<Path> filter = p -> true;
     private Path inspector;
 
-    public Grader(List<Task> tasks, Path root) {
+    public Grader(List<Task> tasks, Path root, ProjectStructure structure) {
         this.tasks = requireNonNull(tasks);
         this.root = requireNonNull(root);
+        this.structure = requireNonNull(structure);
         results = tasks.stream().collect(toMap(t -> t, t -> new Results()));
     }
 
@@ -128,11 +131,12 @@ public class Grader {
 
     private boolean compileProject(Path projectPath, Task task,
             PrintStream out) {
-        var srcPath = projectPath.resolve("src").toAbsolutePath();
+        var srcPath = projectPath.resolve(structure.src)
+                .toAbsolutePath();
         Set<Path> sources;
         try {
-            // remove any pre-compiled class files from bin/
-            var binPath = projectPath.resolve("bin");
+            // remove any pre-compiled class files from bin dir
+            var binPath = projectPath.resolve(structure.bin);
             Files.createDirectories(binPath);
             Files.walk(binPath)
                     .skip(1) // skip bin/ folder itself
@@ -179,7 +183,7 @@ public class Grader {
 
             var options = asList(
                     "-cp", System.getProperty("java.class.path"),
-                    "-d", projectPath.resolve("bin").toString());
+                    "-d", projectPath.resolve(structure.bin).toString());
             javac.getTask(null, manager, collector, options, null,
                     manager.getJavaFileObjectsFromPaths(sources)).call();
 
@@ -222,7 +226,7 @@ public class Grader {
     private void runTests(Task task, Path projectPath, String student,
             PrintStream out) {
         try {
-            var classes = Files.list(projectPath.resolve("src"))
+            var classes = Files.list(projectPath.resolve(structure.src))
                     .map(p -> p.getFileName().toString())
                     .filter(s -> s.endsWith(".java"))
                     .map(s -> s.substring(0, s.length() - 5)).collect(toList());
@@ -232,7 +236,7 @@ public class Grader {
             var junitArgs = new ArrayList<>(classes);
             junitArgs.add(0, task.testClass);
             var jUnit = new JavaProcessBuilder(TestRunner.class, junitArgs)
-                    .classpath(projectPath.resolve("bin") + pathSeparator
+                    .classpath(projectPath.resolve(structure.bin) + pathSeparator
                             + System.getProperty("java.class.path"))
                     .vmArgs("-Dfile.encoding=UTF8", agentArg, "-XX:-OmitStackTraceInFastThrow")
                     .start();
