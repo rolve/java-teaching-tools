@@ -46,6 +46,12 @@ public class Results {
             // Header
             out.append("Name");
             if (!single) { // two-row header
+                for (var res : results) {
+                    // hack to avoid breaking the layout of the TSV file
+                    if (res.criteriaCount() == 0) {
+                        res.criteria.values().forEach(c -> c.add("dummy"));
+                    }
+                }
                 out.append(results.stream()
                         .map(r -> "\t\t" + r.task.testClassSimpleName()
                                 + "\t".repeat(r.criteriaCount() - 1))
