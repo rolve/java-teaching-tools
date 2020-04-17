@@ -139,9 +139,11 @@ public class Grader {
             results.get(task).addSubmission(submName);
 
             prepareProject(projDir, task);
-            var compiled = compileProject(task, gradingDir, out);
-            if (compiled) {
-                results.get(task).addCriterion(submName, "compiles");
+            var hasErrors = compileProject(task, gradingDir, out);
+            if (hasErrors) {
+                results.get(task).addCriterion(submName, "compile errors");
+            }
+            if (!hasErrors || compiler == ECLIPSE) {
                 runTests(task, gradingDir, submName, out);
             }
         }, () -> {
@@ -204,54 +206,25 @@ public class Grader {
 
         var javaCompiler = compiler.create();
 
-        while (true) {
-            var collector = new DiagnosticCollector<>();
-            var manager = javaCompiler.getStandardFileManager(collector, null, UTF_8);
+        var collector = new DiagnosticCollector<>();
+        var manager = javaCompiler.getStandardFileManager(collector, null, UTF_8);
 
-            var version = String.valueOf(Runtime.version().feature());
-            var options = asList(
-                    "-cp", getProperty("java.class.path"),
-                    "-d", gradingDir.resolve(GRADING_BIN).toString(),
-                    "-source", version, "-target", version);
-            javaCompiler.getTask(nullWriter(), manager, collector, options, null,
-                    manager.getJavaFileObjectsFromPaths(sources)).call();
-
-            var errors = collector.getDiagnostics().stream()
-                    .filter(d -> d.getKind() == ERROR).collect(toList());
-            if (errors.isEmpty()) {
-                return true;
-            }
-
-            var faultyFiles = errors.stream()
-                    .map(d -> (JavaFileObject) d.getSource())
-                    .map(f -> srcDir.relativize(Path.of(f.getName())).toString())
-                    .map(s -> s.replace(separatorChar, '/'))
-                    .collect(toSet());
-            if (task.classUnderTest.isPresent()) {
-                var cutPath = task.classUnderTest.get().replace('.', '/') + ".java";
-                if (faultyFiles.remove(cutPath)) {
-                    // never remove class under test from compile arguments
-                    out.println("Class under test has errors.");
-                }
-            }
-            if (faultyFiles.removeAll(task.filesToCopy())) {
-                // copy-in files should *never* have errors
-                out.println("WARNING: One of " + task.filesToCopy()
-                        + " had a compile error.\n");
-            }
-
-            errors.forEach(d -> out.println(format(d, srcDir)));
-
-            if (faultyFiles.isEmpty()) {
-                // no files left to remove. unable to compile.
-                return false;
-            } else {
-                var faulty = faultyFiles.iterator().next();
-                out.printf("%s seems to be faulty. Ignoring it for compilation.\n",
-                        faulty);
-                sources.remove(srcDir.resolve(faulty));
-            }
+        var version = String.valueOf(Runtime.version().feature());
+        var options = new ArrayList<>(List.of(
+                "-cp", getProperty("java.class.path"),
+                "-d", gradingDir.resolve(GRADING_BIN).toString(),
+                "-source", version, "-target", version));
+        if (compiler == ECLIPSE) {
+            options.add("-proceedOnError");
         }
+        javaCompiler.getTask(nullWriter(), manager, collector, options, null,
+                manager.getJavaFileObjectsFromPaths(sources)).call();
+
+        var errors = collector.getDiagnostics().stream()
+                .filter(d -> d.getKind() == ERROR).collect(toList());
+
+        errors.forEach(d -> out.println(format(d, srcDir)));
+        return errors.size() > 0;
     }
 
     private void runTests(Task task, Path gradingDir, String submName,

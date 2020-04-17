@@ -69,7 +69,8 @@ public class TestRunner {
                 } else {
                     everFailed.add(name);
                     var exception = result.getThrowable().get();
-                    var msg = name + ": " + exception.getMessage()
+                    var msg = name + ": "
+                            + exception.getMessage().replaceAll("\\s+", " ")
                             + " (" + exception.getClass().getName() + ")";
                     // TODO: Collect exception stats
                     failMsgs.add(msg);
