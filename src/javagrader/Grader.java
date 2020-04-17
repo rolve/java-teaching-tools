@@ -12,6 +12,7 @@ import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.*;
 import static javagrader.Compiler.ECLIPSE;
+import static javax.tools.Diagnostic.NOPOS;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import java.io.*;
@@ -22,8 +23,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaFileObject;
+import javax.tools.*;
+
+import org.eclipse.jdt.internal.compiler.batch.Main.Logger;
 
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
@@ -238,7 +240,7 @@ public class Grader {
                         + " had a compile error.\n");
             }
 
-            errors.forEach(out::println);
+            errors.forEach(d -> out.println(format(d, srcDir)));
 
             if (faultyFiles.isEmpty()) {
                 // no files left to remove. unable to compile.
@@ -327,5 +329,70 @@ public class Grader {
         try (Closeable c = finallyBlock) {
             tryBlock.close();
         }
+    }
+
+    private String format(Diagnostic<?> problem, Path srcDir) {
+        var path = Path.of(((JavaFileObject) problem.getSource()).toUri());
+        return srcDir.relativize(path)
+                + ":" + problem.getLineNumber()
+                + ": " + problem.getKind()
+                + ": " + problem.getMessage(null) + "\n"
+                + formatSource(problem);
+    }
+
+    /**
+     * Compiler-independent formatting of source location, based on
+     * {@link Logger#errorReportSource}
+     */
+    private CharSequence formatSource(Diagnostic<?> problem) {
+        char[] unitSource = null;
+        try (var in = ((JavaFileObject) problem.getSource()).openInputStream()) {
+            unitSource = new String(in.readAllBytes(), UTF_8).toCharArray();
+        } catch (IOException e) {}
+
+        var startPos = (int) problem.getStartPosition();
+        var endPos = (int) problem.getEndPosition();
+        int len;
+        if ((startPos > endPos)
+                || ((startPos == NOPOS) && (endPos == NOPOS))
+                || (unitSource == null) || (len = unitSource.length) == 0) {
+            return "";
+        }
+
+        char c;
+        int start;
+        int end;
+        for (start = startPos >= len ? len - 1 : startPos; start > 0; start--) {
+            if ((c = unitSource[start - 1]) == '\n' || c == '\r') {
+                break;
+            }
+        }
+        for (end = endPos >= len ? len - 1 : endPos; end + 1 < len; end++) {
+            if ((c = unitSource[end + 1]) == '\r' || c == '\n') {
+                break;
+            }
+        }
+
+        // trim left and right spaces/tabs
+        while ((c = unitSource[start]) == ' ' || c == '\t') {
+            start++;
+        }
+        while ((c = unitSource[end]) == ' ' || c == '\t') {
+            end--;
+        }
+
+        // copy source
+        var result = new StringBuffer();
+        result.append('\t').append(unitSource, start, end - start + 1);
+        result.append("\n\t");
+
+        // compute underline
+        for (int i = start; i < startPos; i++) {
+            result.append((unitSource[i] == '\t') ? '\t' : ' ');
+        }
+        for (int i = startPos; i <= (endPos >= len ? len - 1 : endPos); i++) {
+            result.append('^');
+        }
+        return result;
     }
 }
