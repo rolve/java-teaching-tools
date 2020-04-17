@@ -2,7 +2,7 @@ package javagrader;
 
 import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
-import static java.lang.System.currentTimeMillis;
+import static java.lang.System.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
@@ -32,7 +32,7 @@ public class Grader {
     private static final Path GRADING_BIN = Path.of("bin");
 
     static {
-        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
+        setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
     }
 
     private final List<Task> tasks;
@@ -75,9 +75,6 @@ public class Grader {
                 out.println("Grading " + subm.getFileName());
                 try {
                     grade(subm, out);
-                    if (Math.random() > 0.75) {
-                        writeResultsToFile();
-                    }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
@@ -106,7 +103,7 @@ public class Grader {
 
     private synchronized void writeResultsToFile() throws IOException {
         for (var entry : results.entrySet()) {
-            entry.getValue().writeTo(Path.of(entry.getKey().resultFileName()));
+            entry.getValue().writeTo(entry.getKey().resultFile());
         }
     }
 
@@ -199,7 +196,7 @@ public class Grader {
             var manager = javac.getStandardFileManager(collector, null, UTF_8);
 
             var options = asList(
-                    "-cp", System.getProperty("java.class.path"),
+                    "-cp", getProperty("java.class.path"),
                     "-d", gradingDir.resolve(GRADING_BIN).toString());
             javac.getTask(null, manager, collector, options, null,
                     manager.getJavaFileObjectsFromPaths(sources)).call();
@@ -249,7 +246,7 @@ public class Grader {
 
         var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
                 .classpath(gradingDir.resolve(GRADING_BIN) + pathSeparator
-                        + System.getProperty("java.class.path"))
+                        + getProperty("java.class.path"))
                 .vmArgs("-Dfile.encoding=UTF8", agentArg,
                         "-XX:-OmitStackTraceInFastThrow")
                 .start();

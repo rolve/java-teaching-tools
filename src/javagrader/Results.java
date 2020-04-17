@@ -12,16 +12,16 @@ public class Results {
 
     private final Map<String, Set<String>> criteria = new TreeMap<>();
 
-    public synchronized void addSubmission(String name) {
+    public void addSubmission(String name) {
         var previous = criteria.put(name, new HashSet<>());
         assert previous == null : name + " already added";
     }
 
-    public synchronized void addCriterion(String submName, String criterion) {
+    public void addCriterion(String submName, String criterion) {
         criteria.get(submName).add(criterion);
     }
 
-    public synchronized void writeTo(Path path) throws IOException {
+    public void writeTo(Path path) throws IOException {
         var crit = criteriaNames();
 
         try (var writer = Files.newBufferedWriter(path)) {

@@ -63,14 +63,14 @@ public class Task {
         return dir;
     }
 
-    public String resultFileName() {
+    public Path resultFile() {
         var parts = testClass.split("\\.");
         var className = parts[parts.length - 1];
         var name = className + "-results.tsv";
         if (dir.isPresent()) {
             name = dir.get().toString().replace(separator, "-") + "-" + name;
         }
-        return name;
+        return Path.of(name);
     }
 
     public Path gradingDir() {
