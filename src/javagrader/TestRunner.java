@@ -1,6 +1,7 @@
 package javagrader;
 
 import static java.io.OutputStream.nullOutputStream;
+import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
@@ -68,10 +69,10 @@ public class TestRunner {
                     passed.add(name);
                 } else {
                     everFailed.add(name);
-                    var exception = result.getThrowable().get();
+                    var exc = result.getThrowable().get();
                     var msg = name + ": "
-                            + exception.getMessage().replaceAll("\\s+", " ")
-                            + " (" + exception.getClass().getName() + ")";
+                            + valueOf(exc.getMessage()).replaceAll("\\s+", " ")
+                            + " (" + exc.getClass().getName() + ")";
                     // TODO: Collect exception stats
                     failMsgs.add(msg);
                     if (result.getThrowable().get() instanceof ThreadDeath) {
@@ -86,8 +87,8 @@ public class TestRunner {
                 // this timeout is not so bad. It just means that we are not so
                 // sure that the tests are deterministic, since not all
                 // REPETITIONS were tried
+                err.println("Only " + rep + " repetitions made");
                 out.println("only " + rep + " repetitions");
-                err.println("only " + rep + " repetitions");
                 break;
             }
         }
@@ -108,10 +109,10 @@ public class TestRunner {
             out.println("nondeterministic");
         }
 
-        var alwaysSucc = passedSets.iterator().next();
-        alwaysSucc.removeAll(everFailed);
+        var alwaysPassed = passedSets.iterator().next();
+        alwaysPassed.removeAll(everFailed);
 
-        alwaysSucc.forEach(out::println);
+        alwaysPassed.forEach(out::println);
         out.flush();
         err.flush();
     }
