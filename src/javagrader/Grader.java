@@ -5,6 +5,7 @@ import static java.io.File.separatorChar;
 import static java.lang.System.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.time.LocalDateTime.now;
 import static java.util.Arrays.asList;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
@@ -16,6 +17,7 @@ import static javax.tools.ToolProvider.getSystemJavaCompiler;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -32,6 +34,8 @@ public class Grader {
     private static final Path GRADING_SRC = Path.of("src");
     private static final Path GRADING_BIN = Path.of("bin");
     private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv");
+    private static final DateTimeFormatter LOG_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
     static {
         setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
@@ -67,6 +71,9 @@ public class Grader {
                     .collect(toList());
         }
 
+        var logFile = Path.of("grader_" + now().format(LOG_FORMAT) + ".log");
+        var log = new PrintWriter(Files.newOutputStream(logFile), true);
+
         inspector = Files.createTempFile("inspector", ".jar");
         tryFinally(() -> {
             try (var in = Grader.class.getResourceAsStream("inspector.jar")) {
@@ -90,13 +97,16 @@ public class Grader {
                         i.incrementAndGet(), submissions.size(),
                         (currentTimeMillis() - startTime) / 1000);
                 System.out.println(bytes);
+                log.print(bytes);
             });
-        }, () -> {
-            Files.delete(inspector);
-            writeResultsToFile();
-        });
 
-        System.out.println("All " + submissions.size() + " submissions graded");
+            System.out.println(submissions.size() + " submissions graded");
+            log.println(submissions.size() + " submissions graded");
+        }, () -> {
+            writeResultsToFile();
+            Files.delete(inspector);
+            log.close();
+        });
     }
 
     private void grade(Path subm, PrintStream out) throws IOException {
