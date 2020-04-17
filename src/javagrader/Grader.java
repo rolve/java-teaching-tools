@@ -56,11 +56,14 @@ public class Grader {
     }
 
     public void run() throws IOException {
-        var submissions = Files.list(root)
-                .filter(Files::isDirectory)
-                .filter(filter)
-                .sorted()
-                .collect(toList());
+        List<Path> submissions;
+        try (var list = Files.list(root)) {
+            submissions = list
+                    .filter(Files::isDirectory)
+                    .filter(filter)
+                    .sorted()
+                    .collect(toList());
+        }
 
         withInspector(() -> {
             var startTime = currentTimeMillis();
