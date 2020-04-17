@@ -2,6 +2,7 @@ package javagrader;
 
 import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
+import static java.io.Writer.nullWriter;
 import static java.lang.System.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -10,8 +11,8 @@ import static java.util.Arrays.asList;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.*;
+import static javagrader.Compiler.ECLIPSE;
 import static javax.tools.Diagnostic.Kind.ERROR;
-import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -43,15 +44,22 @@ public class Grader {
     private final List<Task> tasks;
     private final Path root;
     private final ProjectStructure structure;
+    private final Compiler compiler;
 
     private final Map<Task, Results> results = new LinkedHashMap<>();
     private Predicate<Path> filter = p -> true;
     private Path inspector;
 
     public Grader(List<Task> tasks, Path root, ProjectStructure structure) {
+        this(tasks, root, structure, ECLIPSE);
+    }
+
+    public Grader(List<Task> tasks, Path root, ProjectStructure structure,
+            Compiler compiler) {
         this.tasks = requireNonNull(tasks);
         this.root = requireNonNull(root);
         this.structure = requireNonNull(structure);
+        this.compiler = requireNonNull(compiler);
         tasks.forEach(t -> results.put(t, new Results(t)));
     }
 
@@ -192,16 +200,18 @@ public class Grader {
                     .collect(toCollection(HashSet::new));
         }
 
-        var javac = getSystemJavaCompiler();
+        var javaCompiler = compiler.create();
 
         while (true) {
             var collector = new DiagnosticCollector<>();
-            var manager = javac.getStandardFileManager(collector, null, UTF_8);
+            var manager = javaCompiler.getStandardFileManager(collector, null, UTF_8);
 
+            var version = String.valueOf(Runtime.version().feature());
             var options = asList(
                     "-cp", getProperty("java.class.path"),
-                    "-d", gradingDir.resolve(GRADING_BIN).toString());
-            javac.getTask(null, manager, collector, options, null,
+                    "-d", gradingDir.resolve(GRADING_BIN).toString(),
+                    "-source", version, "-target", version);
+            javaCompiler.getTask(nullWriter(), manager, collector, options, null,
                     manager.getJavaFileObjectsFromPaths(sources)).call();
 
             var errors = collector.getDiagnostics().stream()
