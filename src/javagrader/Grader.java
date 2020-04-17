@@ -9,7 +9,6 @@ import static java.time.LocalDateTime.now;
 import static java.util.Arrays.asList;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
-import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.*;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
@@ -45,7 +44,7 @@ public class Grader {
     private final Path root;
     private final ProjectStructure structure;
 
-    private final Map<Task, Results> results;
+    private final Map<Task, Results> results = new LinkedHashMap<>();
     private Predicate<Path> filter = p -> true;
     private Path inspector;
 
@@ -53,7 +52,7 @@ public class Grader {
         this.tasks = requireNonNull(tasks);
         this.root = requireNonNull(root);
         this.structure = requireNonNull(structure);
-        results = tasks.stream().collect(toMap(identity(), Results::new));
+        tasks.forEach(t -> results.put(t, new Results(t)));
     }
 
     public void gradeOnly(String... submNames) {
