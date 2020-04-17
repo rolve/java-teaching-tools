@@ -66,11 +66,11 @@ public class Task {
     public Path resultFile() {
         var parts = testClass.split("\\.");
         var className = parts[parts.length - 1];
-        var name = className + "-results.tsv";
+        var name = className;
         if (dir.isPresent()) {
             name = dir.get().toString().replace(separator, "-") + "-" + name;
         }
-        return Path.of(name);
+        return Path.of("results-" + name + ".tsv");
     }
 
     public Path gradingDir() {

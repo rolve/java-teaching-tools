@@ -30,6 +30,7 @@ public class Grader {
 
     private static final Path GRADING_SRC = Path.of("src");
     private static final Path GRADING_BIN = Path.of("bin");
+    private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv");
 
     static {
         setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
@@ -102,8 +103,11 @@ public class Grader {
     }
 
     private synchronized void writeResultsToFile() throws IOException {
-        for (var entry : results.entrySet()) {
-            entry.getValue().writeTo(entry.getKey().resultFile());
+        for (var e : results.entrySet()) {
+            Results.write(List.of(e.getValue()), e.getKey().resultFile());
+        }
+        if (tasks.size() > 1) {
+            Results.write(results.values(), ALL_RESULTS_FILE);
         }
     }
 
