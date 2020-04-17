@@ -18,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.tools.DiagnosticCollector;
@@ -68,7 +67,12 @@ public class Grader {
                     .collect(toList());
         }
 
-        withInspector(() -> {
+        inspector = Files.createTempFile("inspector", ".jar");
+        tryFinally(() -> {
+            try (var in = Grader.class.getResourceAsStream("inspector.jar")) {
+                Files.copy(in, inspector, REPLACE_EXISTING);
+            }
+
             var startTime = currentTimeMillis();
             var i = new AtomicInteger(0);
             submissions.stream().parallel().forEach(subm -> {
@@ -87,21 +91,12 @@ public class Grader {
                         (currentTimeMillis() - startTime) / 1000);
                 System.out.println(bytes);
             });
+        }, () -> {
+            Files.delete(inspector);
+            writeResultsToFile();
         });
 
-        writeResultsToFile();
-        System.out.println(submissions.size() + " submissions processed");
-    }
-
-    private void withInspector(Runnable code) throws IOException {
-        inspector = Files.createTempFile("inspector", ".jar");
-        // make sure exceptions from "code" are not suppressed:
-        try (Closeable deleter = () -> Files.delete(inspector)) {
-            try (var in = Grader.class.getResourceAsStream("inspector.jar")) {
-                Files.copy(in, inspector, REPLACE_EXISTING);
-            }
-            code.run();
-        }
+        System.out.println("All " + submissions.size() + " submissions graded");
     }
 
     private synchronized void writeResultsToFile() throws IOException {
@@ -121,13 +116,15 @@ public class Grader {
 
     private void gradeTask(Path subm, Task task, PrintStream out)
             throws IOException {
-        var projDir = subm;
+        Path projDir;
         if (task.directory().isPresent()) {
-            projDir = projDir.resolve(task.directory().get());
+            projDir = subm.resolve(task.directory().get());
+        } else {
+            projDir = subm;
         }
         var gradingDir = projDir.resolve(task.gradingDir());
 
-        try {
+        tryFinally(() -> {
             var submName = subm.getFileName().toString();
             results.get(task).addSubmission(submName);
 
@@ -137,9 +134,9 @@ public class Grader {
                 results.get(task).addCriterion(submName, "compiles");
                 runTests(task, gradingDir, submName, out);
             }
-        } finally {
+        }, () -> {
             delete(gradingDir, false);
-        }
+        });
     }
 
     private void prepareProject(Path projDir, Task task) throws IOException {
@@ -297,6 +294,19 @@ public class Grader {
                 .map(Path::toFile)
                 .sorted(reverseOrder())
                 .forEach(File::delete);
+        }
+    }
+
+    /**
+     * Like a normal try-finally, but with the superior exception handling of a
+     * try-with-resources, i.e., does not suppress exceptions thrown from the
+     * try block. Note that {@link Closeable} is used simply as a functional
+     * interface here.
+     */
+    private static void tryFinally(Closeable tryBlock, Closeable finallyBlock)
+            throws IOException {
+        try (Closeable c = finallyBlock) {
+            tryBlock.close();
         }
     }
 }
