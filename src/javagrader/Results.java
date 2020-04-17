@@ -12,12 +12,12 @@ public class Results {
 
     private final Map<String, Set<String>> criteria = new TreeMap<>();
 
-    public void addSubmission(String name) {
+    public synchronized void addSubmission(String name) {
         var previous = criteria.put(name, new HashSet<>());
         assert previous == null : name + " already added";
     }
 
-    public void addCriterion(String submName, String criterion) {
+    public synchronized void addCriterion(String submName, String criterion) {
         criteria.get(submName).add(criterion);
     }
 
