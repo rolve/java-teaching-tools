@@ -99,15 +99,6 @@ public class Grader {
         System.out.println("All " + submissions.size() + " submissions graded");
     }
 
-    private synchronized void writeResultsToFile() throws IOException {
-        for (var e : results.entrySet()) {
-            Results.write(List.of(e.getValue()), e.getKey().resultFile());
-        }
-        if (tasks.size() > 1) {
-            Results.write(results.values(), ALL_RESULTS_FILE);
-        }
-    }
-
     private void grade(Path subm, PrintStream out) throws IOException {
         for (var task : tasks) {
             gradeTask(subm, task, out);
@@ -273,6 +264,15 @@ public class Grader {
                 .filter(line -> !line.isEmpty())
                 .forEach(line -> results.get(task).addCriterion(submName, line));
 
+    }
+
+    private void writeResultsToFile() throws IOException {
+        for (var e : results.entrySet()) {
+            Results.write(List.of(e.getValue()), e.getKey().resultFile());
+        }
+        if (tasks.size() > 1) {
+            Results.write(results.values(), ALL_RESULTS_FILE);
+        }
     }
 
     private String classesToInspect(Path srcDir) throws IOException {
