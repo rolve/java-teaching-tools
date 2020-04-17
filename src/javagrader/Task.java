@@ -79,7 +79,7 @@ public class Task {
 
     @Override
     public int hashCode() {
-        return Objects.hash(testClass);
+        return Objects.hash(testClass, dir);
     }
 
     @Override
@@ -88,6 +88,7 @@ public class Task {
             return false;
         }
         var other = (Task) obj;
-        return testClass.equals(other.testClass);
+        return testClass.equals(other.testClass)
+                && dir.equals(other.dir);
     }
 }
