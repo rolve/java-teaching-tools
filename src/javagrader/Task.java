@@ -73,6 +73,10 @@ public class Task {
         return name;
     }
 
+    public Path gradingDir() {
+        return Path.of("grading-" + testClass);
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(testClass);

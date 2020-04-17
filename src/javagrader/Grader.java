@@ -13,7 +13,8 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.*;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -27,9 +28,8 @@ import ch.trick17.javaprocesses.util.LineWriterAdapter;
 
 public class Grader {
 
-    private static final Path GRADING = Path.of("grading");
-    private static final Path GRADING_SRC = GRADING.resolve("src");
-    private static final Path GRADING_BIN = GRADING.resolve("bin");
+    private static final Path GRADING_SRC = Path.of("src");
+    private static final Path GRADING_BIN = Path.of("bin");
 
     static {
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
@@ -122,29 +122,32 @@ public class Grader {
         if (task.directory().isPresent()) {
             projDir = projDir.resolve(task.directory().get());
         }
+        var gradingDir = projDir.resolve(task.gradingDir());
+
         try {
             var submName = subm.getFileName().toString();
             results.get(task).addSubmission(submName);
 
             prepareProject(projDir, task);
-            var compiled = compileProject(projDir, task, out);
+            var compiled = compileProject(task, gradingDir, out);
             if (compiled) {
                 results.get(task).addCriterion(submName, "compiles");
-                runTests(task, projDir, submName, out);
+                runTests(task, gradingDir, submName, out);
             }
         } finally {
-            delete(projDir.resolve(GRADING), false);
+            delete(gradingDir, false);
         }
     }
 
     private void prepareProject(Path projDir, Task task) throws IOException {
         // Remove any grading files from previous runs
-        delete(projDir.resolve(GRADING), true);
+        var gradingDir = projDir.resolve(task.gradingDir());
+        delete(gradingDir, true);
 
         // Copy sources
         var origSrcDir = projDir.resolve(structure.src);
         Files.createDirectories(origSrcDir); // yes, it happened
-        var srcDir = projDir.resolve(GRADING_SRC);
+        var srcDir = gradingDir.resolve(GRADING_SRC);
         Files.createDirectories(srcDir);
         try (var walk = Files.walk(origSrcDir)) {
             for (var from : (Iterable<Path>) walk::iterator) {
@@ -165,7 +168,7 @@ public class Grader {
         }
 
         // Copy properties files into bin directory
-        var binDir = projDir.resolve(GRADING_BIN);
+        var binDir = gradingDir.resolve(GRADING_BIN);
         Files.createDirectories(binDir);
         try (var walk = Files.walk(origSrcDir)) {
             for (var from : (Iterable<Path>) walk::iterator) {
@@ -178,9 +181,9 @@ public class Grader {
         }
     }
 
-    private boolean compileProject(Path projDir, Task task,
+    private boolean compileProject(Task task, Path gradingDir,
             PrintStream out) throws IOException {
-        var srcDir = projDir.resolve(GRADING_SRC);
+        var srcDir = gradingDir.resolve(GRADING_SRC);
 
         Set<Path> sources;
         try (var walk = Files.walk(srcDir)) {
@@ -197,7 +200,7 @@ public class Grader {
 
             var options = asList(
                     "-cp", System.getProperty("java.class.path"),
-                    "-d", projDir.resolve(GRADING_BIN).toString());
+                    "-d", gradingDir.resolve(GRADING_BIN).toString());
             javac.getTask(null, manager, collector, options, null,
                     manager.getJavaFileObjectsFromPaths(sources)).call();
 
@@ -239,13 +242,13 @@ public class Grader {
         }
     }
 
-    private void runTests(Task task, Path projDir, String submName,
+    private void runTests(Task task, Path gradingDir, String submName,
             PrintStream out) throws IOException {
         var agentArg = "-javaagent:" + inspector + "="
-                + classesToInspect(projDir.resolve(GRADING_SRC));
+                + classesToInspect(gradingDir.resolve(GRADING_SRC));
 
         var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
-                .classpath(projDir.resolve(GRADING_BIN) + pathSeparator
+                .classpath(gradingDir.resolve(GRADING_BIN) + pathSeparator
                         + System.getProperty("java.class.path"))
                 .vmArgs("-Dfile.encoding=UTF8", agentArg,
                         "-XX:-OmitStackTraceInFastThrow")
@@ -284,27 +287,13 @@ public class Grader {
     }
 
     private void delete(Path dir, boolean leaveRoot) throws IOException {
-        // Spuriously fails for some dirs on Windows. Weirdly, retrying helps...
-        int attempts = 50;
-        for (int i = 1; i <= attempts; i++) {
-            try {
-                // create directory if it doesn't exist (needed for walk())
-                Files.createDirectories(dir);
-                try (var walk = Files.walk(dir)) {
-                    walk.skip(leaveRoot? 1 : 0)
-                        .map(Path::toFile)
-                        .sorted(reverseOrder())
-                        .forEach(File::delete);
-                }
-                return;
-            } catch (AccessDeniedException e) {
-                if (i == attempts) {
-                    throw e;
-                }
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ie) {}
-            }
+        // create directory if it doesn't exist (needed for walk())
+        Files.createDirectories(dir);
+        try (var walk = Files.walk(dir)) {
+            walk.skip(leaveRoot? 1 : 0)
+                .map(Path::toFile)
+                .sorted(reverseOrder())
+                .forEach(File::delete);
         }
     }
 }
