@@ -55,6 +55,11 @@ public class Task {
         return this;
     }
 
+    public String testClassSimpleName() {
+        var parts = testClass.split("\\.");
+        return parts[parts.length - 1];
+    }
+
     public Set<String> filesToCopy() {
         return unmodifiableSet(filesToCopy);
     }
@@ -64,9 +69,7 @@ public class Task {
     }
 
     public Path resultFile() {
-        var parts = testClass.split("\\.");
-        var className = parts[parts.length - 1];
-        var name = className;
+        var name = testClassSimpleName();
         if (dir.isPresent()) {
             name = dir.get().toString().replace(separator, "-") + "-" + name;
         }

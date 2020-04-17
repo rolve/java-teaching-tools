@@ -8,6 +8,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.*;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
@@ -17,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.tools.DiagnosticCollector;
@@ -48,7 +50,7 @@ public class Grader {
         this.tasks = requireNonNull(tasks);
         this.root = requireNonNull(root);
         this.structure = requireNonNull(structure);
-        results = tasks.stream().collect(toMap(t -> t, t -> new Results()));
+        results = tasks.stream().collect(toMap(identity(), Results::new));
     }
 
     public void gradeOnly(String... submNames) {
