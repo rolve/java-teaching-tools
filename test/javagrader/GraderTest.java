@@ -69,4 +69,21 @@ public class GraderTest {
                 "3\t1");
         assertEquals(expected, results);
     }
+
+    @Test
+    public void testCustomDir() throws IOException {
+        var tasks = List.of(new Task("AddTest", "Add"));
+        var grader = new Grader(tasks, SUBM_ROOT.resolve("add"),
+                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        grader.setTestsDir(Path.of("tests-custom-dir"));
+        grader.gradeOnly("0", "1", "2");
+        grader.run();
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompile errors\ttestAdd",
+                "0\t0\t1",
+                "1\t0\t0",
+                "2\t1\t0");
+        assertEquals(expected, results);
+    }
 }

@@ -74,7 +74,7 @@ public class Task {
         if (dir.isPresent()) {
             name = dir.get().toString().replace(separator, "-") + "-" + name;
         }
-        return Path.of("results-" + name + ".tsv");
+        return Path.of("results-" + name + ".tsv").toAbsolutePath();
     }
 
     public Path gradingDir() {

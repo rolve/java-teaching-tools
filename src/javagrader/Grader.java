@@ -33,9 +33,10 @@ import ch.trick17.javaprocesses.util.LineWriterAdapter;
 
 public class Grader {
 
-    private static final Path GRADING_SRC = Path.of("src");
-    private static final Path GRADING_BIN = Path.of("bin");
-    private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv");
+    private static final Path GRADING_SRC = Path.of("src"); // relative to grading dir
+    private static final Path GRADING_BIN = Path.of("bin"); // relative to grading dir
+    private static final Path DEFAULT_TESTS_DIR = Path.of("tests").toAbsolutePath();
+    private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv").toAbsolutePath();
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
@@ -50,6 +51,7 @@ public class Grader {
 
     private final Map<Task, Results> results = new LinkedHashMap<>();
     private Predicate<Path> filter = p -> true;
+    private Path testsDir = DEFAULT_TESTS_DIR;
     private Path inspector;
 
     public Grader(List<Task> tasks, Path root, ProjectStructure structure) {
@@ -64,6 +66,10 @@ public class Grader {
         this.structure = requireNonNull(structure);
         this.compiler = requireNonNull(compiler);
         tasks.forEach(t -> results.put(t, new Results(t)));
+    }
+
+    public void setTestsDir(Path testsDir) {
+        this.testsDir = testsDir.toAbsolutePath();
     }
 
     public void gradeOnly(String... submNames) {
@@ -174,7 +180,7 @@ public class Grader {
 
         // Copy grading files
         for (var file : task.filesToCopy()) {
-            var from = Path.of("tests", file);
+            var from = testsDir.resolve(file);
             var to = srcDir.resolve(file);
             Files.createDirectories(to.getParent());
             Files.copy(from, to, REPLACE_EXISTING);
