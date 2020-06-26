@@ -20,6 +20,11 @@ public class GraderTest {
             "0\t0\t1\t1",
             "1\t0\t1\t0",
             "2\t1\t0\t0");
+    static final List<String> EXPECTED_MULTIPLY_SIMPLE = List.of(
+            "Name\tcompile errors\ttestMultiply1\ttestMultiply2",
+            "0\t0\t1\t1",
+            "1\t0\t1\t0",
+            "2\t1\t0\t0");
 
     @Test
     public void testEclipseStructureEclipseCompiler() throws IOException {
@@ -64,6 +69,28 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE, results);
+    }
+
+    @Test
+    public void testPackageEclipseCompiler() throws IOException {
+        var tasks = List.of(new Task("multiply.MultiplyTest", "multiply.Multiply"));
+        var grader = new Grader(tasks, ECLIPSE_ROOT,
+                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        grader.gradeOnly("0", "1", "2");
+        grader.run();
+        var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
+        assertEquals(EXPECTED_MULTIPLY_SIMPLE, results);
+    }
+
+    @Test
+    public void testPackageJavac() throws IOException {
+        var tasks = List.of(new Task("multiply.MultiplyTest", "multiply.Multiply"));
+        var grader = new Grader(tasks, ECLIPSE_ROOT,
+                ProjectStructure.ECLIPSE, Compiler.JAVAC);
+        grader.gradeOnly("0", "1", "2");
+        grader.run();
+        var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
+        assertEquals(EXPECTED_MULTIPLY_SIMPLE, results);
     }
 
     @Test
