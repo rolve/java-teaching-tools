@@ -94,7 +94,7 @@ public class Grader {
             submissions.stream().parallel().forEach(subm -> {
                 var bytes = new ByteArrayOutputStream();
                 var out = new PrintStream(bytes);
-    
+
                 out.println("Grading " + subm.getFileName());
                 try {
                     grade(subm, out);
@@ -139,7 +139,7 @@ public class Grader {
             results.get(task).addSubmission(submName);
 
             prepareProject(projDir, task);
-            var hasErrors = compileProject(task, gradingDir, out);
+            var hasErrors = compileProject(gradingDir, out);
             if (hasErrors) {
                 results.get(task).addCriterion(submName, "compile errors");
             }
@@ -187,14 +187,13 @@ public class Grader {
                 if (from.toString().endsWith(".properties")) {
                     var to = binDir.resolve(origSrcDir.relativize(from));
                     Files.createDirectories(to.getParent());
-                    Files.copy(from, to);      
+                    Files.copy(from, to);
                 }
             }
         }
     }
 
-    private boolean compileProject(Task task, Path gradingDir,
-            PrintStream out) throws IOException {
+    private boolean compileProject(Path gradingDir, PrintStream out) throws IOException {
         var srcDir = gradingDir.resolve(GRADING_SRC);
 
         Set<Path> sources;

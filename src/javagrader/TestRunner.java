@@ -158,7 +158,7 @@ public class TestRunner {
             } catch (InterruptedException e) {}
         }
         if (thread.isAlive()) {
-            thread.stop(); // <- badass
+            stop(thread);
         }
 
         if (result.get() == null) { // quite unlikely but possible, I suppose
@@ -166,5 +166,10 @@ public class TestRunner {
         } else {
             return result.get();
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void stop(Thread thread) {
+        thread.stop(); // <- badass
     }
 }

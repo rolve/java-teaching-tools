@@ -32,7 +32,8 @@ public class Task {
         this(testClass, requireNonNull(classUnderTest), true);
     }
 
-    private Task(String testClass, String classUnderTest, boolean internal) {
+    private Task(String testClass, String classUnderTest,
+            @SuppressWarnings("unused") boolean internal) {
         this.testClass = requireNonNull(testClass);
         this.classUnderTest = Optional.ofNullable(classUnderTest); // may be null if not needed
 
