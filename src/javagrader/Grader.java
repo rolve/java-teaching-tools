@@ -59,7 +59,8 @@ public class Grader {
     public Grader(List<Task> tasks, Path root, ProjectStructure structure,
             Compiler compiler) {
         this.tasks = requireNonNull(tasks);
-        this.root = requireNonNull(root);
+        // make root path absolute, to avoid problems with relativize() later
+        this.root = root.toAbsolutePath();
         this.structure = requireNonNull(structure);
         this.compiler = requireNonNull(compiler);
         tasks.forEach(t -> results.put(t, new Results(t)));
