@@ -1,12 +1,15 @@
 package javagrader;
 
+import static java.nio.file.Files.list;
 import static java.nio.file.Files.readAllLines;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 public class GraderTest {
@@ -136,5 +139,15 @@ public class GraderTest {
                 "1\t0\t0",
                 "2\t1\t0");
         assertEquals(expected, results);
+    }
+
+    @AfterAll
+    public static void deleteLogFiles() throws IOException {
+        try (var allFiles = list(Path.of("."))) {
+            allFiles.filter(Files::isRegularFile)
+                    .filter(p -> p.getFileName().toString()
+                            .matches("grader_.*\\.log|results-.*\\.tsv"))
+                    .forEach(p -> p.toFile().delete());
+        }
     }
 }
