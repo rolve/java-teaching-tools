@@ -101,11 +101,12 @@ public class GraderTest {
         var tasks = List.of(new Task("AddTest", "Add"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
-        grader.gradeOnly("3");
+        grader.gradeOnly("0", "3");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t0\t1\t1",
                 "3\t1\t1\t1");
         assertEquals(expected, results);
     }
@@ -115,12 +116,13 @@ public class GraderTest {
         var tasks = List.of(new Task("AddTest", "Add"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.JAVAC);
-        grader.gradeOnly("3");
+        grader.gradeOnly("0", "3");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompile errors",
-                "3\t1");
+                "Name\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t0\t1\t1",
+                "3\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -183,6 +185,21 @@ public class GraderTest {
                 "Name\tfix: changed signature\ttestMultiply1\ttestMultiply2",
                 "0\t0\t1\t1",
                 "4\t1\t1\t1");
+        assertEquals(expected, results);
+    }
+
+    @Test
+    public void testTimeout() throws IOException {
+        var tasks = List.of(new Task("AddTest", "Add"));
+        var grader = new Grader(tasks, ECLIPSE_ROOT,
+                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        grader.gradeOnly("0", "5"); // contains infinite loop
+        grader.run();
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tonly 1 repetitions\ttestAdd1\ttestAdd2\ttimeout",
+                "0\t0\t1\t1\t0",
+                "5\t1\t0\t0\t1");
         assertEquals(expected, results);
     }
 
