@@ -203,6 +203,52 @@ public class GraderTest {
         assertEquals(expected, results);
     }
 
+    @Test
+    public void testMissingClassUnderTestEclipseCompiler() throws IOException {
+        var tasks = List.of(new Task("AddTest", "Add"));
+        var grader = new Grader(tasks, ECLIPSE_ROOT,
+                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        grader.gradeOnly("0", "6");
+        grader.run();
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        // TODO: would be nice to have an entry for this
+        var expected = List.of(
+                "Name\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t0\t1\t1",
+                "6\t1\t0\t0");
+        assertEquals(expected, results);
+    }
+
+    @Test
+    public void testMissingClassUnderTestJavac() throws IOException {
+        var tasks = List.of(new Task("AddTest", "Add"));
+        var grader = new Grader(tasks, ECLIPSE_ROOT,
+                ProjectStructure.ECLIPSE, Compiler.JAVAC);
+        grader.gradeOnly("0", "6");
+        grader.run();
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t0\t1\t1",
+                "6\t1\t0\t0");
+        assertEquals(expected, results);
+    }
+
+    @Test
+    public void testMissingSrcDir() throws IOException {
+        var tasks = List.of(new Task("AddTest", "Add"));
+        var grader = new Grader(tasks, ECLIPSE_ROOT,
+                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        grader.gradeOnly("0", "7");
+        grader.run();
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t0\t1\t1",
+                "7\t1\t0\t0");
+        assertEquals(expected, results);
+    }
+
     @AfterAll
     public static void deleteLogFiles() throws IOException {
         try (var allFiles = list(Path.of("."))) {
