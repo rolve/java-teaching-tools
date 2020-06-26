@@ -1,4 +1,4 @@
-@Deductions({"changed signature", "wrong package"})
+@javagrader.Deductions({"changed signature", "wrong package"})
 public class Divide {
     
     public static int divide(int i, int j) {

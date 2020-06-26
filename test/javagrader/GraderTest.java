@@ -171,6 +171,21 @@ public class GraderTest {
         assertEquals(expected, results);
     }
 
+    @Test
+    public void testDeductionsPackage() throws IOException {
+        var tasks = List.of(new Task("multiply.MultiplyTest", "Multiply"));
+        var grader = new Grader(tasks, ECLIPSE_ROOT,
+                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        grader.gradeOnly("0", "4");
+        grader.run();
+        var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
+        var expected = List.of(
+                "Name\tfix: changed signature\ttestMultiply1\ttestMultiply2",
+                "0\t0\t1\t1",
+                "4\t1\t1\t1");
+        assertEquals(expected, results);
+    }
+
     @AfterAll
     public static void deleteLogFiles() throws IOException {
         try (var allFiles = list(Path.of("."))) {

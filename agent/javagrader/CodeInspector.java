@@ -1,3 +1,4 @@
+package javagrader;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
@@ -31,7 +32,7 @@ public class CodeInspector implements ClassFileTransformer {
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
             ProtectionDomain protectionDomain, byte[] classfile) throws IllegalClassFormatException {
         try {
-            if(classes.contains(className)) {
+            if(classes.contains(className.replace('/', '.'))) {
                 ClassReader reader = new ClassReader(classfile);
                 reader.accept(new DeductionsScanner(), 0);
             }
@@ -47,7 +48,7 @@ public class CodeInspector implements ClassFileTransformer {
             super(ASM7);
         }
         public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-            if (!desc.contains("Deductions")) {
+            if (!desc.replace('/', '.').contains(Deductions.class.getName())) {
                 return null;
             }
             return new AnnotationVisitor(ASM7) {
