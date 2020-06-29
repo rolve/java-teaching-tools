@@ -206,7 +206,7 @@ public class Grader {
         try (var walk = Files.walk(srcDir)) {
             sources = walk
                     .filter(p -> p.toString().endsWith(".java"))
-                    .collect(toCollection(HashSet::new));
+                    .collect(toSet());
         }
 
         var javaCompiler = compiler.create();
@@ -239,8 +239,7 @@ public class Grader {
                 + classesToInspect(gradingDir.resolve(GRADING_SRC));
 
         var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
-                .classpath(gradingDir.resolve(GRADING_BIN) + pathSeparator
-                        + getProperty("java.class.path"))
+                .addClasspath(gradingDir.resolve(GRADING_BIN).toString())
                 .vmArgs("-Dfile.encoding=UTF8", agentArg,
                         "-XX:-OmitStackTraceInFastThrow")
                 .start();
