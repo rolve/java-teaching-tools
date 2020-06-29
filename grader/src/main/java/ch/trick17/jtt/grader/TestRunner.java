@@ -1,13 +1,11 @@
 package ch.trick17.jtt.grader;
 
-import static ch.trick17.jtt.grader.result.Property.INCOMPLETE_REPETITIONS;
-import static ch.trick17.jtt.grader.result.Property.NONDETERMINISTIC;
+import static ch.trick17.jtt.grader.result.Property.*;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.TestExecutionResult.failed;
 import static org.junit.platform.engine.TestExecutionResult.Status.SUCCESSFUL;
@@ -24,8 +22,6 @@ import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
-
-import ch.trick17.jtt.grader.result.Property;
 
 public class TestRunner {
 
@@ -56,15 +52,14 @@ public class TestRunner {
         System.setOut(new PrintStream(nullOutputStream()));
         System.setErr(new PrintStream(nullOutputStream()));
 
-        var passedSets = new HashSet<Set<String>>();
-        var everFailed = new HashSet<String>();
+        var passed = new HashSet<String>();
+        var failed = new HashSet<String>();
         var failMsgs = new TreeSet<String>();
 
         var methods = findTestMethods(testClass);
 
         var startTime = currentTimeMillis();
         for (int rep = 0; rep < REPETITIONS; rep++) {
-            var passed = new HashSet<String>();
             for (var method : methods) {
                 var result = runTest(method);
 
@@ -72,7 +67,7 @@ public class TestRunner {
                 if (result.getStatus() == SUCCESSFUL) {
                     passed.add(name);
                 } else {
-                    everFailed.add(name);
+                    failed.add(name);
                     var exc = result.getThrowable().get();
                     var msg = name + ": "
                             + valueOf(exc.getMessage()).replaceAll("\\s+", " ")
@@ -80,11 +75,10 @@ public class TestRunner {
                     // TODO: Collect exception stats
                     failMsgs.add(msg);
                     if (result.getThrowable().get() instanceof ThreadDeath) {
-                        out.println("prop: " + Property.TIMEOUT);
+                        out.println("prop: " + TIMEOUT);
                     }
                 }
             }
-            passedSets.add(passed);
 
             if (rep > 0 && rep < REPETITIONS - 1
                     && currentTimeMillis() - startTime > TEST_TIMEOUT) {
@@ -102,21 +96,15 @@ public class TestRunner {
                 .map("    "::concat)
                 .forEach(err::println);
 
-        if (passedSets.size() > 1) {
-            // take the intersection of all tests that once failed tests with all
-            // tests that once passed tests.
-            var everPassed = passedSets.stream().flatMap(Set::stream).collect(toSet());
-            var nonDeterm = new HashSet<>(everFailed);
-            nonDeterm.retainAll(everPassed);
-
+        var nonDeterm = new HashSet<>(passed);
+        nonDeterm.retainAll(failed);
+        if (!nonDeterm.isEmpty()) {
             err.println("Non-determinism detected in tests: " + nonDeterm);
             out.println("prop: " + NONDETERMINISTIC);
         }
 
-        var alwaysPassed = passedSets.iterator().next();
-        alwaysPassed.removeAll(everFailed);
-
-        alwaysPassed.forEach(t -> out.println("test: " + t));
+        passed.removeAll(nonDeterm);
+        passed.forEach(t -> out.println("test: " + t));
         out.flush();
         err.flush();
     }
