@@ -56,11 +56,9 @@ public class TestRunner {
         var failed = new HashSet<String>();
         var failMsgs = new TreeSet<String>();
 
-        var methods = findTestMethods(testClass);
-
-        var startTime = currentTimeMillis();
-        for (int rep = 0; rep < REPETITIONS; rep++) {
-            for (var method : methods) {
+        for (var method : findTestMethods(testClass)) {
+            var startTime = currentTimeMillis();
+            for (int rep = 0; rep < REPETITIONS; rep++) {
                 var result = runTest(method);
 
                 var name = method.getMethodName();
@@ -78,16 +76,16 @@ public class TestRunner {
                         out.println("prop: " + TIMEOUT);
                     }
                 }
-            }
 
-            if (rep > 0 && rep < REPETITIONS - 1
-                    && currentTimeMillis() - startTime > TEST_TIMEOUT) {
-                // this timeout is not so bad. It just means that we are not so
-                // sure that the tests are deterministic, since not all
-                // REPETITIONS were tried
-                err.println("Only " + rep + " repetitions made");
-                out.println("prop: " + INCOMPLETE_REPETITIONS);
-                break;
+                if (rep > 0 && rep < REPETITIONS - 1
+                        && currentTimeMillis() - startTime > TEST_TIMEOUT) {
+                    // this timeout is not so bad. It just means that we are not
+                    // so sure that the test is deterministic, since not all
+                    // REPETITIONS were tried
+                    err.println("Only " + rep + " repetitions made");
+                    out.println("prop: " + INCOMPLETE_REPETITIONS);
+                    break;
+                }
             }
         }
 

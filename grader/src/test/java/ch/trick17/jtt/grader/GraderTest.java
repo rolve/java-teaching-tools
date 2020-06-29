@@ -274,6 +274,23 @@ public class GraderTest {
         assertEquals(expected, results);
     }
 
+    @Test
+    public void testNondeterminismPlusTimeout() throws IOException {
+        // ensure that the timeout of one test does not affect detection
+        // of nondeterminism in other tests, as was previously the case
+        var tasks = List.of(new Task("SubtractTest", "Subtract"));
+        var grader = new Grader(tasks, ECLIPSE_ROOT,
+                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        grader.gradeOnly("0", "9");
+        grader.run();
+        var results = readAllLines(Path.of("results-SubtractTest.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\tnondeterministic\ttimeout\tincomplete repetitions\ttestSubtract1\ttestSubtract2\ttestSubtract3\ttestSubtract4\ttestSubtract5\ttestSubtract6",
+                "0\t1\t0\t0\t0\t1\t1\t1\t1\t1\t1",
+                "9\t1\t1\t1\t1\t0\t0\t0\t0\t0\t0");
+        assertEquals(expected, results);
+    }
+
     @AfterAll
     public static void deleteLogFiles() throws IOException {
         try (var allFiles = list(Path.of("."))) {
