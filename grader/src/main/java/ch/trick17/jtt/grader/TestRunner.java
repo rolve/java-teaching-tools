@@ -1,5 +1,7 @@
 package ch.trick17.jtt.grader;
 
+import static ch.trick17.jtt.grader.result.Property.INCOMPLETE_REPETITIONS;
+import static ch.trick17.jtt.grader.result.Property.NONDETERMINISTIC;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
@@ -23,19 +25,21 @@ import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
 
+import ch.trick17.jtt.grader.result.Property;
+
 public class TestRunner {
 
     private static final int REPETITIONS = 7;
 
-    // Timeout per test. After the timeout, the test is killed forcibly.
-    private static final long TIMEOUT = 6000; // ms
+    // Timeout per test execution. After the timeout, the test is killed forcibly.
+    private static final long EXEC_TIMEOUT = 6000; // ms
 
     // For how long we do REPETITIONS (over all tests). If we were running tests
     // for more than this time, do not attempt another repetition.
-    private static final long MAX_RUNNING_TIME = 10000; // ms
+    private static final long TEST_TIMEOUT = 10000; // ms
 
-    public static PrintStream out;
-    public static PrintStream err;
+    private static PrintStream out;
+    private static PrintStream err;
 
     public static void main(String[] args) throws Exception {
         var testClass = args[0];
@@ -76,19 +80,19 @@ public class TestRunner {
                     // TODO: Collect exception stats
                     failMsgs.add(msg);
                     if (result.getThrowable().get() instanceof ThreadDeath) {
-                        out.println("timeout");
+                        out.println("prop: " + Property.TIMEOUT);
                     }
                 }
             }
             passedSets.add(passed);
 
             if (rep > 0 && rep < REPETITIONS - 1
-                    && currentTimeMillis() - startTime > MAX_RUNNING_TIME) {
+                    && currentTimeMillis() - startTime > TEST_TIMEOUT) {
                 // this timeout is not so bad. It just means that we are not so
                 // sure that the tests are deterministic, since not all
                 // REPETITIONS were tried
                 err.println("Only " + rep + " repetitions made");
-                out.println("only " + rep + " repetitions");
+                out.println("prop: " + INCOMPLETE_REPETITIONS);
                 break;
             }
         }
@@ -106,13 +110,13 @@ public class TestRunner {
             nonDeterm.retainAll(everPassed);
 
             err.println("Non-determinism detected in tests: " + nonDeterm);
-            out.println("nondeterministic");
+            out.println("prop: " + NONDETERMINISTIC);
         }
 
         var alwaysPassed = passedSets.iterator().next();
         alwaysPassed.removeAll(everFailed);
 
-        alwaysPassed.forEach(out::println);
+        alwaysPassed.forEach(t -> out.println("test: " + t));
         out.flush();
         err.flush();
     }
@@ -153,7 +157,7 @@ public class TestRunner {
         thread.start();
         while (true) {
             try {
-                thread.join(TIMEOUT); // ja ja, should calculate time left
+                thread.join(EXEC_TIMEOUT); // ja ja, should calculate time left
                 break;
             } catch (InterruptedException e) {}
         }

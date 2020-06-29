@@ -18,16 +18,16 @@ public class GraderTest {
     static final Path ECLIPSE_ROOT = SUBM_ROOT.resolve("eclipse-structure");
     static final Path MVN_ROOT = SUBM_ROOT.resolve("maven-structure");
 
-    static final List<String> EXPECTED_ADD_SIMPLE = List.of(
-            "Name\tcompile errors\ttestAdd1\ttestAdd2",
-            "0\t0\t1\t1",
-            "1\t0\t1\t0",
-            "2\t1\t0\t0");
-    static final List<String> EXPECTED_MULTIPLY_SIMPLE = List.of(
-            "Name\tcompile errors\ttestMultiply1\ttestMultiply2",
-            "0\t0\t1\t1",
-            "1\t0\t1\t0",
-            "2\t1\t0\t0");
+    static final List<String> EXPECTED_ADD_SIMPLE_EC = List.of(
+            "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+            "0\t1\t0\t1\t1",
+            "1\t1\t0\t1\t0",
+            "2\t1\t1\t0\t0");
+    static final List<String> EXPECTED_ADD_SIMPLE_JC = List.of(
+            "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+            "0\t1\t0\t1\t1",
+            "1\t1\t0\t1\t0",
+            "2\t0\t1\t0\t0");
 
     @Test
     public void testEclipseStructureEclipseCompiler() throws IOException {
@@ -38,7 +38,7 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         // TODO: make results available through API
-        assertEquals(EXPECTED_ADD_SIMPLE, results);
+        assertEquals(EXPECTED_ADD_SIMPLE_EC, results);
     }
 
     @Test
@@ -49,7 +49,7 @@ public class GraderTest {
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
-        assertEquals(EXPECTED_ADD_SIMPLE, results);
+        assertEquals(EXPECTED_ADD_SIMPLE_JC, results);
     }
 
     @Test
@@ -60,7 +60,7 @@ public class GraderTest {
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
-        assertEquals(EXPECTED_ADD_SIMPLE, results);
+        assertEquals(EXPECTED_ADD_SIMPLE_EC, results);
     }
 
     @Test
@@ -71,7 +71,7 @@ public class GraderTest {
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
-        assertEquals(EXPECTED_ADD_SIMPLE, results);
+        assertEquals(EXPECTED_ADD_SIMPLE_JC, results);
     }
 
     @Test
@@ -82,7 +82,12 @@ public class GraderTest {
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
-        assertEquals(EXPECTED_MULTIPLY_SIMPLE, results);
+        var expected = List.of(
+                "Name\tcompiled\tcompile errors\ttestMultiply1\ttestMultiply2",
+                "0\t1\t0\t1\t1",
+                "1\t1\t0\t1\t0",
+                "2\t1\t1\t0\t0");
+        assertEquals(expected, results);
     }
 
     @Test
@@ -93,7 +98,12 @@ public class GraderTest {
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
-        assertEquals(EXPECTED_MULTIPLY_SIMPLE, results);
+        var expected = List.of(
+                "Name\tcompiled\tcompile errors\ttestMultiply1\ttestMultiply2",
+                "0\t1\t0\t1\t1",
+                "1\t1\t0\t1\t0",
+                "2\t0\t1\t0\t0");
+        assertEquals(expected, results);
     }
 
     @Test
@@ -105,9 +115,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t0\t1\t1",
-                "3\t1\t1\t1");
+                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "3\t1\t1\t1\t1");
         assertEquals(expected, results);
     }
 
@@ -120,9 +130,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t0\t1\t1",
-                "3\t1\t0\t0");
+                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "3\t0\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -136,10 +146,10 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompile errors\ttestAdd",
-                "0\t0\t1",
-                "1\t0\t0",
-                "2\t1\t0");
+                "Name\tcompiled\tcompile errors\ttestAdd",
+                "0\t1\t0\t1",
+                "1\t1\t0\t0",
+                "2\t1\t1\t0");
         assertEquals(expected, results);
     }
 
@@ -152,9 +162,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\ttag: changed signature\ttestAdd1\ttestAdd2",
-                "0\t0\t1\t1",
-                "4\t1\t1\t1");
+                "Name\tcompiled\tchanged signature\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "4\t1\t1\t1\t1");
         assertEquals(expected, results);
     }
 
@@ -167,9 +177,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-DivideTest.tsv"));
         var expected = List.of(
-                "Name\ttag: changed signature\ttag: wrong package\ttestDivide",
-                "0\t0\t0\t1",
-                "4\t1\t1\t1");
+                "Name\tcompiled\tchanged signature\twrong package\ttestDivide",
+                "0\t1\t0\t0\t1",
+                "4\t1\t1\t1\t1");
         assertEquals(expected, results);
     }
 
@@ -182,9 +192,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
         var expected = List.of(
-                "Name\ttag: changed signature\ttestMultiply1\ttestMultiply2",
-                "0\t0\t1\t1",
-                "4\t1\t1\t1");
+                "Name\tcompiled\tchanged signature\ttestMultiply1\ttestMultiply2",
+                "0\t1\t0\t1\t1",
+                "4\t1\t1\t1\t1");
         assertEquals(expected, results);
     }
 
@@ -197,9 +207,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tonly 1 repetitions\ttestAdd1\ttestAdd2\ttimeout",
-                "0\t0\t1\t1\t0",
-                "5\t1\t0\t0\t1");
+                "Name\tcompiled\ttimeout\tincomplete repetitions\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t0\t1\t1",
+                "5\t1\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -213,9 +223,9 @@ public class GraderTest {
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         // TODO: would be nice to have an entry for this
         var expected = List.of(
-                "Name\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t0\t1\t1",
-                "6\t1\t0\t0");
+                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "6\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -228,9 +238,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t0\t1\t1",
-                "6\t1\t0\t0");
+                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "6\t0\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -243,9 +253,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t0\t1\t1",
-                "7\t1\t0\t0");
+                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "7\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -258,9 +268,9 @@ public class GraderTest {
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tnondeterministic\ttestAdd1\ttestAdd2",
-                "0\t0\t1\t1",
-                "8\t1\t0\t0");
+                "Name\tcompiled\tnondeterministic\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "8\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 

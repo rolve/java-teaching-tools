@@ -1,6 +1,8 @@
 package ch.trick17.jtt.grader;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static ch.trick17.jtt.grader.result.Property.COMPILED;
+import static ch.trick17.jtt.grader.result.Property.COMPILE_ERRORS;
 import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
 import static java.io.Writer.nullWriter;
@@ -29,6 +31,7 @@ import javax.tools.*;
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
+import ch.trick17.jtt.grader.result.*;
 
 public class Grader {
 
@@ -48,7 +51,7 @@ public class Grader {
     private final ProjectStructure structure;
     private final Compiler compiler;
 
-    private final Map<Task, Results> results = new LinkedHashMap<>();
+    private final Map<Task, TaskResults> results = new LinkedHashMap<>();
     private Predicate<Path> filter = p -> true;
     private Path testsDir = DEFAULT_TESTS_DIR;
     private Path codeTagsAgent;
@@ -64,7 +67,7 @@ public class Grader {
         this.root = root.toAbsolutePath();
         this.structure = requireNonNull(structure);
         this.compiler = requireNonNull(compiler);
-        tasks.forEach(t -> results.put(t, new Results(t)));
+        tasks.forEach(t -> results.put(t, new TaskResults(t)));
     }
 
     public void setTestsDir(Path testsDir) {
@@ -142,14 +145,14 @@ public class Grader {
 
         tryFinally(() -> {
             var submName = subm.getFileName().toString();
-            results.get(task).addSubmission(submName);
 
             prepareProject(projDir, task);
             var hasErrors = compileProject(gradingDir, out);
             if (hasErrors) {
-                results.get(task).addCriterion(submName, "compile errors");
+                results.get(task).get(submName).addProperty(COMPILE_ERRORS);
             }
             if (!hasErrors || compiler == ECLIPSE) {
+                results.get(task).get(submName).addProperty(COMPILED);
                 runTests(task, gradingDir, submName, out);
             }
         }, () -> {
@@ -260,17 +263,25 @@ public class Grader {
             } catch (InterruptedException e) {}
         }
         jUnitOutput.toString().lines()
-                .filter(line -> !line.isEmpty())
-                .forEach(line -> results.get(task).addCriterion(submName, line));
-
+                .filter(line -> line.startsWith("prop: "))
+                .map(line -> Property.valueOf(line.substring(6)))
+                .forEach(results.get(task).get(submName)::addProperty);
+        jUnitOutput.toString().lines()
+                .filter(line -> line.startsWith("tag: "))
+                .map(line -> line.substring(5))
+                .forEach(results.get(task).get(submName)::addTag);
+        jUnitOutput.toString().lines()
+                .filter(line -> line.startsWith("test: "))
+                .map(line -> line.substring(6))
+                .forEach(results.get(task).get(submName)::addPassedTest);
     }
 
     private void writeResultsToFile() throws IOException {
         for (var e : results.entrySet()) {
-            Results.write(List.of(e.getValue()), e.getKey().resultFile());
+            TsvWriter.write(List.of(e.getValue()), e.getKey().resultFile());
         }
         if (tasks.size() > 1) {
-            Results.write(results.values(), ALL_RESULTS_FILE);
+            TsvWriter.write(results.values(), ALL_RESULTS_FILE);
         }
     }
 
