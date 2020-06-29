@@ -17,4 +17,28 @@
         <module>code-tags</module>
         <module>grader</module>
     </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <distributionManagement>
+        <repository>
+            <id>gitlab.com</id>
+            <url>https://gitlab.com/api/v4/projects/19650872/packages/maven</url>
+        </repository>
+    </distributionManagement>
 </project>

@@ -35,7 +35,7 @@
 
     <repositories>
         <repository>
-            <id>gitlab.com-rolve</id>
+            <id>gitlab.com-rolve-java-processes</id>
             <url>https://gitlab.com/api/v4/projects/19626212/packages/maven</url>
         </repository>
     </repositories>
