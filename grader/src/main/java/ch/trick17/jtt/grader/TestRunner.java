@@ -2,6 +2,7 @@ package ch.trick17.jtt.grader;
 
 import static ch.trick17.jtt.grader.result.Property.*;
 import static java.io.OutputStream.nullOutputStream;
+import static java.lang.Integer.getInteger;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
@@ -13,6 +14,7 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -25,25 +27,24 @@ import org.junit.platform.launcher.core.LauncherFactory;
 
 public class TestRunner {
 
-    private static final int REPETITIONS = 7;
+    public static final String REPETITIONS_PROP = "ch.trick17.jtt.repetitions";
+    public static final String REP_TIMEOUT_PROP = "ch.trick17.jtt.repTimeout";
+    public static final String TEST_TIMEOUT_PROP = "ch.trick17.jtt.testTimeout";
 
-    // Timeout per test execution. After the timeout, the test is killed forcibly.
-    private static final long EXEC_TIMEOUT = 6000; // ms
-
-    // For how long we do REPETITIONS (over all tests). If we were running tests
-    // for more than this time, do not attempt another repetition.
-    private static final long TEST_TIMEOUT = 10000; // ms
+    private static final int REPETITIONS = getInteger(REPETITIONS_PROP);
+    private static final int REP_TIMEOUT = getInteger(REP_TIMEOUT_PROP);
+    private static final int TEST_TIMEOUT = getInteger(TEST_TIMEOUT_PROP);
 
     private static PrintStream out;
     private static PrintStream err;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws IOException {
         var testClass = args[0];
         runTests(testClass);
     }
 
     private static void runTests(String testClass)
-            throws Exception {
+            throws IOException {
         // Close standard input in case some solutions read from it
         System.in.close();
 
@@ -143,7 +144,7 @@ public class TestRunner {
         thread.start();
         while (true) {
             try {
-                thread.join(EXEC_TIMEOUT); // ja ja, should calculate time left
+                thread.join(REP_TIMEOUT); // ja ja, should calculate time left
                 break;
             } catch (InterruptedException e) {}
         }

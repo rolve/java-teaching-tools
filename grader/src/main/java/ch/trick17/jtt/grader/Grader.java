@@ -1,6 +1,7 @@
 package ch.trick17.jtt.grader;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static ch.trick17.jtt.grader.TestRunner.*;
 import static ch.trick17.jtt.grader.result.Property.COMPILED;
 import static ch.trick17.jtt.grader.result.Property.COMPILE_ERRORS;
 import static java.io.File.pathSeparator;
@@ -243,8 +244,12 @@ public class Grader {
 
         var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
                 .addClasspath(gradingDir.resolve(GRADING_BIN).toString())
-                .vmArgs("-Dfile.encoding=UTF8", agentArg,
-                        "-XX:-OmitStackTraceInFastThrow")
+                .vmArgs(agentArg,
+                        "-XX:-OmitStackTraceInFastThrow",
+                        "-Dfile.encoding=UTF8",
+                        "-D" + REPETITIONS_PROP + "=" + task.repetitions(),
+                        "-D" + REP_TIMEOUT_PROP + "=" + task.repTimeout().toMillis(),
+                        "-D" + TEST_TIMEOUT_PROP + "=" + task.testTimeout().toMillis())
                 .start();
 
         var jUnitOutput = new StringWriter();
