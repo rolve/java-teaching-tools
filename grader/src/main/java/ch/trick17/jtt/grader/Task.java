@@ -11,7 +11,6 @@ import java.util.*;
 public class Task {
 
     public final String testClass;
-    public final Optional<String> classUnderTest;
 
     private final Set<String> filesToCopy;
     private Optional<Path> dir = Optional.empty();
@@ -21,21 +20,11 @@ public class Task {
     }
 
     public Task(String testClass) {
-        this(testClass, null, true);
+        this(testClass, true);
     }
 
-    public Task(Class<?> testClass, Class<?> classUnderTest) {
-        this(testClass.getName(), classUnderTest.getName());
-    }
-
-    public Task(String testClass, String classUnderTest) {
-        this(testClass, requireNonNull(classUnderTest), true);
-    }
-
-    private Task(String testClass, String classUnderTest,
-            @SuppressWarnings("unused") boolean internal) {
+    private Task(String testClass, boolean internal) {
         this.testClass = requireNonNull(testClass);
-        this.classUnderTest = Optional.ofNullable(classUnderTest); // may be null if not needed
 
         filesToCopy = new HashSet<>(Set.of(testClass.replace('.', '/') + ".java"));
     }

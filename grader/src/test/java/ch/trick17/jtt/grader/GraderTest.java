@@ -31,7 +31,7 @@ public class GraderTest {
 
     @Test
     public void testEclipseStructureEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "1", "2");
@@ -43,7 +43,7 @@ public class GraderTest {
 
     @Test
     public void testEclipseStructureJavac() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.JAVAC);
         grader.gradeOnly("0", "1", "2");
@@ -54,7 +54,7 @@ public class GraderTest {
 
     @Test
     public void testMavenStructureEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, MVN_ROOT,
                 ProjectStructure.MAVEN, Compiler.ECLIPSE);
         grader.gradeOnly("0", "1", "2");
@@ -65,7 +65,7 @@ public class GraderTest {
 
     @Test
     public void testMavenStructureJavac() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, MVN_ROOT,
                 ProjectStructure.MAVEN, Compiler.JAVAC);
         grader.gradeOnly("0", "1", "2");
@@ -76,7 +76,7 @@ public class GraderTest {
 
     @Test
     public void testPackageEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("multiply.MultiplyTest", "multiply.Multiply"));
+        var tasks = List.of(new Task("multiply.MultiplyTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "1", "2");
@@ -92,7 +92,7 @@ public class GraderTest {
 
     @Test
     public void testPackageJavac() throws IOException {
-        var tasks = List.of(new Task("multiply.MultiplyTest", "multiply.Multiply"));
+        var tasks = List.of(new Task("multiply.MultiplyTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.JAVAC);
         grader.gradeOnly("0", "1", "2");
@@ -108,7 +108,7 @@ public class GraderTest {
 
     @Test
     public void testUnrelatedCompileErrorEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "3");
@@ -123,7 +123,7 @@ public class GraderTest {
 
     @Test
     public void testUnrelatedCompileErrorJavac() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.JAVAC);
         grader.gradeOnly("0", "3");
@@ -138,7 +138,7 @@ public class GraderTest {
 
     @Test
     public void testCustomDir() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.setTestsDir(Path.of("tests-custom-dir"));
@@ -155,7 +155,7 @@ public class GraderTest {
 
     @Test
     public void testSingleDeduction() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "4");
@@ -170,7 +170,7 @@ public class GraderTest {
 
     @Test
     public void testMultipleDeductions() throws IOException {
-        var tasks = List.of(new Task("DivideTest", "Divide"));
+        var tasks = List.of(new Task("DivideTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "4");
@@ -185,7 +185,7 @@ public class GraderTest {
 
     @Test
     public void testDeductionsPackage() throws IOException {
-        var tasks = List.of(new Task("multiply.MultiplyTest", "Multiply"));
+        var tasks = List.of(new Task("multiply.MultiplyTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "4");
@@ -200,7 +200,7 @@ public class GraderTest {
 
     @Test
     public void testTimeout() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "5"); // contains infinite loop
@@ -215,7 +215,7 @@ public class GraderTest {
 
     @Test
     public void testMissingClassUnderTestEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "6");
@@ -231,7 +231,7 @@ public class GraderTest {
 
     @Test
     public void testMissingClassUnderTestJavac() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.JAVAC);
         grader.gradeOnly("0", "6");
@@ -246,7 +246,7 @@ public class GraderTest {
 
     @Test
     public void testMissingSrcDir() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "7");
@@ -261,7 +261,7 @@ public class GraderTest {
 
     @Test
     public void testNondeterminism() throws IOException {
-        var tasks = List.of(new Task("AddTest", "Add"));
+        var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "8");
@@ -278,7 +278,7 @@ public class GraderTest {
     public void testNondeterminismPlusTimeout() throws IOException {
         // ensure that the timeout of one test does not affect detection
         // of nondeterminism in other tests, as was previously the case
-        var tasks = List.of(new Task("SubtractTest", "Subtract"));
+        var tasks = List.of(new Task("SubtractTest"));
         var grader = new Grader(tasks, ECLIPSE_ROOT,
                 ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
         grader.gradeOnly("0", "9");
