@@ -59,7 +59,7 @@ public class TestRunner {
 
         for (var method : findTestMethods(testClass)) {
             var startTime = currentTimeMillis();
-            for (int rep = 0; rep < REPETITIONS; rep++) {
+            for (int rep = 1; rep <= REPETITIONS; rep++) {
                 var result = runTest(method);
 
                 var name = method.getMethodName();
@@ -78,8 +78,7 @@ public class TestRunner {
                     }
                 }
 
-                if (rep > 0 && rep < REPETITIONS - 1
-                        && currentTimeMillis() - startTime > TEST_TIMEOUT) {
+                if (rep < REPETITIONS && currentTimeMillis() - startTime > TEST_TIMEOUT) {
                     // this timeout is not so bad. It just means that we are not
                     // so sure that the test is deterministic, since not all
                     // REPETITIONS were tried

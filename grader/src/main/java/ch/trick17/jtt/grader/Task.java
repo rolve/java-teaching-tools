@@ -19,11 +19,10 @@ public class Task {
 
     private final Set<String> filesToCopy;
     private Optional<Path> dir = Optional.empty();
+
     private int repetitions = DEFAULT_REPETITIONS;
     private Duration repTimeout = DEFAULT_REP_TIMEOUT;
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
-
-
 
     public Task(Class<?> testClass) {
         this(testClass.getName());
@@ -35,7 +34,6 @@ public class Task {
 
     private Task(String testClass, boolean internal) {
         this.testClass = requireNonNull(testClass);
-
         filesToCopy = new HashSet<>(Set.of(testClass.replace('.', '/') + ".java"));
     }
 
