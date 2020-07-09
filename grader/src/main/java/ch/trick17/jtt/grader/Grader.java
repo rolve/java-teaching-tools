@@ -11,7 +11,6 @@ import static java.lang.System.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.time.LocalDateTime.now;
-import static java.util.Arrays.asList;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.*;
@@ -32,6 +31,7 @@ import javax.tools.*;
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
+import ch.trick17.jtt.grader.Codebase.Submission;
 import ch.trick17.jtt.grader.result.*;
 
 public class Grader {
@@ -47,27 +47,17 @@ public class Grader {
         setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
     }
 
+    private final Codebase codebase;
     private final List<Task> tasks;
-    private final Path root;
-    private final ProjectStructure structure;
-    private final Compiler compiler;
 
     private final Map<Task, TaskResults> results = new LinkedHashMap<>();
-    private Predicate<Path> filter = p -> true;
+    private Predicate<Submission> filter = p -> true;
     private Path testsDir = DEFAULT_TESTS_DIR;
     private Path codeTagsAgent;
 
-    public Grader(List<Task> tasks, Path root, ProjectStructure structure) {
-        this(tasks, root, structure, ECLIPSE);
-    }
-
-    public Grader(List<Task> tasks, Path root, ProjectStructure structure,
-            Compiler compiler) {
+    public Grader(Codebase codebase, List<Task> tasks) {
+        this.codebase = codebase;
         this.tasks = requireNonNull(tasks);
-        // make root path absolute, to avoid problems with relativize() later
-        this.root = root.toAbsolutePath();
-        this.structure = requireNonNull(structure);
-        this.compiler = requireNonNull(compiler);
         tasks.forEach(t -> results.put(t, new TaskResults(t)));
     }
 
@@ -76,18 +66,14 @@ public class Grader {
     }
 
     public void gradeOnly(String... submNames) {
-        var set = new HashSet<>(asList(submNames));
-        filter = p -> set.contains(p.getFileName().toString());
+        var set = new HashSet<>(List.of(submNames));
+        filter = s -> set.contains(s.name());
     }
 
     public void run() throws IOException {
-        List<Path> submissions;
-        try (var list = Files.list(root)) {
-            submissions = list
-                    .filter(Files::isDirectory)
-                    .filter(filter)
-                    .sorted()
-                    .collect(toList());
+        List<Submission> submissions;
+        try (var all = codebase.submissions()) {
+            submissions = all.filter(filter).collect(toList());
         }
 
         var logFile = Path.of("grader_" + now().format(LOG_FORMAT) + ".log");
@@ -105,7 +91,7 @@ public class Grader {
                 var bytes = new ByteArrayOutputStream();
                 var out = new PrintStream(bytes);
 
-                out.println("Grading " + subm.getFileName());
+                out.println("Grading " + subm.name());
                 try {
                     grade(subm, out);
                 } catch (IOException e) {
@@ -128,46 +114,36 @@ public class Grader {
         });
     }
 
-    private void grade(Path subm, PrintStream out) throws IOException {
+    private void grade(Submission subm, PrintStream out) throws IOException {
         for (var task : tasks) {
             gradeTask(subm, task, out);
         }
     }
 
-    private void gradeTask(Path subm, Task task, PrintStream out)
+    private void gradeTask(Submission subm, Task task, PrintStream out)
             throws IOException {
-        Path projDir;
-        if (task.directory().isPresent()) {
-            projDir = subm.resolve(task.directory().get());
-        } else {
-            projDir = subm;
-        }
-        var gradingDir = projDir.resolve(task.gradingDir());
-
         tryFinally(() -> {
-            var submName = subm.getFileName().toString();
-
-            prepareProject(projDir, task);
-            var hasErrors = compileProject(gradingDir, out);
+            prepareProject(subm, task);
+            var hasErrors = compile(subm, task, out);
             if (hasErrors) {
-                results.get(task).get(submName).addProperty(COMPILE_ERRORS);
+                results.get(task).get(subm.name()).addProperty(COMPILE_ERRORS);
             }
-            if (!hasErrors || compiler == ECLIPSE) {
-                results.get(task).get(submName).addProperty(COMPILED);
-                runTests(task, gradingDir, submName, out);
+            if (!hasErrors || task.compiler() == ECLIPSE) {
+                results.get(task).get(subm.name()).addProperty(COMPILED);
+                runTests(task, subm, out);
             }
         }, () -> {
-            delete(gradingDir, false);
+            delete(gradingDir(subm, task), false);
         });
     }
 
-    private void prepareProject(Path projDir, Task task) throws IOException {
+    private void prepareProject(Submission subm, Task task) throws IOException {
         // Remove any grading files from previous runs
-        var gradingDir = projDir.resolve(task.gradingDir());
+        var gradingDir = gradingDir(subm, task);
         delete(gradingDir, true);
 
         // Copy sources
-        var origSrcDir = projDir.resolve(structure.src);
+        var origSrcDir = subm.srcDir();
         Files.createDirectories(origSrcDir); // yes, it happened
         var srcDir = gradingDir.resolve(GRADING_SRC);
         Files.createDirectories(srcDir);
@@ -203,7 +179,8 @@ public class Grader {
         }
     }
 
-    private boolean compileProject(Path gradingDir, PrintStream out) throws IOException {
+    private boolean compile(Submission subm, Task task, PrintStream out) throws IOException {
+        var gradingDir = gradingDir(subm, task);
         var srcDir = gradingDir.resolve(GRADING_SRC);
 
         Set<Path> sources;
@@ -213,7 +190,7 @@ public class Grader {
                     .collect(toSet());
         }
 
-        var javaCompiler = compiler.create();
+        var javaCompiler = task.compiler().create();
 
         var collector = new DiagnosticCollector<>();
         var manager = javaCompiler.getStandardFileManager(collector, null, UTF_8);
@@ -224,7 +201,7 @@ public class Grader {
                 "-cp", classPath,
                 "-d", gradingDir.resolve(GRADING_BIN).toString(),
                 "-source", version, "-target", version));
-        if (compiler == ECLIPSE) {
+        if (task.compiler() == ECLIPSE) {
             options.add("-proceedOnError");
         }
         javaCompiler.getTask(nullWriter(), manager, collector, options, null,
@@ -237,12 +214,16 @@ public class Grader {
         return errors.size() > 0;
     }
 
-    private void runTests(Task task, Path gradingDir, String submName,
-            PrintStream out) throws IOException {
+    private Path gradingDir(Submission subm, Task task) {
+        return subm.projectDir().resolve("grading-" + task.testClass());
+    }
+
+    private void runTests(Task task, Submission subm, PrintStream out) throws IOException {
+        var gradingDir = gradingDir(subm, task);
         var agentArg = "-javaagent:" + codeTagsAgent + "="
                 + classesToInspect(gradingDir.resolve(GRADING_SRC));
 
-        var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass)
+        var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass())
                 .addClasspath(gradingDir.resolve(GRADING_BIN).toString())
                 .vmArgs(agentArg,
                         "-XX:-OmitStackTraceInFastThrow",
@@ -270,15 +251,15 @@ public class Grader {
         jUnitOutput.toString().lines()
                 .filter(line -> line.startsWith("prop: "))
                 .map(line -> Property.valueOf(line.substring(6)))
-                .forEach(results.get(task).get(submName)::addProperty);
+                .forEach(results.get(task).get(subm.name())::addProperty);
         jUnitOutput.toString().lines()
                 .filter(line -> line.startsWith("tag: "))
                 .map(line -> line.substring(5))
-                .forEach(results.get(task).get(submName)::addTag);
+                .forEach(results.get(task).get(subm.name())::addTag);
         jUnitOutput.toString().lines()
                 .filter(line -> line.startsWith("test: "))
                 .map(line -> line.substring(6))
-                .forEach(results.get(task).get(submName)::addPassedTest);
+                .forEach(results.get(task).get(subm.name())::addPassedTest);
     }
 
     private void writeResultsToFile() throws IOException {
@@ -290,7 +271,7 @@ public class Grader {
         }
     }
 
-    private String classesToInspect(Path srcDir) throws IOException {
+    private static String classesToInspect(Path srcDir) throws IOException {
         try (var all = Files.walk(srcDir)) {
             return all
                     .map(p -> srcDir.relativize(p).toString())
@@ -301,7 +282,7 @@ public class Grader {
         }
     }
 
-    private void delete(Path dir, boolean leaveRoot) throws IOException {
+    private static void delete(Path dir, boolean leaveRoot) throws IOException {
         // create directory if it doesn't exist (needed for walk())
         Files.createDirectories(dir);
         try (var walk = Files.walk(dir)) {

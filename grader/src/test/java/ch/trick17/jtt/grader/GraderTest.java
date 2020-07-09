@@ -1,5 +1,7 @@
 package ch.trick17.jtt.grader;
 
+import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static ch.trick17.jtt.grader.Compiler.JAVAC;
 import static java.nio.file.Files.list;
 import static java.nio.file.Files.readAllLines;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,8 +17,10 @@ import org.junit.jupiter.api.Test;
 public class GraderTest {
 
     static final Path SUBM_ROOT = Path.of("test-submissions");
-    static final Path ECLIPSE_ROOT = SUBM_ROOT.resolve("eclipse-structure");
-    static final Path MVN_ROOT = SUBM_ROOT.resolve("maven-structure");
+    static final Codebase ECLIPSE_BASE = new Codebase(
+            SUBM_ROOT.resolve("eclipse-structure"), ProjectStructure.ECLIPSE);
+    static final Codebase MVN_BASE = new Codebase(
+            SUBM_ROOT.resolve("maven-structure"), ProjectStructure.MAVEN);
 
     static final List<String> EXPECTED_ADD_SIMPLE_EC = List.of(
             "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
@@ -31,9 +35,8 @@ public class GraderTest {
 
     @Test
     public void testEclipseStructureEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var tasks = List.of(new Task("AddTest", ECLIPSE));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -43,9 +46,8 @@ public class GraderTest {
 
     @Test
     public void testEclipseStructureJavac() throws IOException {
-        var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.JAVAC);
+        var tasks = List.of(new Task("AddTest", JAVAC));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -54,9 +56,8 @@ public class GraderTest {
 
     @Test
     public void testMavenStructureEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, MVN_ROOT,
-                ProjectStructure.MAVEN, Compiler.ECLIPSE);
+        var tasks = List.of(new Task("AddTest", ECLIPSE));
+        var grader = new Grader(MVN_BASE, tasks);
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -65,9 +66,8 @@ public class GraderTest {
 
     @Test
     public void testMavenStructureJavac() throws IOException {
-        var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, MVN_ROOT,
-                ProjectStructure.MAVEN, Compiler.JAVAC);
+        var tasks = List.of(new Task("AddTest", JAVAC));
+        var grader = new Grader(MVN_BASE, tasks);
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -76,9 +76,8 @@ public class GraderTest {
 
     @Test
     public void testPackageEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("multiply.MultiplyTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var tasks = List.of(new Task("multiply.MultiplyTest", ECLIPSE));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
@@ -92,9 +91,8 @@ public class GraderTest {
 
     @Test
     public void testPackageJavac() throws IOException {
-        var tasks = List.of(new Task("multiply.MultiplyTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.JAVAC);
+        var tasks = List.of(new Task("multiply.MultiplyTest", JAVAC));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "1", "2");
         grader.run();
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
@@ -108,9 +106,8 @@ public class GraderTest {
 
     @Test
     public void testUnrelatedCompileErrorEclipseCompiler() throws IOException {
-        var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var tasks = List.of(new Task("AddTest", ECLIPSE));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "3");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -123,9 +120,8 @@ public class GraderTest {
 
     @Test
     public void testUnrelatedCompileErrorJavac() throws IOException {
-        var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.JAVAC);
+        var tasks = List.of(new Task("AddTest", JAVAC));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "3");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -139,8 +135,7 @@ public class GraderTest {
     @Test
     public void testCustomDir() throws IOException {
         var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.setTestsDir(Path.of("tests-custom-dir"));
         grader.gradeOnly("0", "1", "2");
         grader.run();
@@ -156,8 +151,7 @@ public class GraderTest {
     @Test
     public void testSingleDeduction() throws IOException {
         var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "4");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -171,8 +165,7 @@ public class GraderTest {
     @Test
     public void testMultipleDeductions() throws IOException {
         var tasks = List.of(new Task("DivideTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "4");
         grader.run();
         var results = readAllLines(Path.of("results-DivideTest.tsv"));
@@ -186,8 +179,7 @@ public class GraderTest {
     @Test
     public void testDeductionsPackage() throws IOException {
         var tasks = List.of(new Task("multiply.MultiplyTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "4");
         grader.run();
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
@@ -201,8 +193,7 @@ public class GraderTest {
     @Test
     public void testTimeout() throws IOException {
         var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "5"); // contains infinite loop
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -216,8 +207,7 @@ public class GraderTest {
     @Test
     public void testMissingClassUnderTestEclipseCompiler() throws IOException {
         var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "6");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -231,9 +221,8 @@ public class GraderTest {
 
     @Test
     public void testMissingClassUnderTestJavac() throws IOException {
-        var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.JAVAC);
+        var tasks = List.of(new Task("AddTest", JAVAC));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "6");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -247,8 +236,7 @@ public class GraderTest {
     @Test
     public void testMissingSrcDir() throws IOException {
         var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "7");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -262,8 +250,7 @@ public class GraderTest {
     @Test
     public void testNondeterminism() throws IOException {
         var tasks = List.of(new Task("AddTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "8");
         grader.run();
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -279,8 +266,7 @@ public class GraderTest {
         // ensure that the timeout of one test does not affect detection
         // of nondeterminism in other tests, as was previously the case
         var tasks = List.of(new Task("SubtractTest"));
-        var grader = new Grader(tasks, ECLIPSE_ROOT,
-                ProjectStructure.ECLIPSE, Compiler.ECLIPSE);
+        var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "9");
         grader.run();
         var results = readAllLines(Path.of("results-SubtractTest.tsv"));

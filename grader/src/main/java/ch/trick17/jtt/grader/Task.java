@@ -1,13 +1,13 @@
 package ch.trick17.jtt.grader;
 
-import static java.io.File.separator;
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Task {
 
@@ -15,34 +15,22 @@ public class Task {
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
 
-    public final String testClass;
-
+    private final String testClass;
+    private final Compiler compiler;
     private final Set<String> filesToCopy;
-    private Optional<Path> dir = Optional.empty();
 
     private int repetitions = DEFAULT_REPETITIONS;
     private Duration repTimeout = DEFAULT_REP_TIMEOUT;
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
 
-    public Task(Class<?> testClass) {
-        this(testClass.getName());
-    }
-
     public Task(String testClass) {
-        this(testClass, true);
+        this(testClass, Compiler.ECLIPSE);
     }
 
-    private Task(String testClass, boolean internal) {
+    public Task(String testClass, Compiler compiler) {
         this.testClass = requireNonNull(testClass);
+        this.compiler = requireNonNull(compiler);
         filesToCopy = new HashSet<>(Set.of(testClass.replace('.', '/') + ".java"));
-    }
-
-    /**
-     * Submissions are located in given subdirectory.
-     */
-    public Task in(String dir) {
-        this.dir = Optional.of(Path.of(dir));
-        return this;
     }
 
     /**
@@ -85,6 +73,10 @@ public class Task {
         return this;
     }
 
+    public String testClass() {
+        return testClass;
+    }
+
     public String testClassSimpleName() {
         var parts = testClass.split("\\.");
         return parts[parts.length - 1];
@@ -94,8 +86,8 @@ public class Task {
         return unmodifiableSet(filesToCopy);
     }
 
-    public Optional<Path> directory() {
-        return dir;
+    public Compiler compiler() {
+        return compiler;
     }
 
     public int repetitions() {
@@ -111,29 +103,6 @@ public class Task {
     }
 
     public Path resultFile() {
-        var name = testClassSimpleName();
-        if (dir.isPresent()) {
-            name = dir.get().toString().replace(separator, "-") + "-" + name;
-        }
-        return Path.of("results-" + name + ".tsv").toAbsolutePath();
-    }
-
-    public Path gradingDir() {
-        return Path.of("grading-" + testClass);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(testClass, dir);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof Task)) {
-            return false;
-        }
-        var other = (Task) obj;
-        return testClass.equals(other.testClass)
-                && dir.equals(other.dir);
+        return Path.of("results-" + testClassSimpleName() + ".tsv").toAbsolutePath();
     }
 }
