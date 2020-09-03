@@ -21,12 +21,10 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.engine.JupiterTestEngine;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
-import org.junit.platform.launcher.core.LauncherConfig;
 import org.junit.platform.launcher.core.LauncherFactory;
 
 public class TestRunner {
@@ -172,11 +170,6 @@ public class TestRunner {
             var sel = selectMethod(className, methodName);
             var req = request().selectors(sel).build();
 
-            var config = LauncherConfig.builder()
-                    .enableTestEngineAutoRegistration(false)
-                    .addTestEngines(new JupiterTestEngine()).build();
-            var launcher = LauncherFactory.create(config);
-
             var result = new AtomicReference<TestExecutionResult>();
             var listener = new TestExecutionListener() {
                 public void executionFinished(TestIdentifier id,
@@ -187,7 +180,7 @@ public class TestRunner {
                 }
             };
 
-            runKillably(() -> launcher.execute(req, listener));
+            runKillably(() -> LauncherFactory.create().execute(req, listener));
 
             if (result.get() == null) { // quite unlikely but possible, I suppose
                 return new ThreadDeath();
