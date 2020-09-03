@@ -1,28 +1,32 @@
 package ch.trick17.jtt.grader;
 
 import static ch.trick17.jtt.grader.result.Property.*;
+import static java.io.File.pathSeparator;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Integer.getInteger;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
+import static java.lang.Thread.currentThread;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
-import static org.junit.platform.engine.TestExecutionResult.failed;
-import static org.junit.platform.engine.TestExecutionResult.Status.SUCCESSFUL;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.*;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.engine.JupiterTestEngine;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
+import org.junit.platform.launcher.core.LauncherConfig;
 import org.junit.platform.launcher.core.LauncherFactory;
 
 public class TestRunner {
@@ -57,23 +61,22 @@ public class TestRunner {
         var failed = new HashSet<String>();
         var failMsgs = new TreeSet<String>();
 
-        for (var method : findTestMethods(testClass)) {
+        for (var test : findTestMethods(testClass)) {
             var startTime = currentTimeMillis();
             for (int rep = 1; rep <= REPETITIONS; rep++) {
-                var result = runTest(method);
+                var result = runIsolated(test);
 
-                var name = method.getMethodName();
-                if (result.getStatus() == SUCCESSFUL) {
+                var name = test.getMethodName();
+                if (result.isEmpty()) {
                     passed.add(name);
                 } else {
                     failed.add(name);
-                    var exc = result.getThrowable().get();
                     var msg = name + ": "
-                            + valueOf(exc.getMessage()).replaceAll("\\s+", " ")
-                            + " (" + exc.getClass().getName() + ")";
+                            + valueOf(result.get().getMessage()).replaceAll("\\s+", " ")
+                            + " (" + result.get().getClass().getName() + ")";
                     // TODO: Collect exception stats
                     failMsgs.add(msg);
-                    if (result.getThrowable().get() instanceof ThreadDeath) {
+                    if (result.get() instanceof ThreadDeath) {
                         out.println("prop: " + TIMEOUT);
                     }
                 }
@@ -119,47 +122,104 @@ public class TestRunner {
     }
 
     /**
-     * Runs test in a different thread so it can be killed after some timeout.
-     * This is a very hard timeout ({@link Thread#stop()}) that should be able
-     * to handle anything the students might do.
+     * Runs a test in isolation, meaning that it runs with freshly loaded
+     * classes. This avoids problems with static initialization. Apparently, two
+     * things are required for this to work: 1) all JUnit classes must be
+     * freshly loaded too, which can be achieved by referring to them from a
+     * class ({@link Isolated}) loaded by a fresh class loader; and 2) the
+     * context class loader, which is used by JUnit to discover test classes,
+     * must be set to the same class loader.
+     * <p>
+     * Note that the isolation provided by this approach is not absolute:
+     * classes from the Java Standard Library are shared among test runs, so
+     * there may still be interference, e.g., via {@link Math#random()},
+     * {@link System#setProperty(String, String)}, etc.
      */
-    private static TestExecutionResult runTest(MethodSource m) {
-        var sel = selectMethod(m.getClassName(), m.getMethodName());
-        var req = request().selectors(sel).build();
-        // create a new launcher, just in case the old one got corrupted
-        var launcher = LauncherFactory.create();
+    private static Optional<Throwable> runIsolated(MethodSource test) {
+        var origLoader = currentThread().getContextClassLoader();
+        var urls = classpathUrls();
+        try (var loader = new URLClassLoader(urls, origLoader.getParent())) {
+            currentThread().setContextClassLoader(loader);
 
-        var result = new AtomicReference<TestExecutionResult>();
-        var listener = new TestExecutionListener() {
-            public void executionFinished(TestIdentifier id,
-                    TestExecutionResult res) {
-                if (id.isTest()) {
-                    result.set(res);
-                }
-            }
-        };
+            var cls = loader.loadClass(Isolated.class.getName());
+            var method = cls.getMethod("run", String.class, String.class);
 
-        var thread = new Thread(() -> launcher.execute(req, listener));
-        thread.start();
-        while (true) {
-            try {
-                thread.join(REP_TIMEOUT); // ja ja, should calculate time left
-                break;
-            } catch (InterruptedException e) {}
-        }
-        if (thread.isAlive()) {
-            stop(thread);
-        }
-
-        if (result.get() == null) { // quite unlikely but possible, I suppose
-            return failed(new ThreadDeath());
-        } else {
-            return result.get();
+            var result = method.invoke(null, test.getClassName(), test.getMethodName());
+            return Optional.ofNullable((Throwable) result);
+        } catch (ReflectiveOperationException | IOException e) {
+            e.printStackTrace(err);
+            throw new AssertionError(e);
+        } finally {
+            currentThread().setContextClassLoader(origLoader);
         }
     }
 
-    @SuppressWarnings("deprecation")
-    private static void stop(Thread thread) {
-        thread.stop(); // <- badass
+    private static URL[] classpathUrls() {
+        return stream(System.getProperty("java.class.path").split(pathSeparator))
+                .map(path -> {
+                    try {
+                        return Path.of(path).toUri().toURL();
+                    } catch (MalformedURLException e) {
+                        throw new AssertionError(e);
+                    }
+                })
+                .toArray(URL[]::new);
+    }
+
+    public static class Isolated {
+
+        public static Throwable run(String className, String methodName) {
+            var sel = selectMethod(className, methodName);
+            var req = request().selectors(sel).build();
+
+            var config = LauncherConfig.builder()
+                    .enableTestEngineAutoRegistration(false)
+                    .addTestEngines(new JupiterTestEngine()).build();
+            var launcher = LauncherFactory.create(config);
+
+            var result = new AtomicReference<TestExecutionResult>();
+            var listener = new TestExecutionListener() {
+                public void executionFinished(TestIdentifier id,
+                        TestExecutionResult res) {
+                    if (id.isTest()) {
+                        result.set(res);
+                    }
+                }
+            };
+
+            runKillably(() -> launcher.execute(req, listener));
+
+            if (result.get() == null) { // quite unlikely but possible, I suppose
+                return new ThreadDeath();
+            } else {
+                // no Optional here, since this method is called reflectively and
+                // an unsafe cast would be needed in the calling method
+                return result.get().getThrowable().orElse(null);
+            }
+        }
+
+        /**
+         * Runs test in a different thread so it can be killed after the timeout.
+         * This is a very hard timeout ({@link Thread#stop()}) that should be able
+         * to handle anything the students might do.
+         */
+        private static void runKillably(Runnable runnable) {
+            var thread = new Thread(runnable);
+            thread.start();
+            while (true) {
+                try {
+                    thread.join(REP_TIMEOUT); // ja ja, should calculate time left
+                    break;
+                } catch (InterruptedException e) {}
+            }
+            if (thread.isAlive()) {
+                stop(thread);
+            }
+        }
+
+        @SuppressWarnings("deprecation")
+        private static void stop(Thread thread) {
+            thread.stop(); // <- badass
+        }
     }
 }

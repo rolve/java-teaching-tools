@@ -277,6 +277,22 @@ public class GraderTest {
         assertEquals(expected, results);
     }
 
+    @Test
+    public void testIsolation() throws IOException {
+        // ensure that classes are reloaded for each test run, meaning
+        // that tests cannot interfere via static fields
+        var tasks = List.of(new Task("SubtractTest"));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
+        grader.gradeOnly("0", "10");
+        grader.run();
+        var results = readAllLines(Path.of("results-SubtractTest.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\ttestSubtract1\ttestSubtract2\ttestSubtract3\ttestSubtract4\ttestSubtract5\ttestSubtract6",
+                "0\t1\t1\t1\t1\t1\t1\t1",
+                "10\t1\t1\t1\t1\t1\t1\t1");
+        assertEquals(expected, results);
+    }
+
     @AfterAll
     public static void deleteLogFiles() throws IOException {
         try (var allFiles = list(Path.of("."))) {
