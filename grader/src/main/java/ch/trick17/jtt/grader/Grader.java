@@ -7,12 +7,14 @@ import static ch.trick17.jtt.grader.result.Property.COMPILE_ERRORS;
 import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
 import static java.io.Writer.nullWriter;
-import static java.lang.System.*;
+import static java.lang.System.currentTimeMillis;
+import static java.lang.System.getProperty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.time.LocalDateTime.now;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
 import static java.util.stream.Collectors.*;
 import static javax.tools.Diagnostic.NOPOS;
 import static javax.tools.Diagnostic.Kind.ERROR;
@@ -23,10 +25,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
 import javax.tools.*;
+
+import org.apache.commons.io.output.TeeOutputStream;
 
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
@@ -43,16 +49,13 @@ public class Grader {
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
-    static {
-        setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "2");
-    }
-
     private final Codebase codebase;
     private final List<Task> tasks;
 
     private final Map<Task, TaskResults> results = new LinkedHashMap<>();
     private Predicate<Submission> filter = p -> true;
     private Path testsDir = DEFAULT_TESTS_DIR;
+    private int parallelism = getCommonPoolParallelism();
     private Path codeTagsAgent;
 
     public Grader(Codebase codebase, List<Task> tasks) {
@@ -70,14 +73,26 @@ public class Grader {
         filter = s -> set.contains(s.name());
     }
 
+    public int getParallelism() {
+        return parallelism;
+    }
+
+    public void setParallelism(int parallelism) {
+        if (parallelism < 1) {
+            throw new IllegalArgumentException();
+        }
+        this.parallelism = parallelism;
+    }
+
     public void run() throws IOException {
+        var logFile = Path.of("grader_" + now().format(LOG_FORMAT) + ".log");
+        var log = Files.newOutputStream(logFile);
+        var out = new PrintStream(new TeeOutputStream(System.out, log), true);
+
         List<Submission> submissions;
         try (var all = codebase.submissions()) {
             submissions = all.filter(filter).collect(toList());
         }
-
-        var logFile = Path.of("grader_" + now().format(LOG_FORMAT) + ".log");
-        var log = new PrintWriter(Files.newOutputStream(logFile), true);
 
         codeTagsAgent = Files.createTempFile("code-tags", ".jar");
         tryFinally(() -> {
@@ -87,37 +102,41 @@ public class Grader {
 
             var startTime = currentTimeMillis();
             var i = new AtomicInteger(0);
-            submissions.stream().parallel().forEach(subm -> {
-                var bytes = new ByteArrayOutputStream();
-                var out = new PrintStream(bytes);
 
-                out.println("Grading " + subm.name());
+            BiConsumer<Submission, PrintStream> gradeSubm = (subm, submOut) -> {
+                submOut.println("Grading " + subm.name());
                 try {
-                    grade(subm, out);
+                    for (var task : tasks) {
+                        gradeTask(subm, task, submOut);
+                    }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
-
-                out.printf("Graded %d/%d, total time: %d s\n\n",
+                submOut.printf("Graded %d/%d, total time: %d s\n\n",
                         i.incrementAndGet(), submissions.size(),
                         (currentTimeMillis() - startTime) / 1000);
-                System.out.println(bytes);
-                log.print(bytes);
-            });
+            };
 
-            System.out.println(submissions.size() + " submissions graded");
-            log.println(submissions.size() + " submissions graded");
+            if (parallelism == 1) {
+                submissions.forEach(subm -> gradeSubm.accept(subm, out));
+            } else {
+                new ForkJoinPool(parallelism).submit(() -> {
+                    submissions.parallelStream().forEach(subm -> {
+                        // need to buffer output for each submission, to avoid
+                        // interleaving of lines
+                        var buffer = new ByteArrayOutputStream();
+                        gradeSubm.accept(subm, new PrintStream(buffer));
+                        out.println(buffer);
+                    });
+                }).join();
+            }
+
+            out.println(submissions.size() + " submissions graded");
         }, () -> {
             writeResultsToFile();
             Files.delete(codeTagsAgent);
             log.close();
         });
-    }
-
-    private void grade(Submission subm, PrintStream out) throws IOException {
-        for (var task : tasks) {
-            gradeTask(subm, task, out);
-        }
     }
 
     private void gradeTask(Submission subm, Task task, PrintStream out)
