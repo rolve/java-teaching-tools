@@ -198,6 +198,10 @@ public class TestRunner {
          */
         private static void runKillably(Runnable runnable) {
             var thread = new Thread(runnable);
+            // we should be able to kill the thread (see below), but just in
+            // case, if everything else fails, the thread is set to "daemon", so
+            // that it is finally killed when the JVM exists:
+            thread.setDaemon(true);
             thread.start();
             while (true) {
                 try {
@@ -206,13 +210,27 @@ public class TestRunner {
                 } catch (InterruptedException e) {}
             }
             if (thread.isAlive()) {
-                stop(thread);
+                kill(thread);
             }
         }
 
+        /**
+         * Uses the infamous {@link Thread#stop()} method to kill the thread.
+         * And, just in case someone tries to catch the thrown
+         * {@link ThreadDeath}, more of them are thrown, faster and faster.
+         */
         @SuppressWarnings("deprecation")
-        private static void stop(Thread thread) {
-            thread.stop(); // <- badass
+        private static void kill(Thread thread) {
+            int waitTime = 100;
+            do {
+                thread.stop();
+                if (waitTime > 0) {
+                    try {
+                        Thread.sleep(waitTime);
+                        waitTime /= 2;
+                    } catch (InterruptedException e) {}
+                }
+            } while (thread.isAlive());
         }
     }
 }
