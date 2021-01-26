@@ -265,7 +265,7 @@ public class GraderTest {
     public void testNondeterminismPlusTimeout() throws IOException {
         // ensure that the timeout of one test does not affect detection
         // of nondeterminism in other tests, as was previously the case
-        var tasks = List.of(new Task("SubtractTest"));
+        var tasks = List.of(new Task("SubtractTest").sandboxEnabled(false)); // needs access to system properties
         var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "9");
         grader.run();
@@ -304,6 +304,20 @@ public class GraderTest {
                 "Name\tcompiled\ttimeout\tincomplete repetitions\ttestAdd1\ttestAdd2",
                 "0\t1\t0\t0\t1\t1",
                 "11\t1\t1\t1\t0\t0");
+        assertEquals(expected, results);
+    }
+
+    @Test
+    public void testSandbox() throws IOException {
+        var tasks = List.of(new Task("AddTest"));
+        var grader = new Grader(ECLIPSE_BASE, tasks);
+        grader.gradeOnly("0", "12"); // tries to read from the file system
+        grader.run();
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\tillegal operation\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "12\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 

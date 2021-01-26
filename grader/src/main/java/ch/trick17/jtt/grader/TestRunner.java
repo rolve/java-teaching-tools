@@ -3,6 +3,7 @@ package ch.trick17.jtt.grader;
 import static ch.trick17.jtt.grader.result.Property.*;
 import static java.io.File.pathSeparator;
 import static java.io.OutputStream.nullOutputStream;
+import static java.lang.Boolean.getBoolean;
 import static java.lang.Integer.getInteger;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
@@ -18,6 +19,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.*;
 import java.nio.file.Path;
+import java.security.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -32,20 +34,23 @@ public class TestRunner {
     public static final String REPETITIONS_PROP = "ch.trick17.jtt.repetitions";
     public static final String REP_TIMEOUT_PROP = "ch.trick17.jtt.repTimeout";
     public static final String TEST_TIMEOUT_PROP = "ch.trick17.jtt.testTimeout";
+    public static final String SANDBOX_ENABLED_PROP = "ch.trick17.jtt.sandboxEnabled";
 
     private static final int REPETITIONS = getInteger(REPETITIONS_PROP);
     private static final int REP_TIMEOUT = getInteger(REP_TIMEOUT_PROP);
     private static final int TEST_TIMEOUT = getInteger(TEST_TIMEOUT_PROP);
+    private static final boolean SANDBOX_ENABLED = getBoolean(SANDBOX_ENABLED_PROP);
 
     private static PrintStream out;
     private static PrintStream err;
 
     public static void main(String[] args) throws IOException {
         var testClass = args[0];
-        runTests(testClass);
+        var codeUnderTest = Path.of(args[1]).toUri().toURL();
+        runTests(testClass, codeUnderTest);
     }
 
-    private static void runTests(String testClass)
+    private static void runTests(String testClass, URL codeUnderTest)
             throws IOException {
         // Close standard input in case some solutions read from it
         System.in.close();
@@ -54,6 +59,12 @@ public class TestRunner {
         err = System.err;
         System.setOut(new PrintStream(nullOutputStream()));
         System.setErr(new PrintStream(nullOutputStream()));
+        currentThread().setUncaughtExceptionHandler((t, e) -> e.printStackTrace(err));
+
+        if (SANDBOX_ENABLED) {
+            Policy.setPolicy(new SandboxPolicy(codeUnderTest));
+            System.setSecurityManager(new SecurityManager());
+        }
 
         var passed = new HashSet<String>();
         var failed = new HashSet<String>();
@@ -76,6 +87,8 @@ public class TestRunner {
                     failMsgs.add(msg);
                     if (result.get() instanceof ThreadDeath) {
                         out.println("prop: " + TIMEOUT);
+                    } else if (result.get() instanceof AccessControlException) {
+                        out.println("prop: " + ILLEGAL_OPERATION);
                     }
                 }
 
@@ -131,7 +144,8 @@ public class TestRunner {
      * Note that the isolation provided by this approach is not absolute:
      * classes from the Java Standard Library are shared among test runs, so
      * there may still be interference, e.g., via {@link Math#random()},
-     * {@link System#setProperty(String, String)}, etc.
+     * {@link System#setProperty(String, String)}, etc. (However, the latter
+     * is prevented by default by the sandboxing mechanism.)
      */
     private static Optional<Throwable> runIsolated(MethodSource test) {
         var origLoader = currentThread().getContextClassLoader();
@@ -231,6 +245,23 @@ public class TestRunner {
                     } catch (InterruptedException e) {}
                 }
             } while (thread.isAlive());
+        }
+    }
+
+    private static class SandboxPolicy extends Policy {
+
+        private final URL codeUnderTest;
+
+        public SandboxPolicy(URL codeUnderTest) {
+            this.codeUnderTest = codeUnderTest;
+        }
+
+        public PermissionCollection getPermissions(CodeSource source) {
+            var permissions = new Permissions();
+            if (!codeUnderTest.equals(source.getLocation())) {
+                permissions.add(new AllPermission());
+            }
+            return permissions;
         }
     }
 }

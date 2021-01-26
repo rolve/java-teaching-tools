@@ -241,14 +241,16 @@ public class Grader {
         var agentArg = "-javaagent:" + codeTagsAgent + "="
                 + classesToInspect(gradingDir.resolve(GRADING_SRC));
 
-        var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass())
-                .addClasspath(gradingDir.resolve(GRADING_BIN).toString())
+        var bin = gradingDir.resolve(GRADING_BIN).toString();
+        var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass(), bin)
+                .addClasspath(bin)
                 .vmArgs(agentArg,
                         "-XX:-OmitStackTraceInFastThrow",
                         "-Dfile.encoding=UTF8",
                         "-D" + REPETITIONS_PROP + "=" + task.repetitions(),
                         "-D" + REP_TIMEOUT_PROP + "=" + task.repTimeout().toMillis(),
-                        "-D" + TEST_TIMEOUT_PROP + "=" + task.testTimeout().toMillis())
+                        "-D" + TEST_TIMEOUT_PROP + "=" + task.testTimeout().toMillis(),
+                        "-D" + SANDBOX_ENABLED_PROP + "=" + task.sandboxEnabled())
                 .start();
 
         var jUnitOutput = new StringWriter();

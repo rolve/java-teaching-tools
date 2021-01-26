@@ -37,7 +37,13 @@ public enum Property {
      * usually happens for non-terminating tests, in which case also the
      * {@link #TIMEOUT} property is present.
      */
-    INCOMPLETE_REPETITIONS;
+    INCOMPLETE_REPETITIONS,
+
+    /**
+     * Tried to perform an operation that is illegal under the installed
+     * security policy, such as accessing the file system or a system property.
+     */
+    ILLEGAL_OPERATION;
 
     public String prettyName() {
         return name().toLowerCase().replace('_', ' ');
