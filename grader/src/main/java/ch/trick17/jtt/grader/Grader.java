@@ -5,7 +5,6 @@ import static ch.trick17.jtt.grader.TestRunner.*;
 import static ch.trick17.jtt.grader.result.Property.COMPILED;
 import static ch.trick17.jtt.grader.result.Property.COMPILE_ERRORS;
 import static java.io.File.pathSeparator;
-import static java.io.File.separatorChar;
 import static java.io.Writer.nullWriter;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.getProperty;
@@ -15,7 +14,8 @@ import static java.time.LocalDateTime.now;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static javax.tools.Diagnostic.NOPOS;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -238,10 +238,9 @@ public class Grader {
 
     private void runTests(Task task, Submission subm, PrintStream out) throws IOException {
         var gradingDir = gradingDir(subm, task);
-        var agentArg = "-javaagent:" + codeTagsAgent + "="
-                + classesToInspect(gradingDir.resolve(GRADING_SRC));
-
         var bin = gradingDir.resolve(GRADING_BIN).toString();
+        var agentArg = "-javaagent:" + codeTagsAgent + "=" + bin;
+
         var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass(), bin)
                 .addClasspath(bin)
                 .vmArgs(agentArg,
@@ -288,17 +287,6 @@ public class Grader {
         }
         if (tasks.size() > 1) {
             TsvWriter.write(results.values(), ALL_RESULTS_FILE);
-        }
-    }
-
-    private static String classesToInspect(Path srcDir) throws IOException {
-        try (var all = Files.walk(srcDir)) {
-            return all
-                    .map(p -> srcDir.relativize(p).toString())
-                    .filter(s -> s.endsWith(".java"))
-                    .map(s -> s.substring(0, s.length() - 5))
-                    .map(s -> s.replace(separatorChar, '.'))
-                    .collect(joining(","));
         }
     }
 

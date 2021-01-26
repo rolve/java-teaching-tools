@@ -1,13 +1,12 @@
 package ch.trick17.jtt.codetags;
-import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toSet;
 import static org.objectweb.asm.Opcodes.ASM7;
 
 import java.io.PrintStream;
 import java.lang.instrument.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Path;
 import java.security.ProtectionDomain;
-import java.util.Set;
 
 import org.objectweb.asm.*;
 
@@ -15,24 +14,23 @@ public class TagInspector implements ClassFileTransformer {
 
     private static final PrintStream STD_OUT = System.out; // System.out may be overwritten by application
 
-    public static void premain(String rawArgs, Instrumentation inst) {
-        String[] args = rawArgs.split(",");
-        System.err.println("Inspecting classes " + stream(args).collect(joining(", ")));
-
-        inst.addTransformer(new TagInspector(stream(args).collect(toSet())));
+    public static void premain(String args, Instrumentation inst) throws MalformedURLException {
+        var codeUnderTest = Path.of(args).toUri().toURL();
+        inst.addTransformer(new TagInspector(codeUnderTest));
     }
 
-    private final Set<String> classes;
+    private final URL codeUnderTest;
 
-    public TagInspector(Set<String> classes) {
-        this.classes = classes;
+    public TagInspector(URL codeUnderTest) {
+        this.codeUnderTest = codeUnderTest;
     }
 
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
             ProtectionDomain protectionDomain, byte[] classfile) throws IllegalClassFormatException {
         try {
-            if(classes.contains(className.replace('/', '.'))) {
+            if(protectionDomain != null
+                    && codeUnderTest.equals(protectionDomain.getCodeSource().getLocation())) {
                 ClassReader reader = new ClassReader(classfile);
                 reader.accept(new TagScanner(), 0);
             }
