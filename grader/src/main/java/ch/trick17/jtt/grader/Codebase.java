@@ -1,58 +1,41 @@
 package ch.trick17.jtt.grader;
 
-import static java.nio.file.Files.list;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
+import java.util.List;
 
-public class Codebase {
+public abstract class Codebase {
 
-    private final Path root;
-    private final Path subdir; // relative to submission dir
     private final ProjectStructure structure;
 
-    public Codebase(Path root, ProjectStructure structure) {
-        this(root, Path.of(""), structure);
-    }
-
-    public Codebase(Path root, Path subdir, ProjectStructure structure) {
-        // make root path absolute, to avoid problems with relativize() later
-        this.root = root.toAbsolutePath();
-        this.subdir = requireNonNull(subdir);
-        if (subdir.isAbsolute()) {
-            throw new IllegalArgumentException("subdirectory must be a relative path");
-        }
+    public Codebase(ProjectStructure structure) {
         this.structure = requireNonNull(structure);
     }
 
-    public Stream<Submission> submissions() throws IOException {
-        return list(root)
-                .filter(Files::isDirectory)
-                .map(Submission::new)
-                .sorted();
-    }
+    public abstract List<Submission> submissions() throws IOException;
 
     public class Submission implements Comparable<Submission> {
 
         private final Path dir;
+        private final String name;
 
-        public Submission(Path dir) {
+        public Submission(String name, Path dir) {
+            this.name = name;
             this.dir = dir;
         }
 
         public String name() {
-            return dir.getFileName().toString();
+            return name;
         }
 
-        public Path projectDir() {
-            return dir.resolve(subdir).normalize();
+        public Path dir() {
+            return dir.normalize();
         }
 
         public Path srcDir() {
-            return projectDir().resolve(structure.srcDir);
+            return dir().resolve(structure.srcDir);
         }
 
         @Override

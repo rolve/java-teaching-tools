@@ -17,9 +17,9 @@ import org.junit.jupiter.api.Test;
 public class GraderTest {
 
     static final Path SUBM_ROOT = Path.of("test-submissions");
-    static final Codebase ECLIPSE_BASE = new Codebase(
+    static final Codebase ECLIPSE_BASE = new MultiCodebase(
             SUBM_ROOT.resolve("eclipse-structure"), ProjectStructure.ECLIPSE);
-    static final Codebase MVN_BASE = new Codebase(
+    static final Codebase MVN_BASE = new MultiCodebase(
             SUBM_ROOT.resolve("maven-structure"), ProjectStructure.MAVEN);
 
     static final List<String> EXPECTED_ADD_SIMPLE_EC = List.of(

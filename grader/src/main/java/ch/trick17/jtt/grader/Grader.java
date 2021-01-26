@@ -89,10 +89,9 @@ public class Grader {
         var log = Files.newOutputStream(logFile);
         var out = new PrintStream(new TeeOutputStream(System.out, log), true);
 
-        List<Submission> submissions;
-        try (var all = codebase.submissions()) {
-            submissions = all.filter(filter).collect(toList());
-        }
+        var submissions = codebase.submissions().stream()
+                .filter(filter)
+                .collect(toList());
 
         codeTagsAgent = Files.createTempFile("code-tags", ".jar");
         tryFinally(() -> {
@@ -117,7 +116,7 @@ public class Grader {
                         (currentTimeMillis() - startTime) / 1000);
             };
 
-            if (parallelism == 1) {
+            if (parallelism == 1 || submissions.size() == 1) {
                 submissions.forEach(subm -> gradeSubm.accept(subm, out));
             } else {
                 new ForkJoinPool(parallelism).submit(() -> {
@@ -234,7 +233,7 @@ public class Grader {
     }
 
     private Path gradingDir(Submission subm, Task task) {
-        return subm.projectDir().resolve("grading-" + task.testClass());
+        return subm.dir().resolve("grading-" + task.testClass());
     }
 
     private void runTests(Task task, Submission subm, PrintStream out) throws IOException {
