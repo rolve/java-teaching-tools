@@ -11,6 +11,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>${groupId}</groupId>
+            <artifactId>sandbox</artifactId>
+            <version>${version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.eclipse.jdt</groupId>
             <artifactId>ecj</artifactId>
             <version>3.24.0</version>

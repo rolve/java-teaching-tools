@@ -1,5 +1,27 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
+import ch.trick17.jtt.sandbox.InJvmSandbox;
+import ch.trick17.jtt.sandbox.SandboxResult;
+import ch.trick17.jtt.sandbox.SandboxResult.Kind;
+import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.engine.support.descriptor.MethodSource;
+import org.junit.platform.launcher.TestExecutionListener;
+import org.junit.platform.launcher.TestIdentifier;
+import org.junit.platform.launcher.core.LauncherFactory;
+
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.TreeSet;
+
 import static ch.trick17.jtt.grader.result.Property.*;
 import static java.io.File.pathSeparator;
 import static java.io.OutputStream.nullOutputStream;
@@ -10,47 +32,37 @@ import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.concat;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
-
-import java.io.IOException;
-import java.io.PrintStream;
-import java.net.*;
-import java.nio.file.Path;
-import java.security.*;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.platform.engine.TestExecutionResult;
-import org.junit.platform.engine.support.descriptor.MethodSource;
-import org.junit.platform.launcher.TestExecutionListener;
-import org.junit.platform.launcher.TestIdentifier;
-import org.junit.platform.launcher.core.LauncherFactory;
 
 public class TestRunner {
 
     public static final String REPETITIONS_PROP = "ch.trick17.jtt.repetitions";
     public static final String REP_TIMEOUT_PROP = "ch.trick17.jtt.repTimeout";
     public static final String TEST_TIMEOUT_PROP = "ch.trick17.jtt.testTimeout";
-    public static final String SANDBOX_ENABLED_PROP = "ch.trick17.jtt.sandboxEnabled";
+    public static final String PERM_RESTRICTIONS_PROP = "ch.trick17.jtt.permRestrictions";
 
     private static final int REPETITIONS = getInteger(REPETITIONS_PROP);
     private static final int REP_TIMEOUT = getInteger(REP_TIMEOUT_PROP);
     private static final int TEST_TIMEOUT = getInteger(TEST_TIMEOUT_PROP);
-    private static final boolean SANDBOX_ENABLED = getBoolean(SANDBOX_ENABLED_PROP);
+    private static final boolean PERM_RESTRICTIONS = getBoolean(PERM_RESTRICTIONS_PROP);
 
     private static PrintStream out;
     private static PrintStream err;
 
     public static void main(String[] args) throws IOException {
         var testClass = args[0];
-        var codeUnderTest = Path.of(args[1]).toUri().toURL();
+        var codeUnderTest = new ArrayList<URL>();
+        for (int i = 1; i < args.length; i++) {
+            codeUnderTest.add(Path.of(args[i]).toUri().toURL());
+        }
         runTests(testClass, codeUnderTest);
     }
 
-    private static void runTests(String testClass, URL codeUnderTest)
+    private static void runTests(String testClass, List<URL> codeUnderTest)
             throws IOException {
         // Close standard input in case some solutions read from it
         System.in.close();
@@ -61,35 +73,33 @@ public class TestRunner {
         System.setErr(new PrintStream(nullOutputStream()));
         currentThread().setUncaughtExceptionHandler((t, e) -> e.printStackTrace(err));
 
-        if (SANDBOX_ENABLED) {
-            Policy.setPolicy(new SandboxPolicy(codeUnderTest));
-            System.setSecurityManager(new SecurityManager());
-        }
-
         var passed = new HashSet<String>();
         var failed = new HashSet<String>();
         var failMsgs = new TreeSet<String>();
 
-        for (var test : findTestMethods(testClass)) {
+        for (var test : findTestMethods(testClass, codeUnderTest)) {
             var startTime = currentTimeMillis();
             for (int rep = 1; rep <= REPETITIONS; rep++) {
-                var result = runIsolated(test);
-
                 var name = test.getMethodName();
-                if (result.isEmpty()) {
+                var result = runSandboxed(test, codeUnderTest);
+
+                if (result.kind() == Kind.TIMEOUT) {
+                    out.println("prop: " + TIMEOUT);
+                } else if (result.kind() == Kind.ILLEGAL_OPERATION) {
+                    err.println("Illegal operation: " + result.exception().getMessage());
+                    out.println("prop: " + ILLEGAL_OPERATION);
+                } else if (result.kind() == Kind.EXCEPTION) {
+                    // should not happen, JUnit catches exceptions
+                    throw new AssertionError(result.exception());
+                } else if (result.value() == null) {
                     passed.add(name);
                 } else {
                     failed.add(name);
                     var msg = name + ": "
-                            + valueOf(result.get().getMessage()).replaceAll("\\s+", " ")
-                            + " (" + result.get().getClass().getName() + ")";
+                            + valueOf(result.value().getMessage()).replaceAll("\\s+", " ")
+                            + " (" + result.value().getClass().getName() + ")";
                     // TODO: Collect exception stats
                     failMsgs.add(msg);
-                    if (result.get() instanceof ThreadDeath) {
-                        out.println("prop: " + TIMEOUT);
-                    } else if (result.get() instanceof AccessControlException) {
-                        out.println("prop: " + ILLEGAL_OPERATION);
-                    }
                 }
 
                 if (rep < REPETITIONS && currentTimeMillis() - startTime > TEST_TIMEOUT) {
@@ -121,52 +131,23 @@ public class TestRunner {
         err.flush();
     }
 
-    private static List<MethodSource> findTestMethods(String testClass) {
-        var launcher = LauncherFactory.create();
-        var classReq = request().selectors(selectClass(testClass));
-        var testPlan = launcher.discover(classReq.build());
-        return testPlan.getRoots().stream()
-                .flatMap(id -> testPlan.getDescendants(id).stream())
-                .filter(id -> id.getType() == TEST)
-                .map(id -> (MethodSource) id.getSource().get())
-                .collect(toList());
+    private static List<MethodSource> findTestMethods(String testClass, List<URL> codeUnderTest) {
+        var urls = concat(codeUnderTest.stream(), classpathUrls().stream())
+                .toArray(URL[]::new);
+        var loader = new URLClassLoader(urls, currentThread().getContextClassLoader());
+        return new CustomCxtClassLoaderRunner(loader).run(() -> {
+            var launcher = LauncherFactory.create();
+            var classReq = request().selectors(selectClass(testClass));
+            var testPlan = launcher.discover(classReq.build());
+            return testPlan.getRoots().stream()
+                    .flatMap(id -> testPlan.getDescendants(id).stream())
+                    .filter(id -> id.getType() == TEST)
+                    .map(id -> (MethodSource) id.getSource().get())
+                    .collect(toList());
+        });
     }
 
-    /**
-     * Runs a test in isolation, meaning that it runs with freshly loaded
-     * classes. This avoids problems with static initialization. Apparently, two
-     * things are required for this to work: 1) all JUnit classes must be
-     * freshly loaded too, which can be achieved by referring to them from a
-     * class ({@link Isolated}) loaded by a fresh class loader; and 2) the
-     * context class loader, which is used by JUnit to discover test classes,
-     * must be set to the same class loader.
-     * <p>
-     * Note that the isolation provided by this approach is not absolute:
-     * classes from the Java Standard Library are shared among test runs, so
-     * there may still be interference, e.g., via {@link Math#random()},
-     * {@link System#setProperty(String, String)}, etc. (However, the latter
-     * is prevented by default by the sandboxing mechanism.)
-     */
-    private static Optional<Throwable> runIsolated(MethodSource test) {
-        var origLoader = currentThread().getContextClassLoader();
-        var urls = classpathUrls();
-        try (var loader = new URLClassLoader(urls, origLoader.getParent())) {
-            currentThread().setContextClassLoader(loader);
-
-            var cls = loader.loadClass(Isolated.class.getName());
-            var method = cls.getMethod("run", String.class, String.class);
-
-            var result = method.invoke(null, test.getClassName(), test.getMethodName());
-            return Optional.ofNullable((Throwable) result);
-        } catch (ReflectiveOperationException | IOException e) {
-            e.printStackTrace(err);
-            throw new AssertionError(e);
-        } finally {
-            currentThread().setContextClassLoader(origLoader);
-        }
-    }
-
-    private static URL[] classpathUrls() {
+    private static List<URL> classpathUrls() {
         return stream(System.getProperty("java.class.path").split(pathSeparator))
                 .map(path -> {
                     try {
@@ -175,93 +156,39 @@ public class TestRunner {
                         throw new AssertionError(e);
                     }
                 })
-                .toArray(URL[]::new);
+                .collect(toList());
     }
 
-    public static class Isolated {
+    private static SandboxResult<Throwable> runSandboxed(MethodSource test, List<URL> codeUnderTest) {
+        var sandbox = new InJvmSandbox()
+                .permRestrictions(PERM_RESTRICTIONS)
+                .timeout(Duration.ofMillis(REP_TIMEOUT));
+        var args = List.of(test.getClassName(), test.getMethodName());
+        return sandbox.run(codeUnderTest, classpathUrls(),
+                Sandboxed.class, "run", List.of(String.class, String.class), args);
+    }
 
+    public static class Sandboxed {
         public static Throwable run(String className, String methodName) {
             var sel = selectMethod(className, methodName);
             var req = request().selectors(sel).build();
-
-            var result = new AtomicReference<TestExecutionResult>();
             var listener = new TestExecutionListener() {
-                public void executionFinished(TestIdentifier id,
-                        TestExecutionResult res) {
+                TestExecutionResult result;
+                public void executionFinished(TestIdentifier id, TestExecutionResult res) {
                     if (id.isTest()) {
-                        result.set(res);
+                        result = res;
                     }
                 }
             };
+            LauncherFactory.create().execute(req, listener);
 
-            runKillably(() -> LauncherFactory.create().execute(req, listener));
-
-            if (result.get() == null) { // quite unlikely but possible, I suppose
-                return new ThreadDeath();
-            } else {
-                // no Optional here, since this method is called reflectively and
-                // an unsafe cast would be needed in the calling method
-                return result.get().getThrowable().orElse(null);
+            var throwable = listener.result.getThrowable().orElse(null);
+            // since JUnit catches the SecurityException, need to rethrow it
+            // for the sandbox to record the illegal operation...
+            if (throwable instanceof SecurityException) {
+                throw (SecurityException) throwable;
             }
-        }
-
-        /**
-         * Runs test in a different thread so it can be killed after the timeout.
-         * This is a very hard timeout ({@link Thread#stop()}) that should be able
-         * to handle anything the students might do.
-         */
-        private static void runKillably(Runnable runnable) {
-            var thread = new Thread(runnable);
-            // we should be able to kill the thread (see below), but just in
-            // case, if everything else fails, the thread is set to "daemon", so
-            // that it is finally killed when the JVM exists:
-            thread.setDaemon(true);
-            thread.start();
-            while (true) {
-                try {
-                    thread.join(REP_TIMEOUT); // ja ja, should calculate time left
-                    break;
-                } catch (InterruptedException e) {}
-            }
-            if (thread.isAlive()) {
-                kill(thread);
-            }
-        }
-
-        /**
-         * Uses the infamous {@link Thread#stop()} method to kill the thread.
-         * And, just in case someone tries to catch the thrown
-         * {@link ThreadDeath}, more of them are thrown, faster and faster.
-         */
-        @SuppressWarnings("deprecation")
-        private static void kill(Thread thread) {
-            int waitTime = 100;
-            do {
-                thread.stop();
-                if (waitTime > 0) {
-                    try {
-                        Thread.sleep(waitTime);
-                        waitTime /= 2;
-                    } catch (InterruptedException e) {}
-                }
-            } while (thread.isAlive());
-        }
-    }
-
-    private static class SandboxPolicy extends Policy {
-
-        private final URL codeUnderTest;
-
-        public SandboxPolicy(URL codeUnderTest) {
-            this.codeUnderTest = codeUnderTest;
-        }
-
-        public PermissionCollection getPermissions(CodeSource source) {
-            var permissions = new Permissions();
-            if (!codeUnderTest.equals(source.getLocation())) {
-                permissions.add(new AllPermission());
-            }
-            return permissions;
+            return throwable;
         }
     }
 }

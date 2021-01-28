@@ -16,6 +16,7 @@
     <modules>
         <module>code-tags</module>
         <module>grader</module>
+        <module>sandbox</module>
     </modules>
 
     <build>

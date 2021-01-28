@@ -265,7 +265,7 @@ public class GraderTest {
     public void testNondeterminismPlusTimeout() throws IOException {
         // ensure that the timeout of one test does not affect detection
         // of nondeterminism in other tests, as was previously the case
-        var tasks = List.of(new Task("SubtractTest").sandboxEnabled(false)); // needs access to system properties
+        var tasks = List.of(new Task("SubtractTest").permRestrictions(false)); // needs access to system properties
         var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "9");
         grader.run();
@@ -308,7 +308,7 @@ public class GraderTest {
     }
 
     @Test
-    public void testSandbox() throws IOException {
+    public void testIllegalOperation() throws IOException {
         var tasks = List.of(new Task("AddTest"));
         var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "12"); // tries to read from the file system

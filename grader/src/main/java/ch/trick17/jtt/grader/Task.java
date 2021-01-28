@@ -22,7 +22,7 @@ public class Task {
     private int repetitions = DEFAULT_REPETITIONS;
     private Duration repTimeout = DEFAULT_REP_TIMEOUT;
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
-    private boolean sandboxEnabled = true;
+    private boolean permRestrictions = true;
 
     public Task(String testClass) {
         this(testClass, Compiler.ECLIPSE);
@@ -74,8 +74,8 @@ public class Task {
         return this;
     }
 
-    public Task sandboxEnabled(boolean sandboxEnabled) {
-        this.sandboxEnabled = sandboxEnabled;
+    public Task permRestrictions(boolean permRestrictions) {
+        this.permRestrictions = permRestrictions;
         return this;
     }
 
@@ -108,8 +108,8 @@ public class Task {
         return testTimeout;
     }
 
-    public boolean sandboxEnabled() {
-        return sandboxEnabled;
+    public boolean permRestrictions() {
+        return permRestrictions;
     }
 
     public Path resultFile() {
