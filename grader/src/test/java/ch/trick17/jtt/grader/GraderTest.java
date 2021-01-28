@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
@@ -249,7 +250,9 @@ public class GraderTest {
 
     @Test
     public void testNondeterminism() throws IOException {
-        var tasks = List.of(new Task("AddTest").repetitions(50));
+        var tasks = List.of(new Task("AddTest")
+                .repetitions(50)
+                .timeouts(Duration.ofSeconds(5), Duration.ofSeconds(60)));
         var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "8");
         grader.run();
