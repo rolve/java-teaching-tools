@@ -249,7 +249,7 @@ public class GraderTest {
 
     @Test
     public void testNondeterminism() throws IOException {
-        var tasks = List.of(new Task("AddTest"));
+        var tasks = List.of(new Task("AddTest").repetitions(50));
         var grader = new Grader(ECLIPSE_BASE, tasks);
         grader.gradeOnly("0", "8");
         grader.run();
