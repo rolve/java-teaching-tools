@@ -1,5 +1,6 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.grader.TestRunResult.MethodResult;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.InJvmSandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
@@ -18,9 +19,8 @@ import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import static ch.trick17.jtt.grader.result.Property.*;
 import static java.io.File.pathSeparator;
@@ -59,10 +59,13 @@ public class TestRunner {
         for (int i = 1; i < args.length; i++) {
             codeUnderTest.add(Path.of(args[i]).toUri().toURL());
         }
-        runTests(testClass, codeUnderTest);
+
+        var result = runTests(testClass, codeUnderTest);
+
+        report(result);
     }
 
-    private static void runTests(String testClass, List<URL> codeUnderTest)
+    private static TestRunResult runTests(String testClass, List<URL> codeUnderTest)
             throws IOException {
         // Close standard input in case some solutions read from it
         System.in.close();
@@ -73,62 +76,50 @@ public class TestRunner {
         System.setErr(new PrintStream(nullOutputStream()));
         currentThread().setUncaughtExceptionHandler((t, e) -> e.printStackTrace(err));
 
-        var passed = new HashSet<String>();
-        var failed = new HashSet<String>();
-        var failMsgs = new TreeSet<String>();
-
-        for (var test : findTestMethods(testClass, codeUnderTest)) {
+        var methodResults = new ArrayList<MethodResult>();
+        for (var method : findTestMethods(testClass, codeUnderTest)) {
             var startTime = currentTimeMillis();
-            for (int rep = 1; rep <= REPETITIONS; rep++) {
-                var name = test.getMethodName();
-                var result = runSandboxed(test, codeUnderTest);
 
-                if (result.kind() == Kind.TIMEOUT) {
-                    out.println("prop: " + TIMEOUT);
-                } else if (result.kind() == Kind.ILLEGAL_OPERATION) {
-                    err.println("Illegal operation: " + result.exception().getMessage());
-                    out.println("prop: " + ILLEGAL_OPERATION);
-                } else if (result.kind() == Kind.EXCEPTION) {
+            var passed = false;
+            var failed = false;
+            var failMsgs = new ArrayList<String>();
+            var repsMade = REPETITIONS;
+            var timeout = false;
+            var illegalOps = new ArrayList<String>();
+            for (int rep = 1; rep <= REPETITIONS; rep++) {
+                var methodResult = runSandboxed(method, codeUnderTest);
+
+                if (methodResult.kind() == Kind.TIMEOUT) {
+                    timeout = true;
+                } else if (methodResult.kind() == Kind.ILLEGAL_OPERATION) {
+                    illegalOps.add(methodResult.exception().getMessage());
+                } else if (methodResult.kind() == Kind.EXCEPTION) {
                     // should not happen, JUnit catches exceptions
-                    throw new AssertionError(result.exception());
-                } else if (result.value() == null) {
-                    passed.add(name);
+                    throw new AssertionError(methodResult.exception());
+                } else if (methodResult.value() == null) {
+                    passed = true;
                 } else {
-                    failed.add(name);
-                    var msg = name + ": "
-                            + valueOf(result.value().getMessage()).replaceAll("\\s+", " ")
-                            + " (" + result.value().getClass().getName() + ")";
+                    failed = true;
+                    var exception = methodResult.value();
+                    var msg = valueOf(exception.getMessage()).replaceAll("\\s+", " ")
+                            + " (" + exception.getClass().getName() + ")";
                     // TODO: Collect exception stats
                     failMsgs.add(msg);
                 }
 
                 if (rep < REPETITIONS && currentTimeMillis() - startTime > TEST_TIMEOUT) {
-                    // this timeout is not so bad. It just means that we are not
-                    // so sure that the test is deterministic, since not all
-                    // REPETITIONS were tried
-                    err.println("Only " + rep + " repetitions made");
-                    out.println("prop: " + INCOMPLETE_REPETITIONS);
+                    repsMade = rep;
                     break;
                 }
             }
+
+            var nonDeterm = passed && failed;
+            passed &= !nonDeterm;
+            methodResults.add(new MethodResult(method.getMethodName(), passed,
+                    failMsgs, nonDeterm, repsMade, timeout, illegalOps));
         }
 
-        failMsgs.stream()
-                .flatMap(s -> stream(s.split("\n")))
-                .map("    "::concat)
-                .forEach(err::println);
-
-        var nonDeterm = new HashSet<>(passed);
-        nonDeterm.retainAll(failed);
-        if (!nonDeterm.isEmpty()) {
-            err.println("Non-determinism detected in tests: " + nonDeterm);
-            out.println("prop: " + NONDETERMINISTIC);
-        }
-
-        passed.removeAll(nonDeterm);
-        passed.forEach(t -> out.println("test: " + t));
-        out.flush();
-        err.flush();
+        return new TestRunResult(methodResults);
     }
 
     private static List<MethodSource> findTestMethods(String testClass, List<URL> codeUnderTest) {
@@ -190,5 +181,36 @@ public class TestRunner {
             }
             return throwable;
         }
+    }
+
+    private static void report(TestRunResult result) {
+        for (var res : result.methodResults()) {
+            if (res.passed()) {
+                out.println("test: " + res.method());
+            }
+            res.failMsgs().stream()
+                    .flatMap(s -> stream(s.split("\n")))
+                    .map("    "::concat)
+                    .forEach(err::println);
+            if (res.nonDeterm()) {
+                err.println("Non-determinism in " + res.method());
+                out.println("prop: " + NONDETERMINISTIC);
+            }
+            if (res.repsMade() < REPETITIONS) {
+                err.println("Only " + res.repsMade() + " repetitions made in " + res.method());
+                out.println("prop: " + INCOMPLETE_REPETITIONS);
+            }
+            if (res.timeout()) {
+                err.println("Timeout in " + res.method());
+                out.println("prop: " + TIMEOUT);
+            }
+            if (!res.illegalOps().isEmpty()) {
+                err.println("Illegal operation(s) in " + res.method() + ": " +
+                        res.illegalOps().stream().collect(Collectors.joining(", ")));
+                out.println("prop: " + ILLEGAL_OPERATION);
+            }
+        }
+        out.flush();
+        err.flush();
     }
 }
