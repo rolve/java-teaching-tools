@@ -1,9 +1,7 @@
 package ch.trick17.jtt.grader;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
-import static ch.trick17.jtt.grader.TestRunner.*;
-import static ch.trick17.jtt.grader.result.Property.COMPILED;
-import static ch.trick17.jtt.grader.result.Property.COMPILE_ERRORS;
+import static ch.trick17.jtt.grader.result.Property.*;
 import static java.io.File.pathSeparator;
 import static java.io.Writer.nullWriter;
 import static java.lang.System.currentTimeMillis;
@@ -11,16 +9,18 @@ import static java.lang.System.getProperty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.time.LocalDateTime.now;
+import static java.util.Arrays.stream;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 import static javax.tools.Diagnostic.NOPOS;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import java.io.*;
 import java.lang.System.Logger;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
@@ -29,9 +29,13 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import javax.tools.*;
 
+import ch.trick17.jtt.grader.test.TestRunConfig;
+import ch.trick17.jtt.grader.test.TestRunResult;
+import ch.trick17.jtt.grader.test.TestRunner;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import ch.trick17.javaprocesses.JavaProcessBuilder;
@@ -48,9 +52,13 @@ public class Grader {
     private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv").toAbsolutePath();
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+    private static final int TEST_RUNNER_CONNECT_TRIES = 3;
 
     private final Codebase codebase;
     private final List<Task> tasks;
+
+    private Process testRunner;
+    private int testRunnerPort;
 
     private final Map<Task, TaskResults> results = new LinkedHashMap<>();
     private Predicate<Submission> filter = p -> true;
@@ -239,45 +247,71 @@ public class Grader {
     private void runTests(Task task, Submission subm, PrintStream out) throws IOException {
         var gradingDir = gradingDir(subm, task);
         var bin = gradingDir.resolve(GRADING_BIN).toString();
-        var agentArg = "-javaagent:" + codeTagsAgent + "=" + bin;
 
-        var jUnit = new JavaProcessBuilder(TestRunner.class, task.testClass(), bin)
-                .vmArgs(agentArg,
-                        "-XX:-OmitStackTraceInFastThrow",
-                        "-Dfile.encoding=UTF8",
-                        "-D" + REPETITIONS_PROP + "=" + task.repetitions(),
-                        "-D" + REP_TIMEOUT_PROP + "=" + task.repTimeout().toMillis(),
-                        "-D" + TEST_TIMEOUT_PROP + "=" + task.testTimeout().toMillis(),
-                        "-D" + PERM_RESTRICTIONS_PROP + "=" + task.permRestrictions())
-                .start();
+        var config = new TestRunConfig(task.testClass(), List.of(bin),
+                task.repetitions(), task.repTimeout(), task.testTimeout(),
+                task.permRestrictions());
 
-        var jUnitOutput = new StringWriter();
-        var outCopier = new Thread(new LineCopier(jUnit.getInputStream(),
-                new LineWriterAdapter(jUnitOutput)));
-        var errCopier = new Thread(new LineCopier(jUnit.getErrorStream(),
-                new LineWriterAdapter(out)));
-        outCopier.start();
-        errCopier.start();
-
-        while (true) {
-            try {
-                outCopier.join();
-                errCopier.join();
+        TestRunResult result = null;
+        for (int tries = 1;; tries++) {
+            ensureTestRunnerRunning();
+            try (var socket = new Socket("localhost", testRunnerPort)) {
+                var request = config.toJson() + "\n";
+                socket.getOutputStream().write(request.getBytes(UTF_8));
+                var response = new String(socket.getInputStream().readAllBytes(), UTF_8);
+                result = TestRunResult.fromJson(response);
                 break;
-            } catch (InterruptedException e) {}
+            } catch (IOException e) {
+                if (tries == TEST_RUNNER_CONNECT_TRIES) {
+                    throw e;
+                } // else try again
+            }
         }
-        jUnitOutput.toString().lines()
-                .filter(line -> line.startsWith("prop: "))
-                .map(line -> Property.valueOf(line.substring(6)))
-                .forEach(results.get(task).get(subm.name())::addProperty);
-        jUnitOutput.toString().lines()
-                .filter(line -> line.startsWith("tag: "))
-                .map(line -> line.substring(5))
-                .forEach(results.get(task).get(subm.name())::addTag);
-        jUnitOutput.toString().lines()
-                .filter(line -> line.startsWith("test: "))
-                .map(line -> line.substring(6))
-                .forEach(results.get(task).get(subm.name())::addPassedTest);
+
+        result.methodResults().forEach(res -> {
+            if (res.passed()) {
+                results.get(task).get(subm.name()).addPassedTest(res.method());
+            }
+            res.failMsgs().stream()
+                    .flatMap(s -> stream(s.split("\n")))
+                    .map("    "::concat)
+                    .forEach(out::println);
+            if (res.nonDeterm()) {
+                out.println("Non-determinism in " + res.method());
+                results.get(task).get(subm.name()).addProperty(NONDETERMINISTIC);
+            }
+            if (res.repsMade() < task.repetitions()) {
+                out.println("Only " + res.repsMade() + " repetitions made in " + res.method());
+                results.get(task).get(subm.name()).addProperty(INCOMPLETE_REPETITIONS);
+            }
+            if (res.timeout()) {
+                out.println("Timeout in " + res.method());
+                results.get(task).get(subm.name()).addProperty(TIMEOUT);
+            }
+            if (!res.illegalOps().isEmpty()) {
+                out.println("Illegal operation(s) in " + res.method() + ": " +
+                        res.illegalOps().stream().collect(joining(", ")));
+                results.get(task).get(subm.name()).addProperty(ILLEGAL_OPERATION);
+            }
+        });
+    }
+
+    private synchronized void ensureTestRunnerRunning() {
+        if (testRunner == null || !testRunner.isAlive()) {
+            try {
+                testRunner = new JavaProcessBuilder(TestRunner.class)
+                        .vmArgs("-XX:-OmitStackTraceInFastThrow", "-Dfile.encoding=UTF8")
+                        .autoExit(true)
+                        .start();
+                testRunnerPort = new Scanner(testRunner.getInputStream()).nextInt();
+                var copier = new Thread(new LineCopier(testRunner.getErrorStream(),
+                        new LineWriterAdapter(System.out)));
+                copier.setDaemon(true);
+                copier.start();
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+        }
     }
 
     private void writeResultsToFile() throws IOException {
