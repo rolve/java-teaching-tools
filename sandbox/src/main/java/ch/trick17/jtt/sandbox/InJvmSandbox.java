@@ -17,7 +17,7 @@ import static java.util.stream.Stream.concat;
 
 public class InJvmSandbox {
 
-    private static SandboxPolicy policy;
+    private static volatile SandboxPolicy policy;
 
     private boolean permRestrictions = true;
     private boolean staticStateIsolation = true;
@@ -121,10 +121,14 @@ public class InJvmSandbox {
     }
 
     private static void ensureSecurityInstalled() {
-        if (!(Policy.getPolicy() instanceof SandboxPolicy)) {
-            policy = new SandboxPolicy();
-            Policy.setPolicy(policy);
-            System.setSecurityManager(new SecurityManager());
+        if (policy == null) {
+            synchronized (InJvmSandbox.class) {
+                if (policy == null) {
+                    policy = new SandboxPolicy();
+                    Policy.setPolicy(policy);
+                    System.setSecurityManager(new SecurityManager());
+                }
+            }
         }
     }
 
