@@ -118,19 +118,11 @@ public class TestRunConfig {
                 repTimeout, testTimeout, permRestrictions);
     }
 
-    public static TestRunConfig fromJson(String json) {
-        try {
-            return mapper.readValue(json, TestRunConfig.class);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e);
-        }
+    public static TestRunConfig fromJson(String json) throws JsonProcessingException {
+        return mapper.readValue(json, TestRunConfig.class);
     }
 
-    public String toJson() {
-        try {
-            return mapper.writeValueAsString(this);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e);
-        }
+    public String toJson() throws JsonProcessingException {
+        return mapper.writeValueAsString(this);
     }
 }

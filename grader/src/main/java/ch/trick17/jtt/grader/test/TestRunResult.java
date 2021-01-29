@@ -89,19 +89,11 @@ public class TestRunResult {
         }
     }
 
-    public static TestRunResult fromJson(String json) {
-        try {
-            return mapper.readValue(json, TestRunResult.class);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e);
-        }
+    public static TestRunResult fromJson(String json) throws JsonProcessingException {
+        return mapper.readValue(json, TestRunResult.class);
     }
 
-    public String toJson() {
-        try {
-            return mapper.writeValueAsString(this);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e);
-        }
+    public String toJson() throws JsonProcessingException {
+        return mapper.writeValueAsString(this);
     }
 }

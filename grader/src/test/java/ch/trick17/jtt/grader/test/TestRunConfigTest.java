@@ -1,5 +1,6 @@
 package ch.trick17.jtt.grader.test;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.Test;
 
 import java.net.MalformedURLException;
@@ -29,12 +30,12 @@ public class TestRunConfigTest {
             "}";
 
     @Test
-    public void testToJson() throws MalformedURLException {
+    public void testToJson() throws JsonProcessingException {
         assertEquals(json, config.toJson());
     }
 
     @Test
-    public void testFromJson() {
+    public void testFromJson() throws JsonProcessingException {
         assertEquals(config, TestRunConfig.fromJson(json));
     }
 }
