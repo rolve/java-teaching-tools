@@ -1,24 +1,23 @@
 package ch.trick17.jtt.sandbox;
 
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.Policy;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeoutException;
 
-import static java.lang.Thread.activeCount;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Stream.concat;
 
 public class InJvmSandbox {
+
+    private static SandboxPolicy policy;
 
     private boolean permRestrictions = true;
     private boolean staticStateIsolation = true;
@@ -93,15 +92,12 @@ public class InJvmSandbox {
         } : timed;
 
         Callable<T> restricted = permRestrictions ? () -> {
-            Policy oldPolicy = Policy.getPolicy();
-            SecurityManager oldSec = System.getSecurityManager();
-            Policy.setPolicy(new SandboxPolicy(unrestrictedCode));
-            System.setSecurityManager(new SecurityManager());
+            ensureSecurityInstalled();
+            policy.activate(unrestrictedCode);
             try {
                 return isolated.call();
             } finally {
-                System.setSecurityManager(oldSec);
-                Policy.setPolicy(oldPolicy);
+                policy.deactivate();
             }
         } : isolated;
 
@@ -122,6 +118,14 @@ public class InJvmSandbox {
                                     List<Class<?>> paramTypes, List<?> args) {
         return run(restrictedCode, unrestrictedCode,
                 cls.getName(), methodName, paramTypes, args);
+    }
+
+    private static void ensureSecurityInstalled() {
+        if (!(Policy.getPolicy() instanceof SandboxPolicy)) {
+            policy = new SandboxPolicy();
+            Policy.setPolicy(policy);
+            System.setSecurityManager(new SecurityManager());
+        }
     }
 
     /**
