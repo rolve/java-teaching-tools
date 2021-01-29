@@ -22,6 +22,7 @@ public class SubmissionResults {
     private final Set<Property> properties = noneOf(Property.class);
     private final Set<String> tags = new HashSet<>();
     private final Set<String> passedTests = new HashSet<>();
+    private final Set<String> failedTests = new HashSet<>();
 
     public SubmissionResults(String submissionName) {
         this.submissionName = submissionName;
@@ -55,8 +56,16 @@ public class SubmissionResults {
         return unmodifiableSet(passedTests);
     }
 
+    public Set<String> failedTests() {
+        return unmodifiableSet(failedTests);
+    }
+
     public void addPassedTest(String test) {
         passedTests.add(test);
+    }
+
+    public void addFailedTest(String test) {
+        failedTests.add(test);
     }
 
     /**

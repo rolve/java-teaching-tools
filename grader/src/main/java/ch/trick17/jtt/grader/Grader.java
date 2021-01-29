@@ -262,8 +262,11 @@ public class Grader implements Closeable {
         }
 
         result.methodResults().forEach(res -> {
+            var submResults = results.get(task).get(subm.name());
             if (res.passed()) {
-                results.get(task).get(subm.name()).addPassedTest(res.method());
+                submResults.addPassedTest(res.method());
+            } else {
+                submResults.addFailedTest(res.method());
             }
             res.failMsgs().stream()
                     .flatMap(s -> stream(s.split("\n")))
@@ -271,20 +274,20 @@ public class Grader implements Closeable {
                     .forEach(out::println);
             if (res.nonDeterm()) {
                 out.println("Non-determinism in " + res.method());
-                results.get(task).get(subm.name()).addProperty(NONDETERMINISTIC);
+                submResults.addProperty(NONDETERMINISTIC);
             }
             if (res.repsMade() < task.repetitions()) {
                 out.println("Only " + res.repsMade() + " repetitions made in " + res.method());
-                results.get(task).get(subm.name()).addProperty(INCOMPLETE_REPETITIONS);
+                submResults.addProperty(INCOMPLETE_REPETITIONS);
             }
             if (res.timeout()) {
                 out.println("Timeout in " + res.method());
-                results.get(task).get(subm.name()).addProperty(TIMEOUT);
+                submResults.addProperty(TIMEOUT);
             }
             if (!res.illegalOps().isEmpty()) {
                 out.println("Illegal operation(s) in " + res.method() + ": " +
                         res.illegalOps().stream().collect(joining(", ")));
-                results.get(task).get(subm.name()).addProperty(ILLEGAL_OPERATION);
+                submResults.addProperty(ILLEGAL_OPERATION);
             }
         });
     }
