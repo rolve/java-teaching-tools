@@ -103,7 +103,7 @@ public class InJvmSandbox {
 
         try {
             var result = restricted.call();
-            return SandboxResult.success(result);
+            return SandboxResult.normal(result);
         } catch (TimeoutException e) {
             return SandboxResult.timeout();
         } catch (SecurityException e) {

@@ -3,11 +3,11 @@ package ch.trick17.jtt.sandbox;
 public class SandboxResult<T> {
 
     public enum Kind {
-        SUCCESS, EXCEPTION, TIMEOUT, ILLEGAL_OPERATION;
+        NORMAL, EXCEPTION, TIMEOUT, ILLEGAL_OPERATION;
     }
 
-    public static <T> SandboxResult<T> success(T value) {
-        return new SandboxResult<>(Kind.SUCCESS, value, null);
+    public static <T> SandboxResult<T> normal(T value) {
+        return new SandboxResult<>(Kind.NORMAL, value, null);
     }
 
     public static <T> SandboxResult<T> exception(Throwable exception) {
@@ -37,7 +37,7 @@ public class SandboxResult<T> {
     }
 
     public T value() {
-        if (kind != Kind.SUCCESS) {
+        if (kind != Kind.NORMAL) {
             throw new IllegalStateException();
         }
         return value;
