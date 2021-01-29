@@ -64,7 +64,6 @@ public class Grader implements Closeable {
     private Predicate<Submission> filter = p -> true;
     private Path testsDir = DEFAULT_TESTS_DIR;
     private int parallelism = getCommonPoolParallelism();
-    private Path codeTagsAgent;
 
     public Grader(Codebase codebase, List<Task> tasks) {
         this.codebase = codebase;
@@ -101,12 +100,7 @@ public class Grader implements Closeable {
                 .filter(filter)
                 .collect(toList());
 
-        codeTagsAgent = Files.createTempFile("code-tags", ".jar");
         tryFinally(() -> {
-            try (var in = Grader.class.getResourceAsStream("/code-tags.jar")) {
-                Files.copy(in, codeTagsAgent, REPLACE_EXISTING);
-            }
-
             var startTime = currentTimeMillis();
             var i = new AtomicInteger(0);
 
@@ -141,7 +135,6 @@ public class Grader implements Closeable {
             out.println(submissions.size() + " submissions graded");
         }, () -> {
             writeResultsToFile();
-            Files.delete(codeTagsAgent);
             log.close();
         });
     }
@@ -222,9 +215,8 @@ public class Grader implements Closeable {
         var manager = javaCompiler.getStandardFileManager(collector, null, UTF_8);
 
         var version = String.valueOf(Runtime.version().feature());
-        var classPath = getProperty("java.class.path") + pathSeparator + codeTagsAgent;
         var options = new ArrayList<>(List.of(
-                "-cp", classPath,
+                "-cp", getProperty("java.class.path"),
                 "-d", gradingDir.resolve(GRADING_BIN).toString(),
                 "-source", version, "-target", version));
         if (task.compiler() == ECLIPSE) {
