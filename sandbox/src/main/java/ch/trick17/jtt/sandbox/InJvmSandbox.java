@@ -95,7 +95,7 @@ public class InJvmSandbox {
         Callable<T> restricted = permRestrictions ? () -> {
             Policy oldPolicy = Policy.getPolicy();
             SecurityManager oldSec = System.getSecurityManager();
-            Policy.setPolicy(new SandboxPolicy(restrictedCode));
+            Policy.setPolicy(new SandboxPolicy(unrestrictedCode));
             System.setSecurityManager(new SecurityManager());
             try {
                 return isolated.call();
