@@ -13,13 +13,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import static ch.trick17.jtt.grader.result.Property.*;
-import static ch.trick17.jtt.grader.result.Property.ILLEGAL_OPERATION;
+import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
 import static java.io.File.pathSeparator;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
@@ -119,7 +116,8 @@ public class TestRun {
     private SandboxResult<Throwable> runSandboxed(MethodSource test) {
         var sandbox = new InJvmSandbox()
                 .permRestrictions(config.permRestrictions())
-                .timeout(config.repTimeout());
+                .timeout(config.repTimeout())
+                .stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());
         return sandbox.run(config.codeUnderTest(), classpathUrls(),
                 Sandboxed.class, "run", List.of(String.class, String.class), args);

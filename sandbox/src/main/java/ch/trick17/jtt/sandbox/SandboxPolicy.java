@@ -5,12 +5,10 @@ import java.security.*;
 import java.util.Collection;
 import java.util.Set;
 
+import static ch.trick17.jtt.sandbox.InJvmSandbox.SANDBOX;
 import static java.util.Set.copyOf;
 
 class SandboxPolicy extends Policy {
-
-    // could be anything at the moment, as the policy is all-or-nothing anyway
-    private static final Permission SANDBOX = new RuntimePermission("sandbox");
 
     private final ThreadLocal<Set<URL>> unrestricted = new InheritableThreadLocal<>();
 

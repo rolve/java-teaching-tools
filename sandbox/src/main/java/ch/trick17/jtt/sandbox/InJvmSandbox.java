@@ -1,8 +1,14 @@
 package ch.trick17.jtt.sandbox;
 
+import org.apache.commons.io.output.TeeOutputStream;
+
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.Permission;
 import java.security.Policy;
 import java.time.Duration;
 import java.util.List;
@@ -10,18 +16,30 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
+import static ch.trick17.jtt.sandbox.OutputMode.*;
+import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Thread.currentThread;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Stream.concat;
 
 public class InJvmSandbox {
 
+    // could be anything at the moment, as the policy is all-or-nothing anyway
+    static final Permission SANDBOX = new RuntimePermission("sandbox");
+
     private static volatile SandboxPolicy policy;
+    private static volatile SandboxPrintStream stdOut;
+    private static volatile SandboxPrintStream stdErr;
 
     private boolean permRestrictions = true;
     private boolean staticStateIsolation = true;
     private Duration timeout = null;
+    private OutputMode stdOutMode = NORMAL;
+    private OutputMode stdErrMode = NORMAL;
 
     /**
      * Enables or disables permission restrictions. If enabled, a
@@ -55,6 +73,28 @@ public class InJvmSandbox {
      */
     public InJvmSandbox timeout(Duration timeout) {
         this.timeout = timeout;
+        return this;
+    }
+
+    /**
+     * Determines how to handle output to <code>System.out</code>. The
+     * default mode is {@link OutputMode#NORMAL}. Note that the sandboxed
+     * code may affect the I/O behavior using {@link System#setOut(PrintStream)},
+     * unless it runs with restricted permissions.
+     */
+    public InJvmSandbox stdOutMode(OutputMode stdOutMode) {
+        this.stdOutMode = requireNonNull(stdOutMode);
+        return this;
+    }
+
+    /**
+     * Determines how to handle output to <code>System.err</code>. The
+     * default mode is {@link OutputMode#NORMAL}. Note that the sandboxed
+     * code may affect the I/O behavior using {@link System#setErr(PrintStream)},
+     * unless it runs with restricted permissions.
+     */
+    public InJvmSandbox stdErrMode(OutputMode stdErrMode) {
+        this.stdErrMode = requireNonNull(stdErrMode);
         return this;
     }
 
@@ -101,15 +141,37 @@ public class InJvmSandbox {
             }
         } : isolated;
 
-        try {
-            var result = restricted.call();
-            return SandboxResult.normal(result);
-        } catch (TimeoutException e) {
-            return SandboxResult.timeout();
-        } catch (SecurityException e) {
-            return SandboxResult.illegalOperation(e);
-        } catch (Throwable e) {
-            return SandboxResult.exception(e);
+        Supplier<SandboxResult<T>> asResult = () -> {
+            try {
+                return SandboxResult.normal(restricted.call());
+            } catch (TimeoutException e) {
+                return SandboxResult.timeout();
+            } catch (SecurityException e) {
+                return SandboxResult.illegalOperation(e);
+            } catch (Throwable e) {
+                return SandboxResult.exception(e);
+            }
+        };
+
+        if (stdOutMode != NORMAL || stdErrMode != NORMAL) {
+            ensurePrintStreamsInstalled();
+            var outRecorder = activatePrintStream(stdOut, stdOutMode);
+            var errRecorder = activatePrintStream(stdErr, stdErrMode);
+            try {
+                var result = asResult.get();
+                if (outRecorder != null) {
+                    result.setStdOut(outRecorder.toString(UTF_8));
+                }
+                if (errRecorder != null) {
+                    result.setStdErr(errRecorder.toString(UTF_8));
+                }
+                return result;
+            } finally {
+                stdOut.deactivate();
+                stdErr.deactivate();
+            }
+        } else {
+            return asResult.get();
         }
     }
 
@@ -118,6 +180,37 @@ public class InJvmSandbox {
                                     List<Class<?>> paramTypes, List<?> args) {
         return run(restrictedCode, unrestrictedCode,
                 cls.getName(), methodName, paramTypes, args);
+    }
+
+    private static void ensurePrintStreamsInstalled() {
+        if (stdOut == null) {
+            synchronized (InJvmSandbox.class) {
+                if (stdOut == null) {
+                    stdOut = new SandboxPrintStream(System.out);
+                    stdErr = new SandboxPrintStream(System.err);
+                    System.setOut(stdOut);
+                    System.setErr(stdErr);
+                }
+            }
+        }
+    }
+
+    private ByteArrayOutputStream activatePrintStream(SandboxPrintStream stream,
+                                                      OutputMode mode) {
+        ByteArrayOutputStream recorder = null;
+        OutputStream sandboxed;
+        if (mode == NORMAL) {
+            return null; // don't activate
+        } else if (mode == RECORD) {
+            sandboxed = recorder = new ByteArrayOutputStream();
+        } else if (mode == RECORD_FORWARD) {
+            recorder = new ByteArrayOutputStream();
+            sandboxed = new TeeOutputStream(recorder, stream.unsandboxed);
+        } else { // DISCARD
+            sandboxed = nullOutputStream();
+        }
+        stream.activate(sandboxed);
+        return recorder;
     }
 
     private static void ensureSecurityInstalled() {

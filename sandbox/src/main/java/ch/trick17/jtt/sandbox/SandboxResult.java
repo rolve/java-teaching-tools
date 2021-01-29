@@ -25,6 +25,8 @@ public class SandboxResult<T> {
     private final Kind kind;
     private final T value;
     private final Throwable exception;
+    private String stdOut = null;
+    private String stdErr = null;
 
     private SandboxResult(Kind kind, T value, Throwable exception) {
         this.kind = kind;
@@ -48,5 +50,29 @@ public class SandboxResult<T> {
             throw new IllegalStateException();
         }
         return exception;
+    }
+
+    /**
+     * The standard output that was recorded. If recording was
+     * not enabled, returns <code>null</code>.
+     */
+    public String stdOut() {
+        return stdOut;
+    }
+
+    /**
+     * The standard error output that was recorded. If recording
+     * was not enabled, returns <code>null</code>.
+     */
+    public String stdErr() {
+        return stdErr;
+    }
+
+    void setStdOut(String stdOut) {
+        this.stdOut = stdOut;
+    }
+
+    void setStdErr(String stdErr) {
+        this.stdErr = stdErr;
     }
 }
