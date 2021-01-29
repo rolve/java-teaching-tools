@@ -44,7 +44,7 @@ import ch.trick17.javaprocesses.util.LineWriterAdapter;
 import ch.trick17.jtt.grader.Codebase.Submission;
 import ch.trick17.jtt.grader.result.*;
 
-public class Grader {
+public class Grader implements Closeable {
 
     private static final Path GRADING_SRC = Path.of("src"); // relative to grading dir
     private static final Path GRADING_BIN = Path.of("bin"); // relative to grading dir
@@ -266,6 +266,7 @@ public class Grader {
                     throw e;
                 } // else try again
             }
+            killTestRunner();
         }
 
         result.methodResults().forEach(res -> {
@@ -311,6 +312,12 @@ public class Grader {
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
+        }
+    }
+
+    private void killTestRunner() {
+        if (testRunner != null && testRunner.isAlive()) {
+            testRunner.destroyForcibly();
         }
     }
 
@@ -410,5 +417,10 @@ public class Grader {
             result.append('^');
         }
         return result;
+    }
+
+    @Override
+    public void close() throws IOException {
+        killTestRunner();
     }
 }

@@ -37,8 +37,8 @@ public class TestRunConfig {
         this.testClass = requireNonNull(testClass);
         this.codeUnderTestPaths = requireNonNull(codeUnderTestPaths);
         this.repetitions = repetitions;
-        this.repTimeout = repTimeout;
-        this.testTimeout = testTimeout;
+        this.repTimeout = requireNonNull(repTimeout);
+        this.testTimeout = requireNonNull(testTimeout);
         this.permRestrictions = permRestrictions;
     }
 
