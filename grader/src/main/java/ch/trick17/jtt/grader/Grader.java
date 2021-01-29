@@ -2,7 +2,6 @@ package ch.trick17.jtt.grader;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
 import static ch.trick17.jtt.grader.result.Property.*;
-import static java.io.File.pathSeparator;
 import static java.io.Writer.nullWriter;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.getProperty;
@@ -20,7 +19,6 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 import java.io.*;
 import java.lang.System.Logger;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
@@ -29,12 +27,11 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import javax.tools.*;
 
 import ch.trick17.jtt.grader.test.TestRunConfig;
-import ch.trick17.jtt.grader.test.TestRunResult;
+import ch.trick17.jtt.grader.test.TestResult;
 import ch.trick17.jtt.grader.test.TestRunner;
 import org.apache.commons.io.output.TeeOutputStream;
 
@@ -244,14 +241,14 @@ public class Grader implements Closeable {
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permRestrictions());
 
-        TestRunResult result = null;
+        TestResult result = null;
         for (int tries = 1;; tries++) {
             ensureTestRunnerRunning();
             try (var socket = new Socket("localhost", testRunnerPort)) {
                 var request = config.toJson() + "\n";
                 socket.getOutputStream().write(request.getBytes(UTF_8));
                 var response = new String(socket.getInputStream().readAllBytes(), UTF_8);
-                result = TestRunResult.fromJson(response);
+                result = TestResult.fromJson(response);
                 break;
             } catch (IOException e) {
                 if (tries == TEST_RUNNER_CONNECT_TRIES) {

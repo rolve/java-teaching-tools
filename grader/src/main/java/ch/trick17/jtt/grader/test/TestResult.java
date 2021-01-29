@@ -9,13 +9,13 @@ import java.util.List;
 import static java.util.List.copyOf;
 import static java.util.Objects.requireNonNull;
 
-public class TestRunResult {
+public class TestResult {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final List<MethodResult> methodResults;
 
-    public TestRunResult(
+    public TestResult(
             @JsonProperty("methodResults") List<MethodResult> methodResults) {
         this.methodResults = copyOf(methodResults);
     }
@@ -89,8 +89,8 @@ public class TestRunResult {
         }
     }
 
-    public static TestRunResult fromJson(String json) throws JsonProcessingException {
-        return mapper.readValue(json, TestRunResult.class);
+    public static TestResult fromJson(String json) throws JsonProcessingException {
+        return mapper.readValue(json, TestResult.class);
     }
 
     public String toJson() throws JsonProcessingException {

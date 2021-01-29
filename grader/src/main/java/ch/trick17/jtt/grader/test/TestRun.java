@@ -37,8 +37,8 @@ public class TestRun {
         this.config = config;
     }
 
-    public TestRunResult execute() {
-        var methodResults = new ArrayList<TestRunResult.MethodResult>();
+    public TestResult execute() {
+        var methodResults = new ArrayList<TestResult.MethodResult>();
         for (var method : findTestMethods()) {
             var startTime = currentTimeMillis();
 
@@ -78,11 +78,11 @@ public class TestRun {
 
             var nonDeterm = passed && failed;
             passed &= !nonDeterm;
-            methodResults.add(new TestRunResult.MethodResult(method.getMethodName(), passed,
+            methodResults.add(new TestResult.MethodResult(method.getMethodName(), passed,
                     failMsgs, nonDeterm, repsMade, timeout, illegalOps));
         }
 
-        return new TestRunResult(methodResults);
+        return new TestResult(methodResults);
     }
 
     private List<MethodSource> findTestMethods() {
