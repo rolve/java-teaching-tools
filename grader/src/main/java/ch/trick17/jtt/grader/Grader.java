@@ -1,21 +1,19 @@
 package ch.trick17.jtt.grader;
 
-import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
-import static ch.trick17.jtt.grader.result.Property.*;
-import static java.io.Writer.nullWriter;
-import static java.lang.System.currentTimeMillis;
-import static java.lang.System.getProperty;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static java.time.LocalDateTime.now;
-import static java.util.Arrays.stream;
-import static java.util.Comparator.reverseOrder;
-import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
-import static java.util.stream.Collectors.*;
-import static javax.tools.Diagnostic.NOPOS;
-import static javax.tools.Diagnostic.Kind.ERROR;
+import ch.trick17.javaprocesses.JavaProcessBuilder;
+import ch.trick17.javaprocesses.util.LineCopier;
+import ch.trick17.javaprocesses.util.LineWriterAdapter;
+import ch.trick17.jtt.grader.Codebase.Submission;
+import ch.trick17.jtt.grader.result.TaskResults;
+import ch.trick17.jtt.grader.result.TsvWriter;
+import ch.trick17.jtt.grader.test.TestResult;
+import ch.trick17.jtt.grader.test.TestRunConfig;
+import ch.trick17.jtt.grader.test.TestRunner;
+import org.apache.commons.io.output.TeeOutputStream;
 
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaFileObject;
 import java.io.*;
 import java.lang.System.Logger;
 import java.net.Socket;
@@ -28,18 +26,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
-import javax.tools.*;
-
-import ch.trick17.jtt.grader.test.TestRunConfig;
-import ch.trick17.jtt.grader.test.TestResult;
-import ch.trick17.jtt.grader.test.TestRunner;
-import org.apache.commons.io.output.TeeOutputStream;
-
-import ch.trick17.javaprocesses.JavaProcessBuilder;
-import ch.trick17.javaprocesses.util.LineCopier;
-import ch.trick17.javaprocesses.util.LineWriterAdapter;
-import ch.trick17.jtt.grader.Codebase.Submission;
-import ch.trick17.jtt.grader.result.*;
+import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static ch.trick17.jtt.grader.result.Property.*;
+import static java.io.Writer.nullWriter;
+import static java.lang.System.currentTimeMillis;
+import static java.lang.System.getProperty;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.LocalDateTime.now;
+import static java.util.Arrays.stream;
+import static java.util.Comparator.reverseOrder;
+import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
+import static java.util.stream.Collectors.*;
+import static javax.tools.Diagnostic.Kind.ERROR;
+import static javax.tools.Diagnostic.NOPOS;
 
 public class Grader implements Closeable {
 
@@ -168,11 +168,10 @@ public class Grader implements Closeable {
         }
 
         // Copy grading files
-        for (var file : task.filesToCopy()) {
-            var from = task.testSrcDir().resolve(file);
-            var to = srcDir.resolve(file);
-            Files.createDirectories(to.getParent());
-            Files.copy(from, to, REPLACE_EXISTING);
+        for (var entry : task.filesToCopy().entrySet()) {
+            var path = srcDir.resolve(entry.getKey());
+            Files.createDirectories(path.getParent());
+            Files.write(path, entry.getValue());
         }
 
         // Copy properties files into bin directory

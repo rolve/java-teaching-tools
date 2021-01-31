@@ -144,7 +144,7 @@ public class GraderTest {
 
     @Test
     public void testCustomDir() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest").testSrcDir(Path.of("tests-custom-dir")));
+        var tasks = List.of(Task.fromClassName("AddTest", Path.of("tests-custom-dir")));
         try (var grader = new Grader(ECLIPSE_BASE, tasks)) {
             grader.gradeOnly("0", "1", "2");
             grader.run();

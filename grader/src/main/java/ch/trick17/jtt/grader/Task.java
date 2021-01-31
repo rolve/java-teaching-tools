@@ -1,13 +1,15 @@
 package ch.trick17.jtt.grader;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
-import static java.util.Arrays.asList;
-import static java.util.Collections.unmodifiableSet;
+import static java.io.File.separatorChar;
+import static java.nio.file.Files.readAllBytes;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 
 public class Task {
@@ -18,35 +20,32 @@ public class Task {
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
 
     private final String testClassName;
+    private final Map<Path, byte[]> filesToCopy;
 
     private Compiler compiler = ECLIPSE;
-    private Path testSrcDir = DEFAULT_TEST_SRC_DIR;
-    private final Set<String> filesToCopy;
     private int repetitions = DEFAULT_REPETITIONS;
     private Duration repTimeout = DEFAULT_REP_TIMEOUT;
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
     private boolean permRestrictions = true;
 
-    public static Task fromClassName(String testClass) {
-        return new Task(testClass);
+    public static Task fromClassName(String testClassName, String... moreFiles) throws IOException {
+        return fromClassName(testClassName, DEFAULT_TEST_SRC_DIR, moreFiles);
     }
 
-    private Task(String testClassName) {
-        this.testClassName = requireNonNull(testClassName);
-        filesToCopy = new HashSet<>(Set.of(testClassName.replace('.', '/') + ".java"));
+    public static Task fromClassName(String testClassName, Path testSrcDir,
+                                     String... moreFiles) throws IOException {
+        var testPath = Path.of(testClassName.replace('.', separatorChar) + ".java");
+        var filesToCopy = new HashMap<>(Map.of(testPath, readAllBytes(testSrcDir.resolve(testPath))));
+        for (var file : moreFiles) {
+            var path = Path.of(file);
+            filesToCopy.put(path, readAllBytes(testSrcDir.resolve(path)));
+        }
+        return new Task(testClassName, filesToCopy);
     }
 
-    public Task testSrcDir(Path testSrcDir) {
-        this.testSrcDir = testSrcDir.toAbsolutePath();
-        return this;
-    }
-
-    /**
-     * In addition to test class, copy these files. Relative to "test src" directory.
-     */
-    public Task copy(String... files) {
-        filesToCopy.addAll(asList(files));
-        return this;
+    private Task(String testClassName, Map<Path, byte[]> filesToCopy) {
+        this.testClassName = testClassName;
+        this.filesToCopy = filesToCopy;
     }
 
     /**
@@ -103,12 +102,8 @@ public class Task {
         return parts[parts.length - 1];
     }
 
-    public Path testSrcDir() {
-        return testSrcDir;
-    }
-
-    public Set<String> filesToCopy() {
-        return unmodifiableSet(filesToCopy);
+    public Map<Path, byte[]> filesToCopy() {
+        return unmodifiableMap(filesToCopy);
     }
 
     public Compiler compiler() {
