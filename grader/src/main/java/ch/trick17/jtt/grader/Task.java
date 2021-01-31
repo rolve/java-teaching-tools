@@ -17,7 +17,7 @@ public class Task {
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
 
-    private final String testClass;
+    private final String testClassName;
     private final Compiler compiler;
 
     private Path testSrcDir = DEFAULT_TEST_SRC_DIR;
@@ -35,10 +35,10 @@ public class Task {
         return new Task(testClass, compiler);
     }
 
-    private Task(String testClass, Compiler compiler) {
-        this.testClass = requireNonNull(testClass);
+    private Task(String testClassName, Compiler compiler) {
+        this.testClassName = requireNonNull(testClassName);
         this.compiler = requireNonNull(compiler);
-        filesToCopy = new HashSet<>(Set.of(testClass.replace('.', '/') + ".java"));
+        filesToCopy = new HashSet<>(Set.of(testClassName.replace('.', '/') + ".java"));
     }
 
     public Task testSrcDir(Path testSrcDir) {
@@ -91,12 +91,12 @@ public class Task {
         return this;
     }
 
-    public String testClass() {
-        return testClass;
+    public String testClassName() {
+        return testClassName;
     }
 
     public String testClassSimpleName() {
-        var parts = testClass.split("\\.");
+        var parts = testClassName.split("\\.");
         return parts[parts.length - 1];
     }
 

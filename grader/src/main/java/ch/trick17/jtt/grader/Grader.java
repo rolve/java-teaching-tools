@@ -224,14 +224,14 @@ public class Grader implements Closeable {
     }
 
     private Path gradingDir(Submission subm, Task task) {
-        return subm.dir().resolve("grading-" + task.testClass());
+        return subm.dir().resolve("grading-" + task.testClassName());
     }
 
     private void runTests(Task task, Submission subm, PrintStream out) throws IOException {
         var gradingDir = gradingDir(subm, task);
         var bin = gradingDir.resolve(GRADING_BIN).toString();
 
-        var config = new TestRunConfig(task.testClass(), List.of(bin),
+        var config = new TestRunConfig(task.testClassName(), List.of(bin),
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permRestrictions());
 

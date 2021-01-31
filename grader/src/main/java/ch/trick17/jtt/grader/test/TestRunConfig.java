@@ -20,7 +20,7 @@ public class TestRunConfig {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final String testClass;
+    private final String testClassName;
     private final List<String> codeUnderTestPaths;
     private final int repetitions;
     private final Duration repTimeout;
@@ -28,13 +28,13 @@ public class TestRunConfig {
     private final boolean permRestrictions;
 
     public TestRunConfig(
-            String testClass,
+            String testClassName,
             List<String> codeUnderTestPaths,
             int repetitions,
             Duration repTimeout,
             Duration testTimeout,
             boolean permRestrictions) {
-        this.testClass = requireNonNull(testClass);
+        this.testClassName = requireNonNull(testClassName);
         this.codeUnderTestPaths = requireNonNull(codeUnderTestPaths);
         this.repetitions = repetitions;
         this.repTimeout = requireNonNull(repTimeout);
@@ -43,20 +43,20 @@ public class TestRunConfig {
     }
 
     public TestRunConfig(
-            @JsonProperty("testClass") String testClass,
+            @JsonProperty("testClassName") String testClassName,
             @JsonProperty("codeUnderTestPaths") List<String> codeUnderTestPaths,
             @JsonProperty("repetitions") int repetitions,
             @JsonProperty("repTimeoutMillis") int repTimeout,
             @JsonProperty("testTimeoutMillis") int testTimeout,
             @JsonProperty("permRestrictions") boolean permRestrictions) {
-        this(testClass, codeUnderTestPaths, repetitions,
+        this(testClassName, codeUnderTestPaths, repetitions,
                 Duration.ofMillis(repTimeout), Duration.ofMillis(testTimeout),
                 permRestrictions);
     }
 
     @JsonProperty
-    public String testClass() {
-        return testClass;
+    public String testClassName() {
+        return testClassName;
     }
 
     @JsonProperty
@@ -109,12 +109,12 @@ public class TestRunConfig {
         var that = (TestRunConfig) o;
         return repetitions == that.repetitions && permRestrictions == that.permRestrictions
                 && repTimeout.equals(that.repTimeout)&& testTimeout.equals(that.testTimeout)
-                && testClass.equals(that.testClass) && codeUnderTestPaths.equals(that.codeUnderTestPaths);
+                && testClassName.equals(that.testClassName) && codeUnderTestPaths.equals(that.codeUnderTestPaths);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(testClass, codeUnderTestPaths, repetitions,
+        return Objects.hash(testClassName, codeUnderTestPaths, repetitions,
                 repTimeout, testTimeout, permRestrictions);
     }
 
