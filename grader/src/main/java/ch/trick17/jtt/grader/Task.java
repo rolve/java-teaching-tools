@@ -5,12 +5,18 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
 import static java.io.File.separatorChar;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.Files.readAllBytes;
 import static java.util.Collections.unmodifiableMap;
-import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Stream.concat;
 
 public class Task {
 
@@ -18,6 +24,9 @@ public class Task {
     private static final int DEFAULT_REPETITIONS = 7;
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
+
+    private static final Pattern PACKAGE_NAME = Pattern.compile("\\bpackage\\s+([^\\s;]+)");
+    private static final Pattern CLASS_NAME = Pattern.compile("\\bclass\\s+([^\\s{]+)");
 
     private final String testClassName;
     private final Map<Path, byte[]> filesToCopy;
@@ -28,13 +37,33 @@ public class Task {
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
     private boolean permRestrictions = true;
 
+    public static Task fromString(String testClassCode) {
+        var packageName = firstMatch(testClassCode, PACKAGE_NAME);
+        var simpleName = firstMatch(testClassCode, CLASS_NAME)
+                .orElseThrow(() -> new IllegalArgumentException("no class name found"));
+        var testClassName = concat(packageName.stream(), Stream.of(simpleName)).collect(joining("."));
+        return new Task(testClassName, Map.of(toPath(testClassName), testClassCode.getBytes(UTF_8)));
+    }
+
+    private static Optional<String> firstMatch(String code, Pattern pattern) {
+        return code.lines()
+                .map(pattern::matcher)
+                .filter(Matcher::find)
+                .map(m -> m.group(1))
+                .findFirst();
+    }
+
+    private static Path toPath(String className) {
+        return Path.of(className.replace('.', separatorChar) + ".java");
+    }
+
     public static Task fromClassName(String testClassName, String... moreFiles) throws IOException {
         return fromClassName(testClassName, DEFAULT_TEST_SRC_DIR, moreFiles);
     }
 
     public static Task fromClassName(String testClassName, Path testSrcDir,
                                      String... moreFiles) throws IOException {
-        var testPath = Path.of(testClassName.replace('.', separatorChar) + ".java");
+        var testPath = toPath(testClassName);
         var filesToCopy = new HashMap<>(Map.of(testPath, readAllBytes(testSrcDir.resolve(testPath))));
         for (var file : moreFiles) {
             var path = Path.of(file);
