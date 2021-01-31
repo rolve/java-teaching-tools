@@ -45,7 +45,6 @@ public class Grader implements Closeable {
 
     private static final Path GRADING_SRC = Path.of("src"); // relative to grading dir
     private static final Path GRADING_BIN = Path.of("bin"); // relative to grading dir
-    private static final Path DEFAULT_TESTS_DIR = Path.of("tests").toAbsolutePath();
     private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv").toAbsolutePath();
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
@@ -59,17 +58,12 @@ public class Grader implements Closeable {
 
     private final Map<Task, TaskResults> results = new LinkedHashMap<>();
     private Predicate<Submission> filter = p -> true;
-    private Path testsDir = DEFAULT_TESTS_DIR;
     private int parallelism = getCommonPoolParallelism();
 
     public Grader(Codebase codebase, List<Task> tasks) {
         this.codebase = codebase;
         this.tasks = requireNonNull(tasks);
         tasks.forEach(t -> results.put(t, new TaskResults(t)));
-    }
-
-    public void setTestsDir(Path testsDir) {
-        this.testsDir = testsDir.toAbsolutePath();
     }
 
     public void gradeOnly(String... submNames) {
@@ -175,7 +169,7 @@ public class Grader implements Closeable {
 
         // Copy grading files
         for (var file : task.filesToCopy()) {
-            var from = testsDir.resolve(file);
+            var from = task.testSrcDir().resolve(file);
             var to = srcDir.resolve(file);
             Files.createDirectories(to.getParent());
             Files.copy(from, to, REPLACE_EXISTING);
@@ -241,7 +235,7 @@ public class Grader implements Closeable {
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permRestrictions());
 
-        TestResult result = null;
+        TestResult result;
         for (int tries = 1;; tries++) {
             ensureTestRunnerRunning();
             try (var socket = new Socket("localhost", testRunnerPort)) {

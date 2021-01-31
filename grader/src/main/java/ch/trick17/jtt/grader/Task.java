@@ -1,41 +1,53 @@
 package ch.trick17.jtt.grader;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.unmodifiableSet;
-import static java.util.Objects.requireNonNull;
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 
+import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.Objects.requireNonNull;
+
 public class Task {
 
+    private static final Path DEFAULT_TEST_SRC_DIR = Path.of("tests").toAbsolutePath();
     private static final int DEFAULT_REPETITIONS = 7;
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
 
     private final String testClass;
     private final Compiler compiler;
-    private final Set<String> filesToCopy;
 
+    private Path testSrcDir = DEFAULT_TEST_SRC_DIR;
+    private final Set<String> filesToCopy;
     private int repetitions = DEFAULT_REPETITIONS;
     private Duration repTimeout = DEFAULT_REP_TIMEOUT;
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
     private boolean permRestrictions = true;
 
-    public Task(String testClass) {
-        this(testClass, Compiler.ECLIPSE);
+    public static Task fromClassName(String testClass) {
+        return new Task(testClass, ECLIPSE);
     }
 
-    public Task(String testClass, Compiler compiler) {
+    public static Task fromClassName(String testClass, Compiler compiler) {
+        return new Task(testClass, compiler);
+    }
+
+    private Task(String testClass, Compiler compiler) {
         this.testClass = requireNonNull(testClass);
         this.compiler = requireNonNull(compiler);
         filesToCopy = new HashSet<>(Set.of(testClass.replace('.', '/') + ".java"));
     }
 
+    public Task testSrcDir(Path testSrcDir) {
+        this.testSrcDir = testSrcDir.toAbsolutePath();
+        return this;
+    }
+
     /**
-     * In addition to test class, copy these files. Relative to "tests" directory.
+     * In addition to test class, copy these files. Relative to "test src" directory.
      */
     public Task copy(String... files) {
         filesToCopy.addAll(asList(files));
@@ -86,6 +98,10 @@ public class Task {
     public String testClassSimpleName() {
         var parts = testClass.split("\\.");
         return parts[parts.length - 1];
+    }
+
+    public Path testSrcDir() {
+        return testSrcDir;
     }
 
     public Set<String> filesToCopy() {

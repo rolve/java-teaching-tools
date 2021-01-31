@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.time.Duration;
-import java.util.Collections;
 
 import static ch.trick17.jtt.sandbox.OutputMode.*;
 import static java.util.Collections.emptyList;
