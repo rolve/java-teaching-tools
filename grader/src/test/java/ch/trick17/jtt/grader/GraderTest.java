@@ -37,7 +37,7 @@ public class GraderTest {
 
     @Test
     public void testEclipseStructureEclipseCompiler() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", ECLIPSE));
+        var tasks = List.of(Task.fromClassName("AddTest").compiler(ECLIPSE));
         try (var grader = new Grader(ECLIPSE_BASE, tasks)) {
             grader.gradeOnly("0", "1", "2");
             grader.run();
@@ -49,7 +49,7 @@ public class GraderTest {
 
     @Test
     public void testEclipseStructureJavac() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", JAVAC));
+        var tasks = List.of(Task.fromClassName("AddTest").compiler(JAVAC));
         try (var grader = new Grader(ECLIPSE_BASE, tasks)) {
             grader.gradeOnly("0", "1", "2");
             grader.run();
@@ -60,7 +60,7 @@ public class GraderTest {
 
     @Test
     public void testMavenStructureEclipseCompiler() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", ECLIPSE));
+        var tasks = List.of(Task.fromClassName("AddTest").compiler(ECLIPSE));
         try (var grader = new Grader(MVN_BASE, tasks)) {
             grader.gradeOnly("0", "1", "2");
             grader.run();
@@ -71,7 +71,7 @@ public class GraderTest {
 
     @Test
     public void testMavenStructureJavac() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", JAVAC));
+        var tasks = List.of(Task.fromClassName("AddTest").compiler(JAVAC));
         try (var grader = new Grader(MVN_BASE, tasks)) {
             grader.gradeOnly("0", "1", "2");
             grader.run();
@@ -82,7 +82,7 @@ public class GraderTest {
 
     @Test
     public void testPackageEclipseCompiler() throws IOException {
-        var tasks = List.of(Task.fromClassName("multiply.MultiplyTest", ECLIPSE));
+        var tasks = List.of(Task.fromClassName("multiply.MultiplyTest").compiler(ECLIPSE));
         try (var grader = new Grader(ECLIPSE_BASE, tasks)) {
             grader.gradeOnly("0", "1", "2");
             grader.run();
@@ -98,7 +98,7 @@ public class GraderTest {
 
     @Test
     public void testPackageJavac() throws IOException {
-        var tasks = List.of(Task.fromClassName("multiply.MultiplyTest", JAVAC));
+        var tasks = List.of(Task.fromClassName("multiply.MultiplyTest").compiler(JAVAC));
         try (var grader = new Grader(ECLIPSE_BASE, tasks)) {
             grader.gradeOnly("0", "1", "2");
             grader.run();
@@ -114,7 +114,7 @@ public class GraderTest {
 
     @Test
     public void testUnrelatedCompileErrorEclipseCompiler() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", ECLIPSE));
+        var tasks = List.of(Task.fromClassName("AddTest").compiler(ECLIPSE));
         try (var grader = new Grader(ECLIPSE_BASE, tasks)) {
             grader.gradeOnly("0", "3");
             grader.run();
@@ -129,7 +129,7 @@ public class GraderTest {
 
     @Test
     public void testUnrelatedCompileErrorJavac() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", JAVAC));
+        var tasks = List.of(Task.fromClassName("AddTest").compiler(JAVAC));
         try (var grader = new Grader(ECLIPSE_BASE, tasks)) {
             grader.gradeOnly("0", "3");
             grader.run();
@@ -239,7 +239,7 @@ public class GraderTest {
 
     @Test
     public void testMissingClassUnderTestJavac() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", JAVAC));
+        var tasks = List.of(Task.fromClassName("AddTest").compiler(JAVAC));
         try (var grader = new Grader(ECLIPSE_BASE, tasks)) {
             grader.gradeOnly("0", "6");
             grader.run();

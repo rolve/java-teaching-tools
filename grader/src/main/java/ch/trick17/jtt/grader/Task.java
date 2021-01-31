@@ -18,8 +18,8 @@ public class Task {
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
 
     private final String testClassName;
-    private final Compiler compiler;
 
+    private Compiler compiler = ECLIPSE;
     private Path testSrcDir = DEFAULT_TEST_SRC_DIR;
     private final Set<String> filesToCopy;
     private int repetitions = DEFAULT_REPETITIONS;
@@ -28,16 +28,11 @@ public class Task {
     private boolean permRestrictions = true;
 
     public static Task fromClassName(String testClass) {
-        return new Task(testClass, ECLIPSE);
+        return new Task(testClass);
     }
 
-    public static Task fromClassName(String testClass, Compiler compiler) {
-        return new Task(testClass, compiler);
-    }
-
-    private Task(String testClassName, Compiler compiler) {
+    private Task(String testClassName) {
         this.testClassName = requireNonNull(testClassName);
-        this.compiler = requireNonNull(compiler);
         filesToCopy = new HashSet<>(Set.of(testClassName.replace('.', '/') + ".java"));
     }
 
@@ -51,6 +46,14 @@ public class Task {
      */
     public Task copy(String... files) {
         filesToCopy.addAll(asList(files));
+        return this;
+    }
+
+    /**
+     * Sets to compiler to use. The default is {@link Compiler#ECLIPSE}
+     */
+    public Task compiler(Compiler compiler) {
+        this.compiler = compiler;
         return this;
     }
 
