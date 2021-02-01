@@ -1,5 +1,6 @@
 package ch.trick17.jtt.grader.test;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,12 +16,12 @@ import static java.util.Objects.requireNonNull;
 
 public class TestResults implements Iterable<TestResults.MethodResult> {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
 
     private final List<MethodResult> methodResults;
 
-    public TestResults(
-            @JsonProperty("methodResults") List<MethodResult> methodResults) {
+    @JsonCreator
+    public TestResults(List<MethodResult> methodResults) {
         this.methodResults = copyOf(methodResults);
     }
 
@@ -50,15 +51,16 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
         private final boolean timeout;
         private final List<String> illegalOps;
 
+        @JsonCreator
         public MethodResult(
-                @JsonProperty("method") String method,
-                @JsonProperty("passed") boolean passed,
-                @JsonProperty("failMsgs") Collection<String> failMsgs,
-                @JsonProperty("nonDeterm") boolean nonDeterm,
-                @JsonProperty("repsMade") int repsMade,
-                @JsonProperty("incompleteReps") boolean incompleteReps,
-                @JsonProperty("timeout") boolean timeout,
-                @JsonProperty("illegalOps") List<String> illegalOps) {
+                String method,
+                boolean passed,
+                Collection<String> failMsgs,
+                boolean nonDeterm,
+                int repsMade,
+                boolean incompleteReps,
+                boolean timeout,
+                List<String> illegalOps) {
             this.method = requireNonNull(method);
             this.passed = passed;
             this.failMsgs = copyOf(failMsgs);

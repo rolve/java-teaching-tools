@@ -1,5 +1,6 @@
 package ch.trick17.jtt.grader.test;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +19,7 @@ public class TestRunConfig {
 
     // good candidate for a record, once we want to update to that Java version
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
 
     private final String testClassName;
     private final List<String> codeUnderTestPaths;
@@ -42,15 +43,16 @@ public class TestRunConfig {
         this.permRestrictions = permRestrictions;
     }
 
+    @JsonCreator
     public TestRunConfig(
-            @JsonProperty("testClassName") String testClassName,
-            @JsonProperty("codeUnderTestPaths") List<String> codeUnderTestPaths,
-            @JsonProperty("repetitions") int repetitions,
-            @JsonProperty("repTimeoutMillis") int repTimeout,
-            @JsonProperty("testTimeoutMillis") int testTimeout,
-            @JsonProperty("permRestrictions") boolean permRestrictions) {
+            String testClassName,
+            List<String> codeUnderTestPaths,
+            int repetitions,
+            int repTimeoutMillis,
+            int testTimeoutMillis,
+            boolean permRestrictions) {
         this(testClassName, codeUnderTestPaths, repetitions,
-                Duration.ofMillis(repTimeout), Duration.ofMillis(testTimeout),
+                Duration.ofMillis(repTimeoutMillis), Duration.ofMillis(testTimeoutMillis),
                 permRestrictions);
     }
 
