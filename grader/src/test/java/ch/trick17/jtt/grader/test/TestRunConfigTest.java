@@ -21,7 +21,7 @@ public class TestRunConfigTest {
             true);
 
     private String json = "{" +
-            "\"testClass\":\"Test\"," +
+            "\"testClassName\":\"Test\"," +
             "\"codeUnderTestPaths\":[\"test\",\"test/more\"]," +
             "\"repetitions\":3," +
             "\"repTimeoutMillis\":6000," +
