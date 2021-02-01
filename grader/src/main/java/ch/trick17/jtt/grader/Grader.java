@@ -4,9 +4,10 @@ import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
 import ch.trick17.jtt.grader.Codebase.Submission;
+import ch.trick17.jtt.grader.result.SubmissionResults;
 import ch.trick17.jtt.grader.result.TaskResults;
 import ch.trick17.jtt.grader.result.TsvWriter;
-import ch.trick17.jtt.grader.test.TestResult;
+import ch.trick17.jtt.grader.test.TestResults;
 import ch.trick17.jtt.grader.test.TestRunConfig;
 import ch.trick17.jtt.grader.test.TestRunner;
 import org.apache.commons.io.output.TeeOutputStream;
@@ -27,17 +28,17 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
-import static ch.trick17.jtt.grader.result.Property.*;
 import static java.io.Writer.nullWriter;
+import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.getProperty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.LocalDateTime.now;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.reverseOrder;
-import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.NOPOS;
 
@@ -50,21 +51,11 @@ public class Grader implements Closeable {
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private static final int TEST_RUNNER_CONNECT_TRIES = 3;
 
-    private final Codebase codebase;
-    private final List<Task> tasks;
-
     private Process testRunner;
     private int testRunnerPort;
 
-    private final Map<Task, TaskResults> results = new LinkedHashMap<>();
     private Predicate<Submission> filter = p -> true;
     private int parallelism = getCommonPoolParallelism();
-
-    public Grader(Codebase codebase, List<Task> tasks) {
-        this.codebase = codebase;
-        this.tasks = requireNonNull(tasks);
-        tasks.forEach(t -> results.put(t, new TaskResults(t)));
-    }
 
     public void gradeOnly(String... submNames) {
         var set = new HashSet<>(List.of(submNames));
@@ -82,7 +73,10 @@ public class Grader implements Closeable {
         this.parallelism = parallelism;
     }
 
-    public void run() throws IOException {
+    public void run(Codebase codebase, List<Task> tasks) throws IOException {
+        var results = new LinkedHashMap<Task, TaskResults>();
+        tasks.forEach(t -> results.put(t, new TaskResults(t)));
+
         var logFile = Path.of("grader_" + now().format(LOG_FORMAT) + ".log");
         var log = Files.newOutputStream(logFile);
         var out = new PrintStream(new TeeOutputStream(System.out, log), true);
@@ -99,7 +93,8 @@ public class Grader implements Closeable {
                 submOut.println("Grading " + subm.name());
                 try {
                     for (var task : tasks) {
-                        gradeTask(subm, task, submOut);
+                        var res = gradeTask(subm, task, submOut);
+                        results.get(task).put(res);
                     }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
@@ -125,23 +120,22 @@ public class Grader implements Closeable {
 
             out.println(submissions.size() + " submissions graded");
         }, () -> {
-            writeResultsToFile();
+            writeResultsToFile(results);
             log.close();
         });
     }
 
-    private void gradeTask(Submission subm, Task task, PrintStream out)
+    private SubmissionResults gradeTask(Submission subm, Task task, PrintStream out)
             throws IOException {
-        tryFinally(() -> {
+        return tryFinally(() -> {
             prepareProject(subm, task);
-            var hasErrors = compile(subm, task, out);
-            if (hasErrors) {
-                results.get(task).get(subm.name()).addProperty(COMPILE_ERRORS);
+            var errors = compile(subm, task, out);
+            var compiled = !errors || task.compiler() == ECLIPSE;
+            TestResults testResults = null;
+            if (compiled) {
+                testResults = runTests(task, subm, out);
             }
-            if (!hasErrors || task.compiler() == ECLIPSE) {
-                results.get(task).get(subm.name()).addProperty(COMPILED);
-                runTests(task, subm, out);
-            }
+            return new SubmissionResults(subm.name(), errors, compiled, testResults);
         }, () -> {
             delete(gradingDir(subm, task), false);
         });
@@ -226,7 +220,7 @@ public class Grader implements Closeable {
         return subm.dir().resolve("grading-" + task.testClassName());
     }
 
-    private void runTests(Task task, Submission subm, PrintStream out) throws IOException {
+    private TestResults runTests(Task task, Submission subm, PrintStream out) throws IOException {
         var gradingDir = gradingDir(subm, task);
         var bin = gradingDir.resolve(GRADING_BIN).toString();
 
@@ -234,15 +228,35 @@ public class Grader implements Closeable {
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permRestrictions());
 
-        TestResult result;
         for (int tries = 1;; tries++) {
             ensureTestRunnerRunning();
             try (var socket = new Socket("localhost", testRunnerPort)) {
                 var request = config.toJson() + "\n";
                 socket.getOutputStream().write(request.getBytes(UTF_8));
                 var response = new String(socket.getInputStream().readAllBytes(), UTF_8);
-                result = TestResult.fromJson(response);
-                break;
+                var results = TestResults.fromJson(response);
+
+                results.forEach(res -> {
+                    res.failMsgs().stream()
+                            .flatMap(s -> stream(s.split("\n")))
+                            .map("    "::concat)
+                            .forEach(out::println);
+                    if (res.nonDeterm()) {
+                        out.println("Non-determinism in " + res.method());
+                    }
+                    if (res.incompleteReps()) {
+                        out.println("Only " + res.repsMade() + " repetitions made in " + res.method());
+                    }
+                    if (res.timeout()) {
+                        out.println("Timeout in " + res.method());
+                    }
+                    if (!res.illegalOps().isEmpty()) {
+                        out.println("Illegal operation(s) in " + res.method() + ": " +
+                                join(", ", res.illegalOps()));
+                    }
+                });
+
+                return results;
             } catch (IOException e) {
                 if (tries == TEST_RUNNER_CONNECT_TRIES) {
                     throw e;
@@ -250,36 +264,6 @@ public class Grader implements Closeable {
             }
             killTestRunner();
         }
-
-        result.methodResults().forEach(res -> {
-            var submResults = results.get(task).get(subm.name());
-            if (res.passed()) {
-                submResults.addPassedTest(res.method());
-            } else {
-                submResults.addFailedTest(res.method());
-            }
-            res.failMsgs().stream()
-                    .flatMap(s -> stream(s.split("\n")))
-                    .map("    "::concat)
-                    .forEach(out::println);
-            if (res.nonDeterm()) {
-                out.println("Non-determinism in " + res.method());
-                submResults.addProperty(NONDETERMINISTIC);
-            }
-            if (res.repsMade() < task.repetitions()) {
-                out.println("Only " + res.repsMade() + " repetitions made in " + res.method());
-                submResults.addProperty(INCOMPLETE_REPETITIONS);
-            }
-            if (res.timeout()) {
-                out.println("Timeout in " + res.method());
-                submResults.addProperty(TIMEOUT);
-            }
-            if (!res.illegalOps().isEmpty()) {
-                out.println("Illegal operation(s) in " + res.method() + ": " +
-                        res.illegalOps().stream().collect(joining(", ")));
-                submResults.addProperty(ILLEGAL_OPERATION);
-            }
-        });
     }
 
     private synchronized void ensureTestRunnerRunning() {
@@ -306,11 +290,11 @@ public class Grader implements Closeable {
         }
     }
 
-    private void writeResultsToFile() throws IOException {
+    private void writeResultsToFile(Map<Task, TaskResults> results) throws IOException {
         for (var e : results.entrySet()) {
             TsvWriter.write(List.of(e.getValue()), e.getKey().resultFile());
         }
-        if (tasks.size() > 1) {
+        if (results.size() > 1) {
             TsvWriter.write(results.values(), ALL_RESULTS_FILE);
         }
     }
@@ -339,6 +323,15 @@ public class Grader implements Closeable {
         }
     }
 
+    private static <T> T tryFinally(CallableIO<T> tryBlock, Closeable finallyBlock)
+            throws IOException {
+        try (Closeable c = finallyBlock) {
+            return tryBlock.call();
+        }
+    }
+
+    private interface CallableIO<T> { T call() throws IOException; }
+
     private String format(Diagnostic<?> problem, Path srcDir) {
         var path = Path.of(((JavaFileObject) problem.getSource()).toUri());
         return srcDir.relativize(path)
@@ -356,7 +349,7 @@ public class Grader implements Closeable {
         char[] unitSource = null;
         try (var in = ((JavaFileObject) problem.getSource()).openInputStream()) {
             unitSource = new String(in.readAllBytes(), UTF_8).toCharArray();
-        } catch (IOException e) {}
+        } catch (IOException ignored) {}
 
         var startPos = (int) problem.getStartPosition();
         var endPos = (int) problem.getEndPosition();

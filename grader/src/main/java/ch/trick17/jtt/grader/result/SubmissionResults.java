@@ -1,15 +1,22 @@
 package ch.trick17.jtt.grader.result;
 
-import static java.util.Collections.unmodifiableSet;
-import static java.util.EnumSet.noneOf;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toSet;
+import ch.trick17.jtt.grader.Task;
+import ch.trick17.jtt.grader.test.TestResults;
+import ch.trick17.jtt.grader.test.TestResults.MethodResult;
 
-import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import ch.trick17.jtt.grader.Task;
+import static ch.trick17.jtt.grader.result.Property.*;
+import static java.util.Collections.emptySet;
+import static java.util.EnumSet.noneOf;
+import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
+import static java.util.function.Predicate.not;
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * A container for the grading results of a {@link Task} for a single
@@ -18,18 +25,32 @@ import ch.trick17.jtt.grader.Task;
 public class SubmissionResults {
 
     private final String submissionName;
+    private final boolean compileErrors;
+    private final boolean compiled;
+    private final TestResults testResults;
 
-    private final Set<Property> properties = noneOf(Property.class);
-    private final Set<String> tags = new HashSet<>();
-    private final Set<String> passedTests = new HashSet<>();
-    private final Set<String> failedTests = new HashSet<>();
-
-    public SubmissionResults(String submissionName) {
-        this.submissionName = submissionName;
+    public SubmissionResults(String submissionName, boolean compileErrors,
+                             boolean compiled, TestResults testResults) {
+        this.submissionName = requireNonNull(submissionName);
+        this.compileErrors = compileErrors;
+        this.compiled = compiled;
+        this.testResults = testResults;
     }
 
     public String submissionName() {
         return submissionName;
+    }
+
+    public boolean compileErrors() {
+        return compileErrors;
+    }
+
+    public boolean compiled() {
+        return compiled;
+    }
+
+    public TestResults testResults() {
+        return testResults;
     }
 
     /**
@@ -37,35 +58,43 @@ public class SubmissionResults {
      * their natural order.
      */
     public Set<Property> properties() {
-        return unmodifiableSet(properties);
+        var withNull = Stream.of(
+                compileErrors ? COMPILE_ERRORS : null,
+                compiled ? COMPILED: null,
+                anyMatch(MethodResult::nonDeterm) ? NONDETERMINISTIC: null,
+                anyMatch(MethodResult::timeout) ? TIMEOUT : null,
+                anyMatch(MethodResult::incompleteReps) ? INCOMPLETE_REPETITIONS : null,
+                anyMatch(m -> !m.illegalOps().isEmpty()) ? ILLEGAL_OPERATION : null);
+        return withNull
+                .filter(Objects::nonNull)
+                .collect(toCollection(() -> noneOf(Property.class)));
     }
 
-    public void addProperty(Property property) {
-        properties.add(property);
+    private boolean anyMatch(Predicate<MethodResult> predicate) {
+        return compiled ? testResults.stream().anyMatch(predicate) : false;
     }
 
+    /**
+     * Tags are not supported right now, so this method returns an empty set.
+     */
     public Set<String> tags() {
-        return unmodifiableSet(tags);
-    }
-
-    public void addTag(String tag) {
-        tags.add(tag);
+        return emptySet();
     }
 
     public Set<String> passedTests() {
-        return unmodifiableSet(passedTests);
+        return Stream.ofNullable(testResults)
+                .flatMap(TestResults::stream)
+                .filter(MethodResult::passed)
+                .map(MethodResult::method)
+                .collect(toSet());
     }
 
     public Set<String> failedTests() {
-        return unmodifiableSet(failedTests);
-    }
-
-    public void addPassedTest(String test) {
-        passedTests.add(test);
-    }
-
-    public void addFailedTest(String test) {
-        failedTests.add(test);
+        return Stream.ofNullable(testResults)
+                .flatMap(TestResults::stream)
+                .filter(not(MethodResult::passed))
+                .map(MethodResult::method)
+                .collect(toSet());
     }
 
     /**
@@ -74,9 +103,9 @@ public class SubmissionResults {
      */
     public Set<String> criteria() {
         var streams = Stream.of(
-                properties.stream().map(Property::prettyName),
-                tags.stream(),
-                passedTests.stream());
+                properties().stream().map(Property::prettyName),
+                tags().stream(),
+                passedTests().stream());
         return streams.flatMap(identity()).collect(toSet());
     }
 }

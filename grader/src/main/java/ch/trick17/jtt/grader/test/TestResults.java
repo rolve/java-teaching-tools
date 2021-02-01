@@ -4,18 +4,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static java.util.List.copyOf;
 import static java.util.Objects.requireNonNull;
 
-public class TestResult {
+public class TestResults implements Iterable<TestResults.MethodResult> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final List<MethodResult> methodResults;
 
-    public TestResult(
+    public TestResults(
             @JsonProperty("methodResults") List<MethodResult> methodResults) {
         this.methodResults = copyOf(methodResults);
     }
@@ -23,6 +27,15 @@ public class TestResult {
     @JsonProperty
     public List<MethodResult> methodResults() {
         return methodResults;
+    }
+
+    @Override
+    public Iterator<MethodResult> iterator() {
+        return methodResults.iterator();
+    }
+
+    public Stream<MethodResult> stream() {
+        return StreamSupport.stream(spliterator(), false);
     }
 
     public static class MethodResult {
@@ -33,15 +46,17 @@ public class TestResult {
         private final List<String> failMsgs;
         private final boolean nonDeterm;
         private final int repsMade;
+        private final boolean incompleteReps;
         private final boolean timeout;
         private final List<String> illegalOps;
 
         public MethodResult(
                 @JsonProperty("method") String method,
                 @JsonProperty("passed") boolean passed,
-                @JsonProperty("failMsgs") List<String> failMsgs,
+                @JsonProperty("failMsgs") Collection<String> failMsgs,
                 @JsonProperty("nonDeterm") boolean nonDeterm,
                 @JsonProperty("repsMade") int repsMade,
+                @JsonProperty("incompleteReps") boolean incompleteReps,
                 @JsonProperty("timeout") boolean timeout,
                 @JsonProperty("illegalOps") List<String> illegalOps) {
             this.method = requireNonNull(method);
@@ -49,6 +64,7 @@ public class TestResult {
             this.failMsgs = copyOf(failMsgs);
             this.nonDeterm = nonDeterm;
             this.repsMade = repsMade;
+            this.incompleteReps = incompleteReps;
             this.timeout = timeout;
             this.illegalOps = copyOf(illegalOps);
         }
@@ -79,6 +95,11 @@ public class TestResult {
         }
 
         @JsonProperty
+        public boolean incompleteReps() {
+            return incompleteReps;
+        }
+
+        @JsonProperty
         public boolean timeout() {
             return timeout;
         }
@@ -89,8 +110,8 @@ public class TestResult {
         }
     }
 
-    public static TestResult fromJson(String json) throws JsonProcessingException {
-        return mapper.readValue(json, TestResult.class);
+    public static TestResults fromJson(String json) throws JsonProcessingException {
+        return mapper.readValue(json, TestResults.class);
     }
 
     public String toJson() throws JsonProcessingException {

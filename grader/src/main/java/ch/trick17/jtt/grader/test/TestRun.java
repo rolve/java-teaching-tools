@@ -1,5 +1,6 @@
 package ch.trick17.jtt.grader.test;
 
+import ch.trick17.jtt.grader.test.TestResults.MethodResult;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.InJvmSandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
@@ -14,6 +15,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
@@ -37,14 +39,14 @@ public class TestRun {
         this.config = config;
     }
 
-    public TestResult execute() {
-        var methodResults = new ArrayList<TestResult.MethodResult>();
+    public TestResults execute() {
+        var methodResults = new ArrayList<MethodResult>();
         for (var method : findTestMethods()) {
             var startTime = currentTimeMillis();
 
             var passed = false;
             var failed = false;
-            var failMsgs = new ArrayList<String>();
+            var failMsgs = new LinkedHashSet<String>();
             var repsMade = config.repetitions();
             var timeout = false;
             var illegalOps = new ArrayList<String>();
@@ -78,11 +80,11 @@ public class TestRun {
 
             var nonDeterm = passed && failed;
             passed &= !nonDeterm;
-            methodResults.add(new TestResult.MethodResult(method.getMethodName(), passed,
-                    failMsgs, nonDeterm, repsMade, timeout, illegalOps));
+            methodResults.add(new MethodResult(method.getMethodName(), passed, failMsgs,
+                    nonDeterm, repsMade, repsMade < config.repetitions(), timeout, illegalOps));
         }
 
-        return new TestResult(methodResults);
+        return new TestResults(methodResults);
     }
 
     private List<MethodSource> findTestMethods() {

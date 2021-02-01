@@ -32,8 +32,11 @@ public class TaskResults {
      * used from multiple threads, but the returned object cannot.
      */
     public synchronized SubmissionResults get(String submName) {
-        return submissionResults.computeIfAbsent(submName,
-                SubmissionResults::new);
+        return submissionResults.get(submName);
+    }
+
+    public synchronized void put(SubmissionResults res) {
+        submissionResults.put(res.submissionName(), res);
     }
 
     /**
