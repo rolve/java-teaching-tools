@@ -36,6 +36,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.LocalDateTime.now;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.reverseOrder;
+import static java.util.List.copyOf;
 import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -56,6 +57,8 @@ public class Grader implements Closeable {
 
     private Predicate<Submission> filter = p -> true;
     private int parallelism = getCommonPoolParallelism();
+    private Path logDir = Path.of(".");
+    private Path resultsDir = Path.of(".");
 
     public void gradeOnly(String... submNames) {
         var set = new HashSet<>(List.of(submNames));
@@ -73,19 +76,50 @@ public class Grader implements Closeable {
         this.parallelism = parallelism;
     }
 
-    public void run(Codebase codebase, List<Task> tasks) throws IOException {
-        var results = new LinkedHashMap<Task, TaskResults>();
-        tasks.forEach(t -> results.put(t, new TaskResults(t)));
+    public Path getLogDir() {
+        return logDir;
+    }
 
-        var logFile = Path.of("grader_" + now().format(LOG_FORMAT) + ".log");
-        var log = Files.newOutputStream(logFile);
-        var out = new PrintStream(new TeeOutputStream(System.out, log), true);
+    /**
+     * Sets the directory in which log files are created. If <code>null</code>,
+     * no log files are created. The default is the working directory (".").
+     */
+    public void setLogDir(Path logDir) {
+        this.logDir = logDir;
+    }
+
+    public Path getResultsDir() {
+        return resultsDir;
+    }
+
+    /**
+     * Sets the directory in which result files are created. If <code>null</code>,
+     * no result files are created. The default is the working directory (".").
+     */
+    public void setResultsDir(Path resultsDir) {
+        this.resultsDir = resultsDir;
+    }
+
+    public List<TaskResults> run(Codebase codebase, List<Task> tasks) throws IOException {
+        OutputStream log;
+        PrintStream out;
+        if (logDir != null) {
+            var logFile = "grader_" + now().format(LOG_FORMAT) + ".log";
+            log = Files.newOutputStream(logDir.resolve(logFile));
+            out = new PrintStream(new TeeOutputStream(System.out, log), true);
+        } else {
+            log = null;
+            out = System.out;
+        }
 
         var submissions = codebase.submissions().stream()
                 .filter(filter)
                 .collect(toList());
 
-        tryFinally(() -> {
+        var results = new LinkedHashMap<Task, TaskResults>();
+        tasks.forEach(t -> results.put(t, new TaskResults(t)));
+
+        return tryFinally(() -> {
             var startTime = currentTimeMillis();
             var i = new AtomicInteger(0);
 
@@ -119,9 +153,15 @@ public class Grader implements Closeable {
             }
 
             out.println(submissions.size() + " submissions graded");
+
+            return copyOf(results.values());
         }, () -> {
-            writeResultsToFile(results);
-            log.close();
+            if (resultsDir != null) {
+                writeResultsToFile(results.values());
+            }
+            if (log != null) {
+                log.close();
+            }
         });
     }
 
@@ -290,12 +330,13 @@ public class Grader implements Closeable {
         }
     }
 
-    private void writeResultsToFile(Map<Task, TaskResults> results) throws IOException {
-        for (var e : results.entrySet()) {
-            TsvWriter.write(List.of(e.getValue()), e.getKey().resultFile());
+    private void writeResultsToFile(Collection<TaskResults> results) throws IOException {
+        for (var r : results) {
+            var filename = "results-" + r.task().testClassSimpleName() + ".tsv";
+            TsvWriter.write(List.of(r), resultsDir.resolve(filename));
         }
         if (results.size() > 1) {
-            TsvWriter.write(results.values(), ALL_RESULTS_FILE);
+            TsvWriter.write(results, resultsDir.resolve(ALL_RESULTS_FILE));
         }
     }
 
@@ -316,16 +357,9 @@ public class Grader implements Closeable {
      * try block. Note that {@link Closeable} is used simply as a functional
      * interface here.
      */
-    private static void tryFinally(Closeable tryBlock, Closeable finallyBlock)
-            throws IOException {
-        try (Closeable c = finallyBlock) {
-            tryBlock.close();
-        }
-    }
-
     private static <T> T tryFinally(CallableIO<T> tryBlock, Closeable finallyBlock)
             throws IOException {
-        try (Closeable c = finallyBlock) {
+        try (finallyBlock) {
             return tryBlock.call();
         }
     }

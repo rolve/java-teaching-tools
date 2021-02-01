@@ -154,8 +154,4 @@ public class Task {
     public boolean permRestrictions() {
         return permRestrictions;
     }
-
-    public Path resultFile() {
-        return Path.of("results-" + testClassSimpleName() + ".tsv").toAbsolutePath();
-    }
 }

@@ -4,7 +4,7 @@ import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
 import static ch.trick17.jtt.grader.Compiler.JAVAC;
 import static java.nio.file.Files.list;
 import static java.nio.file.Files.readAllLines;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,6 +12,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
+import ch.trick17.jtt.grader.result.SubmissionResults;
+import ch.trick17.jtt.grader.test.TestResults;
+import ch.trick17.jtt.grader.test.TestResults.MethodResult;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -39,8 +42,30 @@ public class GraderTest {
     private static Grader grader;
 
     @BeforeAll
-    public static void setup() {
+    public static void setUp() {
         grader = new Grader();
+        grader.setLogDir(null);
+    }
+
+    @Test
+    public void testResults() throws IOException {
+        var tasks = List.of(Task.fromClassName("AddTest").compiler(JAVAC));
+        grader.gradeOnly("0", "1", "2");
+        var resultsList = grader.run(ECLIPSE_BASE, tasks);
+
+        assertEquals(1, resultsList.size());
+        var results = resultsList.get(0);
+        assertEquals(3, results.submissionResults().size());
+
+        assertTrue(results.get("0").testResults().methodResults().get(0).passed());
+        assertTrue(results.get("0").testResults().methodResults().get(1).passed());
+
+        assertTrue(results.get("1").testResults().methodResults().get(0).passed());
+        assertFalse(results.get("1").testResults().methodResults().get(1).passed());
+
+        assertTrue(results.get("2").compileErrors());
+        assertFalse(results.get("2").compiled());
+        assertNull(results.get("2").testResults());
     }
 
     @Test
@@ -49,7 +74,6 @@ public class GraderTest {
         grader.gradeOnly("0", "1", "2");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
-        // TODO: make results available through API
         assertEquals(EXPECTED_ADD_SIMPLE_EC, results);
     }
 
@@ -317,12 +341,12 @@ public class GraderTest {
     }
 
     @AfterAll
-    public static void deleteLogFiles() throws IOException {
+    public static void tearDown() throws IOException {
         grader.close();
         try (var allFiles = list(Path.of("."))) {
             allFiles.filter(Files::isRegularFile)
                     .filter(p -> p.getFileName().toString()
-                            .matches("grader_.*\\.log|results-.*\\.tsv"))
+                            .matches("results-.*\\.tsv"))
                     .forEach(p -> p.toFile().delete());
         }
     }
