@@ -4,6 +4,7 @@ import ch.trick17.jtt.grader.Task;
 import ch.trick17.jtt.grader.test.TestResults;
 import ch.trick17.jtt.grader.test.TestResults.MethodResult;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -11,11 +12,10 @@ import java.util.stream.Stream;
 
 import static ch.trick17.jtt.grader.result.Property.*;
 import static java.util.Collections.emptySet;
-import static java.util.EnumSet.noneOf;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static java.util.function.Predicate.not;
-import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 /**
@@ -53,11 +53,7 @@ public class SubmissionResults {
         return testResults;
     }
 
-    /**
-     * The elements in the returned set are guaranteed to be sorted according to
-     * their natural order.
-     */
-    public Set<Property> properties() {
+    public List<Property> properties() {
         var withNull = Stream.of(
                 compileErrors ? COMPILE_ERRORS : null,
                 compiled ? COMPILED: null,
@@ -67,7 +63,7 @@ public class SubmissionResults {
                 anyMatch(m -> !m.illegalOps().isEmpty()) ? ILLEGAL_OPERATION : null);
         return withNull
                 .filter(Objects::nonNull)
-                .collect(toCollection(() -> noneOf(Property.class)));
+                .collect(toList());
     }
 
     private boolean anyMatch(Predicate<MethodResult> predicate) {
@@ -81,20 +77,20 @@ public class SubmissionResults {
         return emptySet();
     }
 
-    public Set<String> passedTests() {
+    public List<String> passedTests() {
         return Stream.ofNullable(testResults)
                 .flatMap(TestResults::stream)
                 .filter(MethodResult::passed)
                 .map(MethodResult::method)
-                .collect(toSet());
+                .collect(toList());
     }
 
-    public Set<String> failedTests() {
+    public List<String> failedTests() {
         return Stream.ofNullable(testResults)
                 .flatMap(TestResults::stream)
                 .filter(not(MethodResult::passed))
                 .map(MethodResult::method)
-                .collect(toSet());
+                .collect(toList());
     }
 
     /**

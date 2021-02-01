@@ -7,9 +7,9 @@ public class SingleCodebase extends Codebase {
 
     private final Submission submission;
 
-    public SingleCodebase(Path dir, ProjectStructure structure) {
+    public SingleCodebase(String name, Path dir, ProjectStructure structure) {
         super(structure);
-        this.submission = new Submission(dir.getFileName().toString(), dir);
+        this.submission = new Submission(name, dir);
     }
 
     public List<Submission> submissions() {
