@@ -313,11 +313,11 @@ public class Grader implements Closeable {
                         .vmArgs("-XX:-OmitStackTraceInFastThrow", "-Dfile.encoding=UTF8")
                         .autoExit(true)
                         .start();
-                testRunnerPort = new Scanner(testRunner.getInputStream()).nextInt();
                 var copier = new Thread(new LineCopier(testRunner.getErrorStream(),
                         new LineWriterAdapter(System.out)));
                 copier.setDaemon(true);
                 copier.start();
+                testRunnerPort = new Scanner(testRunner.getInputStream()).nextInt();
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
