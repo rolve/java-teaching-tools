@@ -67,7 +67,7 @@ public class SubmissionResults {
     }
 
     private boolean anyMatch(Predicate<MethodResult> predicate) {
-        return compiled ? testResults.stream().anyMatch(predicate) : false;
+        return compiled && testResults.stream().anyMatch(predicate);
     }
 
     /**
