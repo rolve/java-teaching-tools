@@ -1,10 +1,9 @@
 package ch.trick17.jtt.grader;
 
-import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
-import static ch.trick17.jtt.grader.Compiler.JAVAC;
-import static java.nio.file.Files.list;
-import static java.nio.file.Files.readAllLines;
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,13 +11,12 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
-import ch.trick17.jtt.grader.result.SubmissionResults;
-import ch.trick17.jtt.grader.test.TestResults;
-import ch.trick17.jtt.grader.test.TestResults.MethodResult;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static ch.trick17.jtt.grader.Compiler.JAVAC;
+import static java.nio.file.Files.list;
+import static java.nio.file.Files.readAllLines;
+import static java.util.Collections.emptyList;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class GraderTest {
 
@@ -338,6 +336,19 @@ public class GraderTest {
                 "0\t1\t0\t1\t1",
                 "12\t1\t1\t0\t0");
         assertEquals(expected, results);
+    }
+
+    @Test
+    public void testNoTests() throws IOException {
+        var tasks = List.of(Task.fromClassName("NoTests").compiler(ECLIPSE));
+        grader.gradeOnly("0");
+        var resultsList = grader.run(ECLIPSE_BASE, tasks);
+        assertEquals(1, resultsList.size());
+        var results = resultsList.get(0);
+        assertEquals(1, results.submissionResults().size());
+        var submResults = results.submissionResults().get(0);
+        assertEquals(emptyList(), submResults.passedTests());
+        assertEquals(emptyList(), submResults.failedTests());
     }
 
     @AfterAll
