@@ -351,6 +351,23 @@ public class GraderTest {
         assertEquals(emptyList(), submResults.failedTests());
     }
 
+    @Test
+    public void testNestedTestClasses() throws IOException {
+        var tasks = List.of(Task.fromClassName("NestedTestClass").compiler(ECLIPSE));
+        grader.gradeOnly("0", "2");
+        var resultsList = grader.run(ECLIPSE_BASE, tasks);
+
+        assertEquals(1, resultsList.size());
+        var results = resultsList.get(0);
+        assertEquals(2, results.submissionResults().size());
+
+        var allTests = List.of("MultiplyTest.testMultiply1", "MultiplyTest.testMultiply2"); // note alphabetical order
+        assertEquals(allTests, results.get("0").passedTests());
+        assertEquals(emptyList(), results.get("0").failedTests());
+        assertEquals(emptyList(), results.get("2").passedTests());
+        assertEquals(allTests, results.get("2").failedTests());
+    }
+
     @AfterAll
     public static void tearDown() throws IOException {
         grader.close();

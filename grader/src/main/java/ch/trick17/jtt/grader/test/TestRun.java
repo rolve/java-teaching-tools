@@ -24,6 +24,7 @@ import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
@@ -80,8 +81,16 @@ public class TestRun {
 
             var nonDeterm = passed && failed;
             passed &= !nonDeterm;
-            methodResults.add(new MethodResult(method.getMethodName(), passed, failMsgs,
-                    nonDeterm, repsMade, repsMade < config.repetitions(), timeout, illegalOps));
+
+            var name = method.getMethodName();
+            if (method.getClassName().contains("$")) { // nested test
+                var prefix = stream(method.getClassName().split("\\$"))
+                        .skip(1) // skip outermost class
+                        .collect(joining("."));
+                name = prefix + "." + name;
+            }
+            methodResults.add(new MethodResult(name, passed, failMsgs, nonDeterm,
+                    repsMade, repsMade < config.repetitions(), timeout, illegalOps));
         }
 
         return new TestResults(methodResults);
