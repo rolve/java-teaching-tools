@@ -339,6 +339,19 @@ public class GraderTest {
     }
 
     @Test
+    public void testSystemIn() throws IOException {
+        var tasks = List.of(Task.fromClassName("AddTest").repetitions(3));
+        grader.gradeOnly("0", "13");
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\ttestAdd1\ttestAdd2",
+                "0\t1\t1\t1",
+                "13\t1\t0\t0");
+        assertEquals(expected, results);
+    }
+
+    @Test
     public void testNoTests() throws IOException {
         var tasks = List.of(Task.fromClassName("NoTests").compiler(ECLIPSE));
         grader.gradeOnly("0");
