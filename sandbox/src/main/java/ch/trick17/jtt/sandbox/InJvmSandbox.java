@@ -3,6 +3,7 @@ package ch.trick17.jtt.sandbox;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
@@ -18,7 +19,10 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+import static ch.trick17.jtt.sandbox.InputMode.CLOSED;
+import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.*;
+import static java.io.InputStream.nullInputStream;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Thread.currentThread;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -32,12 +36,14 @@ public class InJvmSandbox {
     static final Permission SANDBOX = new RuntimePermission("sandbox");
 
     private static volatile SandboxPolicy policy;
+    private static volatile SandboxInputStream stdIn;
     private static volatile SandboxPrintStream stdOut;
     private static volatile SandboxPrintStream stdErr;
 
     private boolean permRestrictions = true;
     private boolean staticStateIsolation = true;
     private Duration timeout = null;
+    private InputMode stdInMode = InputMode.NORMAL;
     private OutputMode stdOutMode = NORMAL;
     private OutputMode stdErrMode = NORMAL;
 
@@ -73,6 +79,11 @@ public class InJvmSandbox {
      */
     public InJvmSandbox timeout(Duration timeout) {
         this.timeout = timeout;
+        return this;
+    }
+
+    public InJvmSandbox stdInMode(InputMode stdInMode) {
+        this.stdInMode = stdInMode;
         return this;
     }
 
@@ -153,8 +164,16 @@ public class InJvmSandbox {
             }
         };
 
-        if (stdOutMode != NORMAL || stdErrMode != NORMAL) {
-            ensurePrintStreamsInstalled();
+        if (stdInMode != InputMode.NORMAL || stdOutMode != NORMAL || stdErrMode != NORMAL) {
+            ensureStreamsInstalled();
+            if (stdInMode == EMPTY || stdInMode == CLOSED) {
+                stdIn.activate(nullInputStream());
+                if (stdInMode == InputMode.CLOSED) {
+                    try {
+                        stdIn.close();
+                    } catch (IOException ignored) {}
+                }
+            }
             var outRecorder = activatePrintStream(stdOut, stdOutMode);
             var errRecorder = activatePrintStream(stdErr, stdErrMode);
             try {
@@ -167,6 +186,7 @@ public class InJvmSandbox {
                 }
                 return result;
             } finally {
+                stdIn.deactivate();
                 stdOut.deactivate();
                 stdErr.deactivate();
             }
@@ -182,12 +202,14 @@ public class InJvmSandbox {
                 cls.getName(), methodName, paramTypes, args);
     }
 
-    private static void ensurePrintStreamsInstalled() {
-        if (stdOut == null) {
+    private static void ensureStreamsInstalled() {
+        if (stdIn == null) {
             synchronized (InJvmSandbox.class) {
-                if (stdOut == null) {
+                if (stdIn == null) {
+                    stdIn = new SandboxInputStream(System.in);
                     stdOut = new SandboxPrintStream(System.out);
                     stdErr = new SandboxPrintStream(System.err);
+                    System.setIn(stdIn);
                     System.setOut(stdOut);
                     System.setErr(stdErr);
                 }
