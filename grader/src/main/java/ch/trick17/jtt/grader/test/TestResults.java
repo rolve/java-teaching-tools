@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -28,6 +29,12 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
     @JsonProperty
     public List<MethodResult> methodResults() {
         return methodResults;
+    }
+
+    public Optional<MethodResult> methodResultFor(String method) {
+        return methodResults.stream()
+                .filter(r -> r.method.equals(method))
+                .findFirst();
     }
 
     @Override

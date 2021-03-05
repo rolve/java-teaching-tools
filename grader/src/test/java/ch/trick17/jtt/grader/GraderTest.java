@@ -381,6 +381,38 @@ public class GraderTest {
         assertEquals(allTests, results.get("2").failedTests());
     }
 
+    @Test
+    public void testAssumptions() throws IOException {
+        var tasks = List.of(Task.fromClassName("TestWithAssumption").compiler(ECLIPSE));
+        grader.gradeOnly("0");
+        var resultsList = grader.run(ECLIPSE_BASE, tasks);
+
+        assertEquals(1, resultsList.size());
+        var results = resultsList.get(0);
+        assertEquals(1, results.submissionResults().size());
+
+        var testResults = results.get("0").testResults();
+        assertTrue(testResults.methodResultFor("testNormal").get().passed());
+        assertFalse(testResults.methodResultFor("testFailedAssumption").get().passed());
+    }
+
+    @Test
+    public void testDisabled() throws IOException {
+        var tasks = List.of(Task.fromClassName("DisabledTest").compiler(ECLIPSE));
+        grader.gradeOnly("0");
+        var resultsList = grader.run(ECLIPSE_BASE, tasks);
+
+        assertEquals(1, resultsList.size());
+        var results = resultsList.get(0);
+        assertEquals(1, results.submissionResults().size());
+
+        var testResults = results.get("0").testResults();
+        assertTrue(testResults.methodResultFor("testNormal").get().passed());
+        assertTrue(testResults.methodResultFor("testDisabled").get().passed());
+
+        // TODO: better support for disabled tests
+    }
+
     @AfterAll
     public static void tearDown() throws IOException {
         grader.close();

@@ -17,9 +17,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
+import static ch.trick17.jtt.sandbox.SandboxResult.Kind.*;
 import static java.io.File.pathSeparator;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
@@ -55,11 +57,11 @@ public class TestRun {
             for (int rep = 1; rep <= config.repetitions(); rep++) {
                 var methodResult = runSandboxed(method);
 
-                if (methodResult.kind() == SandboxResult.Kind.TIMEOUT) {
+                if (methodResult.kind() == TIMEOUT) {
                     timeout = true;
-                } else if (methodResult.kind() == SandboxResult.Kind.ILLEGAL_OPERATION) {
+                } else if (methodResult.kind() == ILLEGAL_OPERATION) {
                     illegalOps.add(methodResult.exception().getMessage());
-                } else if (methodResult.kind() == SandboxResult.Kind.EXCEPTION) {
+                } else if (methodResult.kind() == EXCEPTION) {
                     // should not happen, JUnit catches exceptions
                     throw new AssertionError(methodResult.exception());
                 } else if (methodResult.value() == null) {
@@ -149,7 +151,8 @@ public class TestRun {
             };
             LauncherFactory.create().execute(req, listener);
 
-            var throwable = listener.result.getThrowable().orElse(null);
+            var throwable = Optional.ofNullable(listener.result)
+                    .flatMap(TestExecutionResult::getThrowable).orElse(null);
             // since JUnit catches the SecurityException, need to rethrow it
             // for the sandbox to record the illegal operation...
             if (throwable instanceof SecurityException) {
