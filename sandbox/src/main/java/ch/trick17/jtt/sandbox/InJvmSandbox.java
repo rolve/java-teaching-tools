@@ -206,12 +206,14 @@ public class InJvmSandbox {
         if (stdIn == null) {
             synchronized (InJvmSandbox.class) {
                 if (stdIn == null) {
-                    stdIn = new SandboxInputStream(System.in);
+                    var in = new SandboxInputStream(System.in);
                     stdOut = new SandboxPrintStream(System.out);
                     stdErr = new SandboxPrintStream(System.err);
-                    System.setIn(stdIn);
+                    System.setIn(in);
                     System.setOut(stdOut);
                     System.setErr(stdErr);
+
+                    stdIn = in; // signal for other threads that everything is ready
                 }
             }
         }
@@ -239,9 +241,11 @@ public class InJvmSandbox {
         if (policy == null) {
             synchronized (InJvmSandbox.class) {
                 if (policy == null) {
-                    policy = new SandboxPolicy();
-                    Policy.setPolicy(policy);
+                    var pol = new SandboxPolicy();
+                    Policy.setPolicy(pol);
                     System.setSecurityManager(new SecurityManager());
+
+                    policy = pol; // signal for other threads that everything is ready
                 }
             }
         }
