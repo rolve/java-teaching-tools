@@ -59,6 +59,7 @@ public class SubmissionResults {
                 compiled ? COMPILED: null,
                 anyMatch(MethodResult::nonDeterm) ? NONDETERMINISTIC: null,
                 anyMatch(MethodResult::timeout) ? TIMEOUT : null,
+                anyMatch(MethodResult::outOfMemory) ? OUT_OF_MEMORY : null,
                 anyMatch(MethodResult::incompleteReps) ? INCOMPLETE_REPETITIONS : null,
                 anyMatch(m -> !m.illegalOps().isEmpty()) ? ILLEGAL_OPERATION : null);
         return withNull

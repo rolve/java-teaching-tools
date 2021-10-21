@@ -157,6 +157,9 @@ public class InJvmSandbox {
                 return SandboxResult.normal(restricted.call());
             } catch (TimeoutException e) {
                 return SandboxResult.timeout();
+            } catch (OutOfMemoryError e) {
+                System.gc(); // may or may not help...
+                return SandboxResult.outOfMemory(e);
             } catch (SecurityException e) {
                 return SandboxResult.illegalOperation(e);
             } catch (Throwable e) {

@@ -53,12 +53,15 @@ public class TestRun {
             var failMsgs = new LinkedHashSet<String>();
             var repsMade = config.repetitions();
             var timeout = false;
+            var outOfMemory = false;
             var illegalOps = new ArrayList<String>();
             for (int rep = 1; rep <= config.repetitions(); rep++) {
                 var methodResult = runSandboxed(method);
 
                 if (methodResult.kind() == TIMEOUT) {
                     timeout = true;
+                } else if (methodResult.kind() == OUT_OF_MEMORY) {
+                    outOfMemory = true;
                 } else if (methodResult.kind() == ILLEGAL_OPERATION) {
                     illegalOps.add(methodResult.exception().getMessage());
                 } else if (methodResult.kind() == EXCEPTION) {
@@ -93,7 +96,7 @@ public class TestRun {
                 name = prefix + "." + name;
             }
             methodResults.add(new MethodResult(name, passed, failMsgs, nonDeterm,
-                    repsMade, repsMade < config.repetitions(), timeout, illegalOps));
+                    repsMade, repsMade < config.repetitions(), timeout, outOfMemory, illegalOps));
         }
 
         return new TestResults(methodResults);

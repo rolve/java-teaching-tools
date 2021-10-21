@@ -290,6 +290,9 @@ public class Grader implements Closeable {
                     if (res.timeout()) {
                         out.println("Timeout in " + res.method());
                     }
+                    if (res.outOfMemory()) {
+                        out.println("Out of memory in " + res.method());
+                    }
                     if (!res.illegalOps().isEmpty()) {
                         out.println("Illegal operation(s) in " + res.method() + ": " +
                                 join(", ", res.illegalOps()));

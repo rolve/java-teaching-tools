@@ -3,7 +3,7 @@ package ch.trick17.jtt.sandbox;
 public class SandboxResult<T> {
 
     public enum Kind {
-        NORMAL, EXCEPTION, TIMEOUT, ILLEGAL_OPERATION;
+        NORMAL, EXCEPTION, TIMEOUT, OUT_OF_MEMORY, ILLEGAL_OPERATION;
     }
 
     public static <T> SandboxResult<T> normal(T value) {
@@ -18,7 +18,11 @@ public class SandboxResult<T> {
         return new SandboxResult<>(Kind.TIMEOUT, null, null);
     }
 
-    public static <T> SandboxResult<T> illegalOperation(Throwable exception) {
+    public static <T> SandboxResult<T> outOfMemory(OutOfMemoryError error) {
+        return new SandboxResult<>(Kind.OUT_OF_MEMORY, null, error);
+    }
+
+    public static <T> SandboxResult<T> illegalOperation(SecurityException exception) {
         return new SandboxResult<>(Kind.ILLEGAL_OPERATION, null, exception);
     }
 

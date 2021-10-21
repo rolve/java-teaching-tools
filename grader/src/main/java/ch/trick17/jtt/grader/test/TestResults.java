@@ -56,6 +56,7 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
         private final int repsMade;
         private final boolean incompleteReps;
         private final boolean timeout;
+        private final boolean outOfMemory;
         private final List<String> illegalOps;
 
         @JsonCreator
@@ -67,6 +68,7 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
                 int repsMade,
                 boolean incompleteReps,
                 boolean timeout,
+                boolean outOfMemory,
                 List<String> illegalOps) {
             this.method = requireNonNull(method);
             this.passed = passed;
@@ -75,6 +77,7 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
             this.repsMade = repsMade;
             this.incompleteReps = incompleteReps;
             this.timeout = timeout;
+            this.outOfMemory = outOfMemory;
             this.illegalOps = copyOf(illegalOps);
         }
 
@@ -111,6 +114,11 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
         @JsonProperty
         public boolean timeout() {
             return timeout;
+        }
+
+        @JsonProperty
+        public boolean outOfMemory() {
+            return outOfMemory;
         }
 
         @JsonProperty

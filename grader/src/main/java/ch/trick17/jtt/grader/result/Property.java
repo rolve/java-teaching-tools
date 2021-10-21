@@ -31,6 +31,11 @@ public enum Property {
     TIMEOUT,
 
     /**
+     * At least one test execution ran out of memory. Such a test is considered failed.
+     */
+    OUT_OF_MEMORY,
+
+    /**
      * Not all repetitions of a test were executed, due to a long running time.
      * This may happen even though no single test execution timed out, because
      * of an additional timeout for all repetitions together. However, this
