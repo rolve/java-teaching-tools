@@ -50,7 +50,7 @@ public class JavaSandboxTest {
                 .permRestrictions(false)
                 .stdInMode(InputMode.NORMAL);
         var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
-                emptyList(), emptyList());
+                emptyList(), emptyList(), String.class);
         assertEquals(Kind.NORMAL, result.kind());
         assertEquals("Hello", result.value());
     }
@@ -62,7 +62,7 @@ public class JavaSandboxTest {
                 .permRestrictions(false)
                 .stdInMode(EMPTY);
         var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
-                emptyList(), emptyList());
+                emptyList(), emptyList(), String.class);
         assertEquals(Kind.NORMAL, result.kind());
         assertEquals("", result.value());
     }
@@ -74,7 +74,7 @@ public class JavaSandboxTest {
                 .permRestrictions(false)
                 .stdInMode(CLOSED);
         var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
-                emptyList(), emptyList());
+                emptyList(), emptyList(), String.class);
         assertEquals(Kind.EXCEPTION, result.kind());
         assertEquals(IOException.class, result.exception().getClass());
     }
@@ -86,7 +86,7 @@ public class JavaSandboxTest {
                 .permRestrictions(false)
                 .stdOutMode(NORMAL).stdErrMode(NORMAL);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
-                emptyList(), emptyList());
+                emptyList(), emptyList(), Void.class);
 
         assertNull(result.stdOut());
         assertNull(result.stdErr());
@@ -101,7 +101,7 @@ public class JavaSandboxTest {
                 .permRestrictions(false)
                 .stdOutMode(DISCARD).stdErrMode(DISCARD);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
-                emptyList(), emptyList());
+                emptyList(), emptyList(), Void.class);
 
         assertNull(result.stdOut());
         assertNull(result.stdErr());
@@ -116,7 +116,7 @@ public class JavaSandboxTest {
                 .permRestrictions(false)
                 .stdOutMode(RECORD).stdErrMode(RECORD);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
-                emptyList(), emptyList());
+                emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
         assertEquals("This goes err", result.stdErr());
@@ -132,7 +132,7 @@ public class JavaSandboxTest {
                 .timeout(Duration.ofSeconds(1))
                 .stdOutMode(RECORD).stdErrMode(RECORD);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
-                emptyList(), emptyList());
+                emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
         assertEquals("This goes err", result.stdErr());
@@ -147,7 +147,7 @@ public class JavaSandboxTest {
                 .permRestrictions(false)
                 .stdOutMode(RECORD_FORWARD).stdErrMode(RECORD_FORWARD);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
-                emptyList(), emptyList());
+                emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
         assertEquals("This goes err", result.stdErr());

@@ -136,8 +136,8 @@ public class TestRun {
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());
-        return sandbox.run(config.codeUnderTest(), classpathUrls(),
-                Sandboxed.class, "run", List.of(String.class, String.class), args);
+        return sandbox.run(config.codeUnderTest(), classpathUrls(), Sandboxed.class,
+                "run", List.of(String.class, String.class), args, Throwable.class);
     }
 
     public static class Sandboxed {

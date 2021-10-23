@@ -68,11 +68,11 @@ public abstract class Sandbox {
 
     public abstract <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
                                              String className, String methodName,
-                                             List<Class<?>> paramTypes, List<?> args);
+                                             List<Class<?>> paramTypes, List<?> args, Class<T> resultType);
 
     public <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
                                      Class<?> cls, String methodName,
-                                     List<Class<?>> paramTypes, List<?> args) {
-        return run(restrictedCode, unrestrictedCode, cls.getName(), methodName, paramTypes, args);
+                                     List<Class<?>> paramTypes, List<?> args, Class<T> resultType) {
+        return run(restrictedCode, unrestrictedCode, cls.getName(), methodName, paramTypes, args, resultType);
     }
 }

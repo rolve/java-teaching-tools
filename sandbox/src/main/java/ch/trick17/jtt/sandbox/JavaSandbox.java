@@ -67,14 +67,12 @@ public class JavaSandbox extends Sandbox {
     @Override
     public <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
                                     String className, String methodName,
-                                    List<Class<?>> paramTypes, List<?> args) {
+                                    List<Class<?>> paramTypes, List<?> args, Class<T> resultType) {
         Callable<T> action = () -> {
             var cls = currentThread().getContextClassLoader().loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
             try {
-                @SuppressWarnings("unchecked")
-                var result = (T) method.invoke(null, args.toArray());
-                return result;
+                return resultType.cast(method.invoke(null, args.toArray()));
             } catch (InvocationTargetException e) {
                 throw asException(e.getTargetException());
             }
