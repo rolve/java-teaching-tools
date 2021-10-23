@@ -2,7 +2,7 @@ package ch.trick17.jtt.grader.test;
 
 import ch.trick17.jtt.grader.test.TestResults.MethodResult;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
-import ch.trick17.jtt.sandbox.InJvmSandbox;
+import ch.trick17.jtt.sandbox.JavaSandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.support.descriptor.MethodSource;
@@ -131,7 +131,7 @@ public class TestRun {
     }
 
     private SandboxResult<Throwable> runSandboxed(MethodSource test) {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .permRestrictions(config.permRestrictions())
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);

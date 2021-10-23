@@ -5,7 +5,7 @@ import java.security.*;
 import java.util.Collection;
 import java.util.Set;
 
-import static ch.trick17.jtt.sandbox.InJvmSandbox.SANDBOX;
+import static ch.trick17.jtt.sandbox.JavaSandbox.SANDBOX;
 import static java.util.Set.copyOf;
 
 class SandboxPolicy extends Policy {

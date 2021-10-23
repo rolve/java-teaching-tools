@@ -18,7 +18,7 @@ import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class InJvmSandboxTest {
+public class JavaSandboxTest {
 
     // Many features are tested indirectly in GraderTest, not here
 
@@ -45,7 +45,7 @@ public class InJvmSandboxTest {
 
     @Test
     public void testInputModeNormal() {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .staticStateIsolation(false)
                 .permRestrictions(false)
                 .stdInMode(InputMode.NORMAL);
@@ -57,7 +57,7 @@ public class InJvmSandboxTest {
 
     @Test
     public void testInputModeEmpty() {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .staticStateIsolation(false)
                 .permRestrictions(false)
                 .stdInMode(EMPTY);
@@ -69,7 +69,7 @@ public class InJvmSandboxTest {
 
     @Test
     public void testInputModeClosed() {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .staticStateIsolation(false)
                 .permRestrictions(false)
                 .stdInMode(CLOSED);
@@ -81,7 +81,7 @@ public class InJvmSandboxTest {
 
     @Test
     public void testOutputModeNormal() {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .staticStateIsolation(false)
                 .permRestrictions(false)
                 .stdOutMode(NORMAL).stdErrMode(NORMAL);
@@ -96,7 +96,7 @@ public class InJvmSandboxTest {
 
     @Test
     public void testOutputModeDiscard() {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .staticStateIsolation(false)
                 .permRestrictions(false)
                 .stdOutMode(DISCARD).stdErrMode(DISCARD);
@@ -111,7 +111,7 @@ public class InJvmSandboxTest {
 
     @Test
     public void testOutputModeRecord() {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .staticStateIsolation(false)
                 .permRestrictions(false)
                 .stdOutMode(RECORD).stdErrMode(RECORD);
@@ -126,7 +126,7 @@ public class InJvmSandboxTest {
 
     @Test
     public void testOutputModeRecordTimeout() {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .staticStateIsolation(false)
                 .permRestrictions(false)
                 .timeout(Duration.ofSeconds(1))
@@ -142,7 +142,7 @@ public class InJvmSandboxTest {
 
     @Test
     public void testOutputModeRecordForward() {
-        var sandbox = new InJvmSandbox()
+        var sandbox = new JavaSandbox()
                 .staticStateIsolation(false)
                 .permRestrictions(false)
                 .stdOutMode(RECORD_FORWARD).stdErrMode(RECORD_FORWARD);

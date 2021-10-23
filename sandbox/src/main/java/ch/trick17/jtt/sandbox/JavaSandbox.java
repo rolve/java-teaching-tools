@@ -32,7 +32,7 @@ import static java.util.stream.Stream.concat;
  * A {@link Sandbox} based on standard Java technology, including class loading
  * and {@link SecurityManager}.
  */
-public class InJvmSandbox extends Sandbox {
+public class JavaSandbox extends Sandbox {
 
     // could be anything at the moment, as the policy is all-or-nothing anyway
     static final Permission SANDBOX = new RuntimePermission("sandbox");
@@ -51,7 +51,7 @@ public class InJvmSandbox extends Sandbox {
      * classes loaded by a parent class loader (such as
      * {@link java.util.Random}). By default, this isolation is enabled.
      */
-    public InJvmSandbox staticStateIsolation(boolean staticStateIsolation) {
+    public JavaSandbox staticStateIsolation(boolean staticStateIsolation) {
         this.staticStateIsolation = staticStateIsolation;
         return this;
     }
@@ -148,7 +148,7 @@ public class InJvmSandbox extends Sandbox {
 
     private static void ensureStreamsInstalled() {
         if (stdIn == null) {
-            synchronized (InJvmSandbox.class) {
+            synchronized (JavaSandbox.class) {
                 if (stdIn == null) {
                     var in = new SandboxInputStream(System.in);
                     stdOut = new SandboxPrintStream(System.out);
@@ -183,7 +183,7 @@ public class InJvmSandbox extends Sandbox {
 
     private static void ensureSecurityInstalled() {
         if (policy == null) {
-            synchronized (InJvmSandbox.class) {
+            synchronized (JavaSandbox.class) {
                 if (policy == null) {
                     var pol = new SandboxPolicy();
                     Policy.setPolicy(pol);
