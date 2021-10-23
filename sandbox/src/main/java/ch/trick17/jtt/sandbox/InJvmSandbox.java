@@ -5,13 +5,11 @@ import org.apache.commons.io.output.TeeOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.Permission;
 import java.security.Policy;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -30,7 +28,11 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Stream.concat;
 
-public class InJvmSandbox {
+/**
+ * A {@link Sandbox} based on standard Java technology, including class loading
+ * and {@link SecurityManager}.
+ */
+public class InJvmSandbox extends Sandbox {
 
     // could be anything at the moment, as the policy is all-or-nothing anyway
     static final Permission SANDBOX = new RuntimePermission("sandbox");
@@ -40,24 +42,7 @@ public class InJvmSandbox {
     private static volatile SandboxPrintStream stdOut;
     private static volatile SandboxPrintStream stdErr;
 
-    private boolean permRestrictions = true;
     private boolean staticStateIsolation = true;
-    private Duration timeout = null;
-    private InputMode stdInMode = InputMode.NORMAL;
-    private OutputMode stdOutMode = NORMAL;
-    private OutputMode stdErrMode = NORMAL;
-
-    /**
-     * Enables or disables permission restrictions. If enabled, a
-     * {@link SecurityManager} will restrict the permissions for the
-     * code specified as 'restricted' when the
-     * {@link #run(List, List, String, String, List, List)} method
-     * is called. By default, restrictions are enabled.
-     */
-    public InJvmSandbox permRestrictions(boolean permRestrictions) {
-        this.permRestrictions = permRestrictions;
-        return this;
-    }
 
     /**
      * Enables or disables isolated execution. If enabled, the code is
@@ -72,44 +57,6 @@ public class InJvmSandbox {
     }
 
     /**
-     * Sets a timeout for the code to be executed. If a timeout is set,
-     * the code is executed in a different thread that is forcefully
-     * terminated when the timeout is over. By default, the timeout is
-     * set to <code>null</code>, meaning it is disabled.
-     */
-    public InJvmSandbox timeout(Duration timeout) {
-        this.timeout = timeout;
-        return this;
-    }
-
-    public InJvmSandbox stdInMode(InputMode stdInMode) {
-        this.stdInMode = stdInMode;
-        return this;
-    }
-
-    /**
-     * Determines how to handle output to <code>System.out</code>. The
-     * default mode is {@link OutputMode#NORMAL}. Note that the sandboxed
-     * code may affect the I/O behavior using {@link System#setOut(PrintStream)},
-     * unless it runs with restricted permissions.
-     */
-    public InJvmSandbox stdOutMode(OutputMode stdOutMode) {
-        this.stdOutMode = requireNonNull(stdOutMode);
-        return this;
-    }
-
-    /**
-     * Determines how to handle output to <code>System.err</code>. The
-     * default mode is {@link OutputMode#NORMAL}. Note that the sandboxed
-     * code may affect the I/O behavior using {@link System#setErr(PrintStream)},
-     * unless it runs with restricted permissions.
-     */
-    public InJvmSandbox stdErrMode(OutputMode stdErrMode) {
-        this.stdErrMode = requireNonNull(stdErrMode);
-        return this;
-    }
-
-    /**
      * Runs the specified static (!) method with the given parameters
      * in the sandbox. The return value of the method is returned, but
      * be aware that it could be an object of a class loaded by a
@@ -117,9 +64,10 @@ public class InJvmSandbox {
      * making it unusable without reflection. (This is not the case for
      * classes loaded by the bootstrap class loader, like String).
      */
+    @Override
     public <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
-                     String className, String methodName,
-                     List<Class<?>> paramTypes, List<?> args) {
+                                    String className, String methodName,
+                                    List<Class<?>> paramTypes, List<?> args) {
         Callable<T> action = () -> {
             var cls = currentThread().getContextClassLoader().loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
@@ -198,13 +146,6 @@ public class InJvmSandbox {
         }
     }
 
-    public <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
-                                    Class<?> cls, String methodName,
-                                    List<Class<?>> paramTypes, List<?> args) {
-        return run(restrictedCode, unrestrictedCode,
-                cls.getName(), methodName, paramTypes, args);
-    }
-
     private static void ensureStreamsInstalled() {
         if (stdIn == null) {
             synchronized (InJvmSandbox.class) {
@@ -255,7 +196,7 @@ public class InJvmSandbox {
     }
 
     /**
-     * Runs the code in a different thread so it can be killed after the timeout.
+     * Runs the code in a different thread, so it can be killed after the timeout.
      * This is a very hard timeout ({@link Thread#stop()}) that should be able
      * to handle pretty much anything.
      */

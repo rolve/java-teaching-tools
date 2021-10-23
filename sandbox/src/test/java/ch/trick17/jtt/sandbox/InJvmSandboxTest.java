@@ -46,8 +46,8 @@ public class InJvmSandboxTest {
     @Test
     public void testInputModeNormal() {
         var sandbox = new InJvmSandbox()
-                .permRestrictions(false)
                 .staticStateIsolation(false)
+                .permRestrictions(false)
                 .stdInMode(InputMode.NORMAL);
         var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
                 emptyList(), emptyList());
@@ -58,8 +58,8 @@ public class InJvmSandboxTest {
     @Test
     public void testInputModeEmpty() {
         var sandbox = new InJvmSandbox()
-                .permRestrictions(false)
                 .staticStateIsolation(false)
+                .permRestrictions(false)
                 .stdInMode(EMPTY);
         var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
                 emptyList(), emptyList());
@@ -70,8 +70,8 @@ public class InJvmSandboxTest {
     @Test
     public void testInputModeClosed() {
         var sandbox = new InJvmSandbox()
-                .permRestrictions(false)
                 .staticStateIsolation(false)
+                .permRestrictions(false)
                 .stdInMode(CLOSED);
         var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
                 emptyList(), emptyList());
@@ -82,8 +82,8 @@ public class InJvmSandboxTest {
     @Test
     public void testOutputModeNormal() {
         var sandbox = new InJvmSandbox()
-                .permRestrictions(false)
                 .staticStateIsolation(false)
+                .permRestrictions(false)
                 .stdOutMode(NORMAL).stdErrMode(NORMAL);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList());
@@ -97,8 +97,8 @@ public class InJvmSandboxTest {
     @Test
     public void testOutputModeDiscard() {
         var sandbox = new InJvmSandbox()
-                .permRestrictions(false)
                 .staticStateIsolation(false)
+                .permRestrictions(false)
                 .stdOutMode(DISCARD).stdErrMode(DISCARD);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList());
@@ -112,8 +112,8 @@ public class InJvmSandboxTest {
     @Test
     public void testOutputModeRecord() {
         var sandbox = new InJvmSandbox()
-                .permRestrictions(false)
                 .staticStateIsolation(false)
+                .permRestrictions(false)
                 .stdOutMode(RECORD).stdErrMode(RECORD);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList());
@@ -127,8 +127,8 @@ public class InJvmSandboxTest {
     @Test
     public void testOutputModeRecordTimeout() {
         var sandbox = new InJvmSandbox()
-                .permRestrictions(false)
                 .staticStateIsolation(false)
+                .permRestrictions(false)
                 .timeout(Duration.ofSeconds(1))
                 .stdOutMode(RECORD).stdErrMode(RECORD);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
@@ -143,8 +143,8 @@ public class InJvmSandboxTest {
     @Test
     public void testOutputModeRecordForward() {
         var sandbox = new InJvmSandbox()
-                .permRestrictions(false)
                 .staticStateIsolation(false)
+                .permRestrictions(false)
                 .stdOutMode(RECORD_FORWARD).stdErrMode(RECORD_FORWARD);
         var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList());
