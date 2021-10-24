@@ -13,6 +13,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>ch.trick17.jtt</groupId>
+            <artifactId>sandbox</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.graalvm.truffle</groupId>
             <artifactId>truffle-api</artifactId>
             <version>21.3.0</version>

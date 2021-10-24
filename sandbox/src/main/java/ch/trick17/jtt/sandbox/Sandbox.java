@@ -20,7 +20,7 @@ public abstract class Sandbox {
      * Enables or disables permission restrictions. If enabled, a
      * {@link SecurityManager} will restrict the permissions for the
      * code specified as 'restricted' when the
-     * {@link #run(List, List, String, String, List, List)} method
+     * {@link #run(List, List, String, String, List, List, Class)} method
      * is called. By default, restrictions are enabled.
      */
     public Sandbox permRestrictions(boolean permRestrictions) {
