@@ -127,6 +127,9 @@ public class Grader implements Closeable {
                 submOut.println("Grading " + subm.name());
                 try {
                     for (var task : tasks) {
+                        if (tasks.size() > 1) {
+                            submOut.println(task.testClassName());
+                        }
                         var res = gradeTask(subm, task, submOut);
                         results.get(task).put(res);
                     }
