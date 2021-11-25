@@ -5,7 +5,7 @@
     <parent>
         <groupId>ch.trick17.jtt</groupId>
         <artifactId>java-teaching-tools</artifactId>
-        <version>1.5.3-SNAPSHOT</version>
+        <version>1.5.4-SNAPSHOT</version>
     </parent>
     <artifactId>grader</artifactId>
 
@@ -18,7 +18,7 @@
         <dependency>
             <groupId>org.eclipse.jdt</groupId>
             <artifactId>ecj</artifactId>
-            <version>3.24.0</version>
+            <version>3.27.0</version>
         </dependency>
         <dependency>
             <groupId>ch.trick17.java-processes</groupId>
