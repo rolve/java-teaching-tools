@@ -16,7 +16,6 @@ import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import java.io.*;
-import java.lang.System.Logger;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -383,7 +382,7 @@ public class Grader implements Closeable {
 
     /**
      * Compiler-independent formatting of source location, based on
-     * {@link Logger#errorReportSource}
+     * {@link org.eclipse.jdt.internal.compiler.problem.DefaultProblem#errorReportSource(char[])}
      */
     private CharSequence formatSource(Diagnostic<?> problem) {
         char[] unitSource = null;

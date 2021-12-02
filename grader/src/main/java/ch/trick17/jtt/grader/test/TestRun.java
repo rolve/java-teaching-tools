@@ -105,6 +105,9 @@ public class TestRun {
     private List<MethodSource> findTestMethods() {
         var urls = concat(config.codeUnderTest().stream(), classpathUrls().stream())
                 .toArray(URL[]::new);
+        // to discover test classes, JUnit needs to *load* them, so we create
+        // a custom class loader with a classpath that includes the code under
+        // test and set it as the "context class loader" of the current thread
         var loader = new URLClassLoader(urls, currentThread().getContextClassLoader());
         return new CustomCxtClassLoaderRunner(loader).run(() -> {
             var launcher = LauncherFactory.create();
@@ -113,7 +116,7 @@ public class TestRun {
             return testPlan.getRoots().stream()
                     .flatMap(id -> testPlan.getDescendants(id).stream())
                     .filter(id -> id.getType() == TEST)
-                    .map(id -> (MethodSource) id.getSource().get())
+                    .map(id -> (MethodSource) id.getSource().orElseThrow())
                     .collect(toList());
         });
     }
