@@ -111,7 +111,10 @@ public class TestRun {
         var loader = new URLClassLoader(urls, currentThread().getContextClassLoader());
         return new CustomCxtClassLoaderRunner(loader).run(() -> {
             var launcher = LauncherFactory.create();
-            var classReq = request().selectors(selectClass(config.testClassName()));
+            var classReq = request()
+                    .configurationParameter("junit.jupiter.testmethod.order.default",
+                            "org.junit.jupiter.api.MethodOrderer$DisplayName")
+                    .selectors(selectClass(config.testClassName()));
             var testPlan = launcher.discover(classReq.build());
             return testPlan.getRoots().stream()
                     .flatMap(id -> testPlan.getDescendants(id).stream())

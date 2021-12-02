@@ -4,6 +4,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.engine.JupiterTestEngine;
+import org.junit.jupiter.engine.config.JupiterConfiguration;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -411,6 +413,30 @@ public class GraderTest {
         assertTrue(testResults.methodResultFor("testDisabled").get().passed());
 
         // TODO: better support for disabled tests
+    }
+
+    @Test
+    public void testDefaultMethodOrder() throws IOException {
+        var tasks = List.of(Task.fromClassName("TestWithDisplayNames").compiler(ECLIPSE));
+        grader.gradeOnly("0");
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readAllLines(Path.of("results-TestWithDisplayNames.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\ttest3\ttest2\ttest4\ttest1",
+                "0\t1\t1\t0\t1\t0");
+        assertEquals(expected, results);
+    }
+
+    @Test
+    public void testCustomMethodOrder() throws IOException {
+        var tasks = List.of(Task.fromClassName("TestWithMethodOrder").compiler(ECLIPSE));
+        grader.gradeOnly("0");
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readAllLines(Path.of("results-TestWithMethodOrder.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\ttest4\ttest3\ttest2\ttest1",
+                "0\t1\t1\t1\t0\t0");
+        assertEquals(expected, results);
     }
 
     @AfterAll

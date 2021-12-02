@@ -13,10 +13,8 @@ import java.util.stream.Stream;
 import static ch.trick17.jtt.grader.result.Property.*;
 import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
-import static java.util.function.Function.identity;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 /**
  * A container for the grading results of a {@link Task} for a single
@@ -78,31 +76,29 @@ public class SubmissionResults {
         return emptySet();
     }
 
+    /**
+     * Returns the names of all tests that were executed for the submission,
+     * in the order of execution. If no tests could be executed, the list is
+     * empty.
+     */
+    public List<String> allTests() {
+        return Stream.ofNullable(testResults).flatMap(TestResults::stream)
+                .map(MethodResult::method)
+                .collect(toList());
+
+    }
+
     public List<String> passedTests() {
-        return Stream.ofNullable(testResults)
-                .flatMap(TestResults::stream)
+        return Stream.ofNullable(testResults).flatMap(TestResults::stream)
                 .filter(MethodResult::passed)
                 .map(MethodResult::method)
                 .collect(toList());
     }
 
     public List<String> failedTests() {
-        return Stream.ofNullable(testResults)
-                .flatMap(TestResults::stream)
+        return Stream.ofNullable(testResults).flatMap(TestResults::stream)
                 .filter(not(MethodResult::passed))
                 .map(MethodResult::method)
                 .collect(toList());
-    }
-
-    /**
-     * Returns the criteria this submission fulfills. This set of criteria is
-     * basically a simplified, string-based representation of this object.
-     */
-    public Set<String> criteria() {
-        var streams = Stream.of(
-                properties().stream().map(Property::prettyName),
-                tags().stream(),
-                passedTests().stream());
-        return streams.flatMap(identity()).collect(toSet());
     }
 }
