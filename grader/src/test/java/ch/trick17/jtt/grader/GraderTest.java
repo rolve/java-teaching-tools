@@ -4,8 +4,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.engine.JupiterTestEngine;
-import org.junit.jupiter.engine.config.JupiterConfiguration;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -328,28 +326,41 @@ public class GraderTest {
     }
 
     @Test
-    public void testIllegalOperation() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest"));
-        grader.gradeOnly("0", "12"); // tries to read from the file system
-        grader.run(ECLIPSE_BASE, tasks);
-        var results = readAllLines(Path.of("results-AddTest.tsv"));
-        var expected = List.of(
-                "Name\tcompiled\tillegal operation\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "12\t1\t1\t0\t0");
-        assertEquals(expected, results);
-    }
-
-    @Test
     public void testSystemIn() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest").repetitions(3));
-        grader.gradeOnly("0", "13");
+        grader.gradeOnly("0", "12");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttestAdd1\ttestAdd2",
                 "0\t1\t1\t1",
-                "13\t1\t0\t0");
+                "12\t1\t0\t0");
+        assertEquals(expected, results);
+    }
+
+    @Test
+    public void testIllegalOperationIO() throws IOException {
+        var tasks = List.of(Task.fromClassName("AddTest"));
+        grader.gradeOnly("0", "13"); // tries to read from the file system
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\tillegal operation\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "13\t1\t1\t0\t0");
+        assertEquals(expected, results);
+    }
+
+    @Test
+    public void testIllegalOperationReflection() throws IOException {
+        var tasks = List.of(Task.fromClassName("AddTest"));
+        grader.gradeOnly("0", "14"); // uses getDeclaredMethods()
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\tillegal operation\ttestAdd1\ttestAdd2",
+                "0\t1\t0\t1\t1",
+                "14\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
