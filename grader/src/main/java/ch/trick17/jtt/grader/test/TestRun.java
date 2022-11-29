@@ -5,6 +5,7 @@ import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.JavaSandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
 import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.engine.reporting.ReportEntry;
 import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
@@ -14,15 +15,14 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
+import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
 import static ch.trick17.jtt.sandbox.SandboxResult.Kind.*;
 import static java.io.File.pathSeparator;
+import static java.lang.Double.parseDouble;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
@@ -35,7 +35,7 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
-public class TestRun {
+class TestRun {
 
     private final TestRunConfig config;
 
@@ -55,6 +55,7 @@ public class TestRun {
             var timeout = false;
             var outOfMemory = false;
             var illegalOps = new ArrayList<String>();
+            var scores = new ArrayList<Double>();
             for (int rep = 1; rep <= config.repetitions(); rep++) {
                 var methodResult = runSandboxed(method);
 
@@ -67,15 +68,21 @@ public class TestRun {
                 } else if (methodResult.kind() == EXCEPTION) {
                     // should not happen, JUnit catches exceptions
                     throw new AssertionError(methodResult.exception());
-                } else if (methodResult.value() == null) {
-                    passed = true;
                 } else {
-                    failed = true;
-                    var exception = methodResult.value();
-                    var msg = valueOf(exception.getMessage()).replaceAll("\\s+", " ")
-                            + " (" + exception.getClass().getName() + ")";
-                    // TODO: Collect exception stats
-                    failMsgs.add(msg);
+                    var junitResult = methodResult.value();
+                    if (junitResult.get("throwable") == null) {
+                        passed = true;
+                    } else {
+                        failed = true;
+                        var throwable = (Throwable) junitResult.get("throwable");
+                        var msg = valueOf(throwable.getMessage()).replaceAll("\\s+", " ")
+                                + " (" + throwable.getClass().getName() + ")";
+                        // TODO: Collect exception stats
+                        failMsgs.add(msg);
+                    }
+                    if (junitResult.get("score") != null) {
+                        scores.add((Double) junitResult.get("score"));
+                    }
                 }
 
                 if (rep < config.repetitions() &&
@@ -95,8 +102,9 @@ public class TestRun {
                         .collect(joining("."));
                 name = prefix + "." + name;
             }
+            var incompleteReps = repsMade < config.repetitions();
             methodResults.add(new MethodResult(name, passed, failMsgs, nonDeterm,
-                    repsMade, repsMade < config.repetitions(), timeout, outOfMemory, illegalOps));
+                    repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
         }
 
         return new TestResults(methodResults);
@@ -136,22 +144,32 @@ public class TestRun {
                 .collect(toList());
     }
 
-    private SandboxResult<Throwable> runSandboxed(MethodSource test) {
+    @SuppressWarnings("unchecked")
+    private SandboxResult<Map<String, Object>> runSandboxed(MethodSource test) {
         var sandbox = new JavaSandbox()
                 .permRestrictions(config.permRestrictions())
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());
-        return sandbox.run(config.codeUnderTest(), classpathUrls(), Sandboxed.class,
-                "run", List.of(String.class, String.class), args, Throwable.class);
+        var result = sandbox.run(config.codeUnderTest(), classpathUrls(), Sandboxed.class,
+                "run", List.of(String.class, String.class), args, Map.class);
+        return (SandboxResult<Map<String, Object>>) (Object) result;
     }
 
     public static class Sandboxed {
-        public static Throwable run(String className, String methodName) {
+        public static Map<String, Object> run(String className, String methodName) {
             var sel = selectMethod(className, methodName);
             var req = request().selectors(sel).build();
             var listener = new TestExecutionListener() {
                 TestExecutionResult result;
+                Double score;
+                public void reportingEntryPublished(TestIdentifier id, ReportEntry entry) {
+                    entry.getKeyValuePairs().entrySet().stream()
+                            .filter(e -> e.getKey().equals(SCORE_KEY))
+                            .map(e -> parseDouble(e.getValue()))
+                            .findFirst()
+                            .ifPresent(s -> score = s);
+                }
                 public void executionFinished(TestIdentifier id, TestExecutionResult res) {
                     if (id.isTest()) {
                         result = res;
@@ -160,14 +178,23 @@ public class TestRun {
             };
             LauncherFactory.create().execute(req, listener);
 
-            var throwable = Optional.ofNullable(listener.result)
-                    .flatMap(TestExecutionResult::getThrowable).orElse(null);
+            if (listener.result == null) {
+                throw new AssertionError();
+            }
+
+            var throwable = listener.result.getThrowable().orElse(null);
             // since JUnit catches the SecurityException, need to rethrow it
             // for the sandbox to record the illegal operation...
             if (throwable instanceof SecurityException) {
                 throw (SecurityException) throwable;
             }
-            return throwable;
+
+            // can only transfer classes loaded by the bootstrap class loader
+            // across sandbox boundary...
+            var result = new HashMap<String, Object>();
+            result.put("throwable", throwable);
+            result.put("score", listener.score);
+            return result;
         }
     }
 }

@@ -5,10 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -58,6 +55,7 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
         private final boolean timeout;
         private final boolean outOfMemory;
         private final List<String> illegalOps;
+        private final List<Double> scores;
 
         @JsonCreator
         public MethodResult(
@@ -69,7 +67,8 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
                 boolean incompleteReps,
                 boolean timeout,
                 boolean outOfMemory,
-                List<String> illegalOps) {
+                List<String> illegalOps,
+                List<Double> scores) {
             this.method = requireNonNull(method);
             this.passed = passed;
             this.failMsgs = copyOf(failMsgs);
@@ -79,6 +78,7 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
             this.timeout = timeout;
             this.outOfMemory = outOfMemory;
             this.illegalOps = copyOf(illegalOps);
+            this.scores = copyOf(scores);
         }
 
         @JsonProperty
@@ -124,6 +124,11 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
         @JsonProperty
         public List<String> illegalOps() {
             return illegalOps;
+        }
+
+        @JsonProperty
+        public List<Double> scores() {
+            return scores;
         }
     }
 

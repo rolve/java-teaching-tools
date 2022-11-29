@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
 import static ch.trick17.jtt.grader.Compiler.JAVAC;
@@ -448,6 +449,49 @@ public class GraderTest {
                 "Name\tcompiled\ttest4\ttest3\ttest2\ttest1",
                 "0\t1\t1\t1\t0\t0");
         assertEquals(expected, results);
+    }
+
+    @Test
+    public void testScore() throws IOException {
+        var tasks = List.of(Task.fromClassName("TestWithScore").compiler(ECLIPSE).repetitions(20));
+        grader.gradeOnly("0", "1");
+        var resultsList = grader.run(ECLIPSE_BASE, tasks);
+
+        // submission 0 passes all tests
+        var results0 = resultsList.get(0).get("0").testResults();
+        assertTrue(results0.methodResultFor("testWithScore").get().passed());
+        var scores = results0.methodResultFor("testWithScore").get().scores();
+        assertEquals(20, scores.size());
+        assertEquals(Set.of(50.0, 100.0), Set.copyOf(scores));
+
+        assertTrue(results0.methodResultFor("testWithScoreFirst").get().passed());
+        scores = results0.methodResultFor("testWithScoreFirst").get().scores();
+        assertEquals(20, scores.size());
+        assertEquals(Set.of(100.0), Set.copyOf(scores));
+
+        assertTrue(results0.methodResultFor("testWithoutScore").get().passed());
+        assertTrue(results0.methodResultFor("testWithoutScore").get().scores().isEmpty());
+
+        assertTrue(results0.methodResultFor("testWithOrWithoutScore").get().passed());
+        scores = results0.methodResultFor("testWithOrWithoutScore").get().scores();
+        assertTrue(0 < scores.size() && scores.size() < 20);
+        assertEquals(Set.of(100.0), Set.copyOf(scores));
+
+        // submission 1 fails all tests
+        var results1 = resultsList.get(0).get("1").testResults();
+        assertFalse(results1.methodResultFor("testWithScore").get().passed());
+        assertTrue(results1.methodResultFor("testWithScore").get().scores().isEmpty());
+
+        assertFalse(results1.methodResultFor("testWithScoreFirst").get().passed());
+        scores = results1.methodResultFor("testWithScoreFirst").get().scores();
+        assertEquals(20, scores.size());
+        assertEquals(Set.of(100.0), Set.copyOf(scores));
+
+        assertFalse(results1.methodResultFor("testWithoutScore").get().passed());
+        assertEquals(0, results1.methodResultFor("testWithoutScore").get().scores().size());
+
+        assertFalse(results1.methodResultFor("testWithOrWithoutScore").get().passed());
+        assertTrue(results1.methodResultFor("testWithOrWithoutScore").get().scores().isEmpty());
     }
 
     @AfterAll

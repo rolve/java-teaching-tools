@@ -32,7 +32,9 @@ public class ScoreExtension implements AfterEachCallback {
         }
 
         var score = (Double) scoreFields.get(0).get(instance);
-        context.publishReportEntry(SCORE_KEY, Double.toString(score));
+        if (score != null) {
+            context.publishReportEntry(SCORE_KEY, score.toString());
+        }
     }
 
     private boolean isScoreField(Field f) {
