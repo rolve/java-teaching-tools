@@ -249,7 +249,7 @@ public class Grader implements Closeable {
             options.add("-proceedOnError");
         }
         javaCompiler.getTask(nullWriter(), manager, collector, options, null,
-                manager.getJavaFileObjectsFromPaths(sources)).call();
+                manager.getJavaFileObjectsFromPaths((Iterable<Path>) sources)).call();
 
         var errors = collector.getDiagnostics().stream()
                 .filter(d -> d.getKind() == ERROR).collect(toList());
