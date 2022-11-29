@@ -15,6 +15,8 @@ import static org.junit.platform.commons.support.ReflectionSupport.findFields;
 
 public class ScoreExtension implements AfterEachCallback {
 
+    public static final String SCORE_KEY = "jtt-score";
+
     private static final Logger logger = getLogger(ScoreExtension.class.getName());
 
     @Override
@@ -30,11 +32,7 @@ public class ScoreExtension implements AfterEachCallback {
         }
 
         var score = (Double) scoreFields.get(0).get(instance);
-        if (score == null) {
-            System.out.println(context.getDisplayName() + ": no score");
-        } else {
-            System.out.println(context.getDisplayName() + " score: " + score);
-        }
+        context.publishReportEntry(SCORE_KEY, Double.toString(score));
     }
 
     private boolean isScoreField(Field f) {
