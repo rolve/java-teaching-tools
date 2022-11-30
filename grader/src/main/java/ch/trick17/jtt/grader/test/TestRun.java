@@ -178,11 +178,10 @@ class TestRun {
             };
             LauncherFactory.create().execute(req, listener);
 
-            if (listener.result == null) {
-                throw new AssertionError();
-            }
+            var throwable = listener.result == null
+                    ? null // test was skipped
+                    : listener.result.getThrowable().orElse(null);
 
-            var throwable = listener.result.getThrowable().orElse(null);
             // since JUnit catches the SecurityException, need to rethrow it
             // for the sandbox to record the illegal operation...
             if (throwable instanceof SecurityException) {
