@@ -20,7 +20,7 @@ import static java.util.stream.Stream.concat;
 
 public class Task {
 
-    private static final Path DEFAULT_TEST_SRC_DIR = Path.of("tests").toAbsolutePath();
+    private static final Path DEFAULT_TEST_SRC_DIR = Path.of("src/test/java").toAbsolutePath();
     private static final int DEFAULT_REPETITIONS = 7;
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
@@ -55,6 +55,15 @@ public class Task {
 
     private static Path toPath(String className) {
         return Path.of(className.replace('.', separatorChar) + ".java");
+    }
+
+    public static Task from(Class<?> testClass, String... moreFiles) throws IOException {
+        return from(testClass, DEFAULT_TEST_SRC_DIR, moreFiles);
+    }
+
+    public static Task from(Class<?> testClass, Path testSrcDir,
+                            String... moreFiles) throws IOException {
+        return fromClassName(testClass.getName(), testSrcDir, moreFiles);
     }
 
     public static Task fromClassName(String testClassName, String... moreFiles) throws IOException {
