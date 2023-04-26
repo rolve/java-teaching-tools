@@ -495,6 +495,32 @@ public class GraderTest {
         assertTrue(results1.methodResultFor("testWithOrWithoutScore").get().scores().isEmpty());
     }
 
+    @Test
+    public void testEncoding() throws IOException {
+        var tasks = List.of(Task.fromClassName("EncodingTest", TEST_SRC_DIR).compiler(ECLIPSE));
+        var resultsFile = Path.of("results-EncodingTest.tsv");
+        grader.gradeOnly("0", "1");
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readAllLines(resultsFile);
+        var expected = List.of(
+                "Name\tcompiled\ttestEncoding",
+                "0\t1\t1",
+                "1\t1\t1");
+        assertEquals(expected, results);
+
+        try (var other = new Grader()) {
+            other.setTestVmArgs("-Dfile.encoding=ASCII");
+            other.gradeOnly("0", "1");
+            other.run(ECLIPSE_BASE, tasks);
+            results = readAllLines(resultsFile);
+            expected = List.of(
+                    "Name\tcompiled\ttestEncoding",
+                    "0\t1\t1",
+                    "1\t1\t0"); // submission should fail because encoding is not explicitly defined
+            assertEquals(expected, results);
+        }
+    }
+
     @AfterAll
     public static void tearDown() throws IOException {
         grader.close();

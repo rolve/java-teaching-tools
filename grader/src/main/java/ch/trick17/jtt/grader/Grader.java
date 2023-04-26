@@ -58,6 +58,7 @@ public class Grader implements Closeable {
     private int parallelism = getCommonPoolParallelism();
     private Path logDir = Path.of(".");
     private Path resultsDir = Path.of(".");
+    private String[] testVmArgs = { "-Dfile.encoding=UTF8" };
 
     public void gradeOnly(String... submNames) {
         var set = new HashSet<>(List.of(submNames));
@@ -97,6 +98,21 @@ public class Grader implements Closeable {
      */
     public void setResultsDir(Path resultsDir) {
         this.resultsDir = resultsDir;
+    }
+
+    public String[] getTestVmArgs() {
+        return testVmArgs.clone();
+    }
+
+    /**
+     * Sets the VM arguments that are used to start the JVM(s) in which the tests
+     * are executed (in addition to predefined arguments such as the classpath,
+     * which is equal to the one of this VM). The default is "-Dfile.encoding=UTF8",
+     * so to enforce a different (or again the same) encoding, a respective argument
+     * should be included when using this method.
+     */
+    public void setTestVmArgs(String... testVmArgs) {
+        this.testVmArgs = testVmArgs.clone();
     }
 
     public List<TaskResults> run(Codebase codebase, List<Task> tasks) throws IOException {
@@ -315,7 +331,8 @@ public class Grader implements Closeable {
         if (testRunner == null || !testRunner.isAlive()) {
             try {
                 testRunner = new JavaProcessBuilder(TestRunner.class)
-                        .vmArgs("-XX:-OmitStackTraceInFastThrow", "-Dfile.encoding=UTF8")
+                        .vmArgs("-XX:-OmitStackTraceInFastThrow")
+                        .addVmArgs(testVmArgs)
                         .autoExit(true)
                         .start();
                 var copier = new Thread(new LineCopier(testRunner.getErrorStream(),
