@@ -3,11 +3,9 @@ package ch.trick17.jtt.grader.test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.Test;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.file.Path;
 import java.util.List;
 
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRunConfigTest {
@@ -18,7 +16,8 @@ public class TestRunConfigTest {
             3,
             6000,
             10000,
-            true);
+            true,
+            emptyList());
 
     private String json = "{" +
             "\"testClassName\":\"Test\"," +

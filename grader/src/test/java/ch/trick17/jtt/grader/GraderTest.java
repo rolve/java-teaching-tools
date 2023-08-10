@@ -521,6 +521,38 @@ public class GraderTest {
         }
     }
 
+    @Test
+    public void testClassPathJavac() throws IOException {
+        var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
+                .compiler(JAVAC)
+                .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar")));
+        grader.gradeOnly("0", "1", "15"); // 15 uses external lib
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\ttestAdd1\ttestAdd2",
+                "0\t1\t1\t1",
+                "1\t1\t1\t0",
+                "15\t1\t1\t1");
+        assertEquals(expected, results);
+    }
+
+    @Test
+    public void testClassPathEclipse() throws IOException {
+        var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
+                .compiler(ECLIPSE)
+                .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar")));
+        grader.gradeOnly("0", "1", "15"); // 15 uses external lib
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readAllLines(Path.of("results-AddTest.tsv"));
+        var expected = List.of(
+                "Name\tcompiled\ttestAdd1\ttestAdd2",
+                "0\t1\t1\t1",
+                "1\t1\t1\t0",
+                "15\t1\t1\t1");
+        assertEquals(expected, results);
+    }
+
     @AfterAll
     public static void tearDown() throws IOException {
         grader.close();

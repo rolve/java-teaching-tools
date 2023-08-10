@@ -38,8 +38,7 @@ import static java.util.Arrays.stream;
 import static java.util.Comparator.reverseOrder;
 import static java.util.List.copyOf;
 import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.NOPOS;
 import static javax.tools.StandardLocation.CLASS_OUTPUT;
@@ -257,7 +256,8 @@ public class Grader implements Closeable {
         }
         var classPath = stream(getProperty("java.class.path").split(pathSeparator))
                 .map(File::new)
-                .collect(toList());
+                .collect(toCollection(ArrayList::new));
+        task.dependencies().forEach(p -> classPath.add(p.toFile()));
 
         var javaCompiler = task.compiler().create();
 
@@ -288,11 +288,11 @@ public class Grader implements Closeable {
 
     private TestResults runTests(Task task, Submission subm, PrintStream out) throws IOException {
         var gradingDir = gradingDir(subm, task);
-        var bin = gradingDir.resolve(GRADING_BIN).toString();
+        var bin = gradingDir.resolve(GRADING_BIN);
 
         var config = new TestRunConfig(task.testClassName(), List.of(bin),
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
-                task.permRestrictions());
+                task.permRestrictions(), task.dependencies());
 
         for (int tries = 1; ; tries++) {
             ensureTestRunnerRunning();

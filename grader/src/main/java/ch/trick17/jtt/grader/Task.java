@@ -3,9 +3,7 @@ package ch.trick17.jtt.grader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -14,7 +12,10 @@ import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
 import static java.io.File.separatorChar;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.Files.readAllBytes;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableMap;
+import static java.util.List.copyOf;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Stream.concat;
 
@@ -36,6 +37,7 @@ public class Task {
     private Duration repTimeout = DEFAULT_REP_TIMEOUT;
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
     private boolean permRestrictions = true;
+    private List<Path> dependencies = emptyList();
 
     public static Task fromString(String testClassCode) {
         var packageName = firstMatch(testClassCode, PACKAGE_NAME);
@@ -126,6 +128,25 @@ public class Task {
         return this;
     }
 
+    /**
+     * Sets the given list of paths (to JAR files or directories) as the
+     * dependencies that will be added to the class path for compilation and
+     * test execution, in addition to the class path of the current JVM.
+     */
+    public Task dependencies(Path... dependencies) {
+        return dependencies(asList(dependencies));
+    }
+
+    /**
+     * Sets the given list of paths (to JAR files or directories) as the
+     * dependencies that will be added to the class path for compilation and
+     * test execution, in addition to the class path of the current JVM.
+     */
+    public Task dependencies(List<Path> dependencies) {
+        this.dependencies = copyOf(dependencies);
+        return this;
+    }
+
     public Task permRestrictions(boolean permRestrictions) {
         this.permRestrictions = permRestrictions;
         return this;
@@ -162,5 +183,9 @@ public class Task {
 
     public boolean permRestrictions() {
         return permRestrictions;
+    }
+
+    public List<Path> dependencies() {
+        return dependencies;
     }
 }

@@ -9,10 +9,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 
 public class TestRunConfig {
@@ -22,25 +25,28 @@ public class TestRunConfig {
     private static final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
 
     private final String testClassName;
-    private final List<String> codeUnderTestPaths;
+    private final List<Path> codeUnderTestPaths;
     private final int repetitions;
     private final Duration repTimeout;
     private final Duration testTimeout;
     private final boolean permRestrictions;
+    private final List<Path> dependencies;
 
     public TestRunConfig(
             String testClassName,
-            List<String> codeUnderTestPaths,
+            List<Path> codeUnderTest,
             int repetitions,
             Duration repTimeout,
             Duration testTimeout,
-            boolean permRestrictions) {
+            boolean permRestrictions,
+            List<Path> dependencies) {
         this.testClassName = requireNonNull(testClassName);
-        this.codeUnderTestPaths = requireNonNull(codeUnderTestPaths);
+        this.codeUnderTestPaths = requireNonNull(codeUnderTest);
         this.repetitions = repetitions;
         this.repTimeout = requireNonNull(repTimeout);
         this.testTimeout = requireNonNull(testTimeout);
         this.permRestrictions = permRestrictions;
+        this.dependencies = requireNonNull(dependencies);
     }
 
     @JsonCreator
@@ -50,10 +56,15 @@ public class TestRunConfig {
             int repetitions,
             int repTimeoutMillis,
             int testTimeoutMillis,
-            boolean permRestrictions) {
-        this(testClassName, codeUnderTestPaths, repetitions,
-                Duration.ofMillis(repTimeoutMillis), Duration.ofMillis(testTimeoutMillis),
-                permRestrictions);
+            boolean permRestrictions,
+            List<String> dependenciesPaths) {
+        this(testClassName,
+                codeUnderTestPaths.stream().map(Path::of).collect(toList()),
+                repetitions,
+                Duration.ofMillis(repTimeoutMillis),
+                Duration.ofMillis(testTimeoutMillis),
+                permRestrictions,
+                dependenciesPaths.stream().map(Path::of).collect(toList()));
     }
 
     @JsonProperty
@@ -63,13 +74,13 @@ public class TestRunConfig {
 
     @JsonProperty
     public List<String> codeUnderTestPaths() {
-        return codeUnderTestPaths;
+        return codeUnderTestPaths.stream().map(Path::toString).collect(toList());
     }
 
     public List<URL> codeUnderTest() {
         return codeUnderTestPaths.stream().map(s -> {
             try {
-                return Path.of(s).toUri().toURL();
+                return s.toUri().toURL();
             } catch (MalformedURLException e) {
                 throw new AssertionError(e);
             }
@@ -102,6 +113,21 @@ public class TestRunConfig {
     @JsonProperty
     public boolean permRestrictions() {
         return permRestrictions;
+    }
+
+    @JsonProperty
+    public List<String> dependenciesPaths() {
+        return dependencies.stream().map(Path::toString).collect(toList());
+    }
+
+    public List<URL> dependencies() {
+        return dependencies.stream().map(s -> {
+            try {
+                return s.toUri().toURL();
+            } catch (MalformedURLException e) {
+                throw new AssertionError(e);
+            }
+        }).collect(toCollection(ArrayList::new));
     }
 
     @Override

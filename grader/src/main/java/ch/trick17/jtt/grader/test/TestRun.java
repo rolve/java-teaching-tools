@@ -16,6 +16,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
@@ -25,11 +27,10 @@ import static java.io.File.pathSeparator;
 import static java.lang.Double.parseDouble;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
+import static java.lang.System.getProperty;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Stream.concat;
+import static java.util.stream.Collectors.*;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
@@ -111,7 +112,10 @@ class TestRun {
     }
 
     private List<MethodSource> findTestMethods() {
-        var urls = concat(config.codeUnderTest().stream(), classpathUrls().stream())
+        var urls = Stream.of(config.codeUnderTest(),
+                        config.dependencies(),
+                        currentClassPath())
+                .flatMap(List::stream)
                 .toArray(URL[]::new);
         // to discover test classes, JUnit needs to *load* them, so we create
         // a custom class loader with a classpath that includes the code under
@@ -132,8 +136,8 @@ class TestRun {
         });
     }
 
-    private List<URL> classpathUrls() {
-        return stream(System.getProperty("java.class.path").split(pathSeparator))
+    private List<URL> currentClassPath() {
+        return stream(getProperty("java.class.path").split(pathSeparator))
                 .map(path -> {
                     try {
                         return Path.of(path).toUri().toURL();
@@ -151,7 +155,9 @@ class TestRun {
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());
-        var result = sandbox.run(config.codeUnderTest(), classpathUrls(), Sandboxed.class,
+        var unrestricted = config.dependencies();
+        unrestricted.addAll(currentClassPath());
+        var result = sandbox.run(config.codeUnderTest(), unrestricted, Sandboxed.class,
                 "run", List.of(String.class, String.class), args, Map.class);
         return (SandboxResult<Map<String, Object>>) (Object) result;
     }
@@ -163,6 +169,7 @@ class TestRun {
             var listener = new TestExecutionListener() {
                 TestExecutionResult result;
                 Double score;
+
                 public void reportingEntryPublished(TestIdentifier id, ReportEntry entry) {
                     entry.getKeyValuePairs().entrySet().stream()
                             .filter(e -> e.getKey().equals(SCORE_KEY))
@@ -170,6 +177,7 @@ class TestRun {
                             .findFirst()
                             .ifPresent(s -> score = s);
                 }
+
                 public void executionFinished(TestIdentifier id, TestExecutionResult res) {
                     if (id.isTest()) {
                         result = res;
