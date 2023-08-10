@@ -5,27 +5,29 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static java.io.File.separator;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRunConfigTest {
 
-    private TestRunConfig config = new TestRunConfig(
+    private final TestRunConfig config = new TestRunConfig(
             "Test",
             List.of("test", "test/more"),
             3,
             6000,
             10000,
             true,
-            emptyList());
+            List.of("lib/foo.jar", "lib/bar.jar"));
 
-    private String json = "{" +
+    private final String json = "{" +
             "\"testClassName\":\"Test\"," +
             "\"codeUnderTestPaths\":[\"test\",\"test/more\"]," +
             "\"repetitions\":3," +
             "\"repTimeoutMillis\":6000," +
             "\"testTimeoutMillis\":10000," +
-            "\"permRestrictions\":true" +
+            "\"permRestrictions\":true," +
+            "\"dependenciesPaths\":[\"lib/foo.jar\",\"lib/bar.jar\"]" +
             "}";
 
     @Test
