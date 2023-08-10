@@ -27,6 +27,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static java.io.File.pathSeparator;
 import static java.io.Writer.nullWriter;
 import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
@@ -41,6 +42,8 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.NOPOS;
+import static javax.tools.StandardLocation.CLASS_OUTPUT;
+import static javax.tools.StandardLocation.CLASS_PATH;
 
 public class Grader implements Closeable {
 
@@ -58,7 +61,7 @@ public class Grader implements Closeable {
     private int parallelism = getCommonPoolParallelism();
     private Path logDir = Path.of(".");
     private Path resultsDir = Path.of(".");
-    private String[] testVmArgs = { "-Dfile.encoding=UTF8" };
+    private String[] testVmArgs = {"-Dfile.encoding=UTF8"};
 
     public void gradeOnly(String... submNames) {
         var set = new HashSet<>(List.of(submNames));
@@ -93,8 +96,9 @@ public class Grader implements Closeable {
     }
 
     /**
-     * Sets the directory in which result files are created. If <code>null</code>,
-     * no result files are created. The default is the working directory (".").
+     * Sets the directory in which result files are created. If
+     * <code>null</code>, no result files are created. The default is the
+     * working directory (".").
      */
     public void setResultsDir(Path resultsDir) {
         this.resultsDir = resultsDir;
@@ -105,11 +109,12 @@ public class Grader implements Closeable {
     }
 
     /**
-     * Sets the VM arguments that are used to start the JVM(s) in which the tests
-     * are executed (in addition to predefined arguments such as the classpath,
-     * which is equal to the one of this VM). The default is "-Dfile.encoding=UTF8",
-     * so to enforce a different (or again the same) encoding, a respective argument
-     * should be included when using this method.
+     * Sets the VM arguments that are used to start the JVM(s) in which the
+     * tests are executed (in addition to predefined arguments such as the
+     * classpath, which is equal to the one of this VM). The default is
+     * "-Dfile.encoding=UTF8", so to enforce a different (or again the same)
+     * encoding, a respective argument should be included when using this
+     * method.
      */
     public void setTestVmArgs(String... testVmArgs) {
         this.testVmArgs = testVmArgs.clone();
@@ -250,16 +255,19 @@ public class Grader implements Closeable {
                     .filter(p -> p.toString().endsWith(".java"))
                     .collect(toSet());
         }
+        var classPath = stream(getProperty("java.class.path").split(pathSeparator))
+                .map(File::new)
+                .collect(toList());
 
         var javaCompiler = task.compiler().create();
 
         var collector = new DiagnosticCollector<>();
         var manager = javaCompiler.getStandardFileManager(collector, null, UTF_8);
+        manager.setLocation(CLASS_PATH, classPath);
+        manager.setLocation(CLASS_OUTPUT, List.of(gradingDir.resolve(GRADING_BIN).toFile()));
 
         var version = String.valueOf(Runtime.version().feature());
         var options = new ArrayList<>(List.of(
-                "-cp", getProperty("java.class.path"),
-                "-d", gradingDir.resolve(GRADING_BIN).toString(),
                 "-source", version, "-target", version));
         if (task.compiler() == ECLIPSE) {
             options.add("-proceedOnError");
@@ -286,7 +294,7 @@ public class Grader implements Closeable {
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permRestrictions());
 
-        for (int tries = 1;; tries++) {
+        for (int tries = 1; ; tries++) {
             ensureTestRunnerRunning();
             try (var socket = new Socket("localhost", testRunnerPort)) {
                 var request = config.toJson() + "\n";
@@ -366,10 +374,10 @@ public class Grader implements Closeable {
         // create directory if it doesn't exist (needed for walk())
         Files.createDirectories(dir);
         try (var walk = Files.walk(dir)) {
-            walk.skip(leaveRoot? 1 : 0)
-                .map(Path::toFile)
-                .sorted(reverseOrder())
-                .forEach(File::delete);
+            walk.skip(leaveRoot ? 1 : 0)
+                    .map(Path::toFile)
+                    .sorted(reverseOrder())
+                    .forEach(File::delete);
         }
     }
 
@@ -386,7 +394,9 @@ public class Grader implements Closeable {
         }
     }
 
-    private interface CallableIO<T> { T call() throws IOException; }
+    private interface CallableIO<T> {
+        T call() throws IOException;
+    }
 
     private String format(Diagnostic<?> problem, Path srcDir) {
         var path = Path.of(((JavaFileObject) problem.getSource()).toUri());
