@@ -6,10 +6,12 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static java.io.File.separator;
-import static java.util.Collections.emptyList;
+import static org.apache.commons.text.StringEscapeUtils.escapeJava;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRunConfigTest {
+
+    static final String SLASH = escapeJava(separator);
 
     private final TestRunConfig config = new TestRunConfig(
             "Test",
@@ -18,16 +20,16 @@ public class TestRunConfigTest {
             6000,
             10000,
             true,
-            List.of("lib/foo.jar", "lib/bar.jar"));
+            List.of("lib/foo.jar", "/lib/bar.jar"));
 
     private final String json = "{" +
             "\"testClassName\":\"Test\"," +
-            "\"codeUnderTestPaths\":[\"test\",\"test/more\"]," +
+            "\"codeUnderTestPaths\":[\"test\",\"test" + SLASH + "more\"]," +
             "\"repetitions\":3," +
             "\"repTimeoutMillis\":6000," +
             "\"testTimeoutMillis\":10000," +
             "\"permRestrictions\":true," +
-            "\"dependenciesPaths\":[\"lib/foo.jar\",\"lib/bar.jar\"]" +
+            "\"dependenciesPaths\":[\"lib" + SLASH + "foo.jar\",\"" + SLASH + "lib" + SLASH + "bar.jar\"]" +
             "}";
 
     @Test

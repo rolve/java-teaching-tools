@@ -76,7 +76,7 @@ public class TestRunConfig {
 
     @JsonProperty
     public List<String> codeUnderTestPaths() {
-        return codeUnderTestPaths.stream().map(this::withSlash).collect(toList());
+        return codeUnderTestPaths.stream().map(Path::toString).collect(toList());
     }
 
     public List<URL> codeUnderTest() {
@@ -119,7 +119,7 @@ public class TestRunConfig {
 
     @JsonProperty
     public List<String> dependenciesPaths() {
-        return dependencies.stream().map(this::withSlash).collect(toList());
+        return dependencies.stream().map(Path::toString).collect(toList());
     }
 
     public List<URL> dependencies() {
@@ -146,12 +146,6 @@ public class TestRunConfig {
     public int hashCode() {
         return Objects.hash(testClassName, codeUnderTestPaths, repetitions,
                 repTimeout, testTimeout, permRestrictions);
-    }
-
-    private String withSlash(Path path) {
-        return stream(path.spliterator(), false)
-                .map(Path::toString)
-                .collect(joining("/"));
     }
 
     public static TestRunConfig fromJson(String json) throws JsonProcessingException {
