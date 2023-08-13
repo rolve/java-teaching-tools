@@ -6,6 +6,7 @@ import java.util.Random;
 import java.util.stream.IntStream;
 
 public class TruffleTest {
+
     public static void main(String[] args) {
         for (int i = 0; i < 10; i++) {
             var start = System.nanoTime();
@@ -14,12 +15,18 @@ public class TruffleTest {
                     .allowNativeAccess(true)
                     .allowCreateThread(true)
                     .option("java.Classpath", System.getProperty("java.class.path"))
+                    .option(StatementProfilerExample.ID, "true")
                     .build();
+
             context.getBindings("java").getMember(Guest.class.getName())
                     .invokeMember("main", (Object) null);
 
             var time = (System.nanoTime() - start) / 1_000_000_000.0;
             System.out.printf("%.2f s (host)\n", time);
+
+            var profiler = context.getEngine().getInstruments().get(StatementProfilerExample.ID)
+                    .lookup(StatementProfilerExample.class);
+            profiler.getCounters().forEach((s, c) -> System.out.println(s + ": " + c.get()));
         }
     }
 
@@ -28,7 +35,7 @@ public class TruffleTest {
         public static void main(String[] args) {
             var start = System.nanoTime();
 
-            var random = new Random();
+            var random = new Random(42);
             IntStream.generate(() -> random.nextInt(1_000_000))
                     .filter(Guest::isPrime)
                     .limit(1000)
