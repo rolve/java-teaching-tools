@@ -18,10 +18,10 @@ public abstract class Sandbox {
 
     /**
      * Enables or disables permission restrictions. If enabled, a
-     * {@link SecurityManager} will restrict the permissions for the
-     * code specified as 'restricted' when the
-     * {@link #run(List, List, String, String, List, List, Class)} method
-     * is called. By default, restrictions are enabled.
+     * {@link SecurityManager} will restrict the permissions for the code
+     * specified as 'restricted' when the
+     * {@link #run(List, List, String, String, List, List, Class)} method is
+     * called. By default, restrictions are enabled.
      */
     public Sandbox permRestrictions(boolean permRestrictions) {
         this.permRestrictions = permRestrictions;
@@ -29,10 +29,10 @@ public abstract class Sandbox {
     }
 
     /**
-     * Sets a timeout for the code to be executed. If a timeout is set,
-     * the code is executed in a different thread that is forcefully
-     * terminated when the timeout is over. By default, the timeout is
-     * set to <code>null</code>, meaning it is disabled.
+     * Sets a timeout for the code to be executed. If a timeout is set, the code
+     * is executed in a different thread that is forcefully terminated when the
+     * timeout is over. By default, the timeout is set to <code>null</code>,
+     * meaning it is disabled.
      */
     public Sandbox timeout(Duration timeout) {
         this.timeout = timeout;
@@ -45,10 +45,10 @@ public abstract class Sandbox {
     }
 
     /**
-     * Determines how to handle output to <code>System.out</code>. The
-     * default mode is {@link OutputMode#NORMAL}. Note that the sandboxed
-     * code may affect the I/O behavior using {@link System#setOut(PrintStream)},
-     * unless it runs with restricted permissions.
+     * Determines how to handle output to <code>System.out</code>. The default
+     * mode is {@link OutputMode#NORMAL}. Note that the sandboxed code may
+     * affect the I/O behavior using {@link System#setOut(PrintStream)}, unless
+     * it runs with restricted permissions.
      */
     public Sandbox stdOutMode(OutputMode stdOutMode) {
         this.stdOutMode = requireNonNull(stdOutMode);
@@ -56,10 +56,10 @@ public abstract class Sandbox {
     }
 
     /**
-     * Determines how to handle output to <code>System.err</code>. The
-     * default mode is {@link OutputMode#NORMAL}. Note that the sandboxed
-     * code may affect the I/O behavior using {@link System#setErr(PrintStream)},
-     * unless it runs with restricted permissions.
+     * Determines how to handle output to <code>System.err</code>. The default
+     * mode is {@link OutputMode#NORMAL}. Note that the sandboxed code may
+     * affect the I/O behavior using {@link System#setErr(PrintStream)}, unless
+     * it runs with restricted permissions.
      */
     public Sandbox stdErrMode(OutputMode stdErrMode) {
         this.stdErrMode = requireNonNull(stdErrMode);
@@ -71,8 +71,8 @@ public abstract class Sandbox {
                                              List<Class<?>> paramTypes, List<?> args, Class<T> resultType);
 
     public <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
-                                     Class<?> cls, String methodName,
-                                     List<Class<?>> paramTypes, List<?> args, Class<T> resultType) {
+                                    Class<?> cls, String methodName,
+                                    List<Class<?>> paramTypes, List<?> args, Class<T> resultType) {
         return run(restrictedCode, unrestrictedCode, cls.getName(), methodName, paramTypes, args, resultType);
     }
 }
