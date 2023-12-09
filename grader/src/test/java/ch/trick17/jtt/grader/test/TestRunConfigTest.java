@@ -24,12 +24,12 @@ public class TestRunConfigTest {
 
     private final String json = "{" +
             "\"testClassName\":\"Test\"," +
-            "\"codeUnderTestPaths\":[\"test\",\"test" + SLASH + "more\"]," +
+            "\"codeUnderTestStrings\":[\"test\",\"test" + SLASH + "more\"]," +
             "\"repetitions\":3," +
             "\"repTimeoutMillis\":6000," +
             "\"testTimeoutMillis\":10000," +
             "\"permRestrictions\":true," +
-            "\"dependenciesPaths\":[\"lib" + SLASH + "foo.jar\",\"" + SLASH + "lib" + SLASH + "bar.jar\"]" +
+            "\"dependenciesStrings\":[\"lib" + SLASH + "foo.jar\",\"" + SLASH + "lib" + SLASH + "bar.jar\"]" +
             "}";
 
     @Test

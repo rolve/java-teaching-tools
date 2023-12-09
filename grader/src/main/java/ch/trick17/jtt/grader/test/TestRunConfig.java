@@ -5,20 +5,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.*;
-import static java.util.stream.StreamSupport.stream;
+import static java.util.stream.Collectors.toList;
 
 public class TestRunConfig {
 
@@ -27,12 +21,12 @@ public class TestRunConfig {
     private static final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
 
     private final String testClassName;
-    private final List<Path> codeUnderTestPaths;
+    private final List<Path> codeUnderTest = new ArrayList<>();
     private final int repetitions;
     private final Duration repTimeout;
     private final Duration testTimeout;
     private final boolean permRestrictions;
-    private final List<Path> dependencies;
+    private final List<Path> dependencies = new ArrayList<>();
 
     public TestRunConfig(
             String testClassName,
@@ -43,30 +37,30 @@ public class TestRunConfig {
             boolean permRestrictions,
             List<Path> dependencies) {
         this.testClassName = requireNonNull(testClassName);
-        this.codeUnderTestPaths = requireNonNull(codeUnderTest);
+        this.codeUnderTest.addAll(codeUnderTest);
         this.repetitions = repetitions;
         this.repTimeout = requireNonNull(repTimeout);
         this.testTimeout = requireNonNull(testTimeout);
         this.permRestrictions = permRestrictions;
-        this.dependencies = requireNonNull(dependencies);
+        this.dependencies.addAll(dependencies);
     }
 
     @JsonCreator
     public TestRunConfig(
             String testClassName,
-            List<String> codeUnderTestPaths,
+            List<String> codeUnderTestStrings,
             int repetitions,
             int repTimeoutMillis,
             int testTimeoutMillis,
             boolean permRestrictions,
-            List<String> dependenciesPaths) {
+            List<String> dependenciesStrings) {
         this(testClassName,
-                codeUnderTestPaths.stream().map(Path::of).collect(toList()),
+                codeUnderTestStrings.stream().map(Path::of).collect(toList()),
                 repetitions,
                 Duration.ofMillis(repTimeoutMillis),
                 Duration.ofMillis(testTimeoutMillis),
                 permRestrictions,
-                dependenciesPaths.stream().map(Path::of).collect(toList()));
+                dependenciesStrings.stream().map(Path::of).collect(toList()));
     }
 
     @JsonProperty
@@ -75,18 +69,12 @@ public class TestRunConfig {
     }
 
     @JsonProperty
-    public List<String> codeUnderTestPaths() {
-        return codeUnderTestPaths.stream().map(Path::toString).collect(toList());
+    public List<String> codeUnderTestStrings() {
+        return codeUnderTest.stream().map(Path::toString).collect(toList());
     }
 
-    public List<URL> codeUnderTest() {
-        return codeUnderTestPaths.stream().map(s -> {
-            try {
-                return s.toUri().toURL();
-            } catch (MalformedURLException e) {
-                throw new AssertionError(e);
-            }
-        }).collect(toList());
+    public List<Path> codeUnderTest() {
+        return codeUnderTest;
     }
 
     @JsonProperty
@@ -118,33 +106,30 @@ public class TestRunConfig {
     }
 
     @JsonProperty
-    public List<String> dependenciesPaths() {
+    public List<String> dependenciesStrings() {
         return dependencies.stream().map(Path::toString).collect(toList());
     }
 
-    public List<URL> dependencies() {
-        return dependencies.stream().map(s -> {
-            try {
-                return s.toUri().toURL();
-            } catch (MalformedURLException e) {
-                throw new AssertionError(e);
-            }
-        }).collect(toCollection(ArrayList::new));
+    public List<Path> dependencies() {
+        return dependencies;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof TestRunConfig)) return false;
-        var that = (TestRunConfig) o;
-        return repetitions == that.repetitions && permRestrictions == that.permRestrictions
-                && repTimeout.equals(that.repTimeout)&& testTimeout.equals(that.testTimeout)
-                && testClassName.equals(that.testClassName) && codeUnderTestPaths.equals(that.codeUnderTestPaths);
+        if (this == o) {
+            return true;
+        } else if (!(o instanceof TestRunConfig)) {
+            return false;
+        }
+        var other = (TestRunConfig) o;
+        return repetitions == other.repetitions && permRestrictions == other.permRestrictions
+               && repTimeout.equals(other.repTimeout) && testTimeout.equals(other.testTimeout)
+               && testClassName.equals(other.testClassName) && codeUnderTest.equals(other.codeUnderTest);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(testClassName, codeUnderTestPaths, repetitions,
+        return Objects.hash(testClassName, codeUnderTest, repetitions,
                 repTimeout, testTimeout, permRestrictions);
     }
 

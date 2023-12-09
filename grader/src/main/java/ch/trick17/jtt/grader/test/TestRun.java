@@ -16,7 +16,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
@@ -112,8 +111,8 @@ class TestRun {
     }
 
     private List<MethodSource> findTestMethods() {
-        var urls = Stream.of(config.codeUnderTest(),
-                        config.dependencies(),
+        var urls = Stream.of(toUrls(config.codeUnderTest()),
+                        toUrls(config.dependencies()),
                         currentClassPath())
                 .flatMap(List::stream)
                 .toArray(URL[]::new);
@@ -155,9 +154,9 @@ class TestRun {
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());
-        var unrestricted = config.dependencies();
+        var unrestricted = toUrls(config.dependencies());
         unrestricted.addAll(currentClassPath());
-        var result = sandbox.run(config.codeUnderTest(), unrestricted, Sandboxed.class,
+        var result = sandbox.run(toUrls(config.codeUnderTest()), unrestricted, Sandboxed.class,
                 "run", List.of(String.class, String.class), args, Map.class);
         return (SandboxResult<Map<String, Object>>) (Object) result;
     }
@@ -203,5 +202,15 @@ class TestRun {
             result.put("score", listener.score);
             return result;
         }
+    }
+
+    private static ArrayList<URL> toUrls(List<Path> paths) {
+        return paths.stream().map(uri -> {
+            try {
+                return uri.toUri().toURL();
+            } catch (MalformedURLException e) {
+                throw new AssertionError(e);
+            }
+        }).collect(toCollection(ArrayList::new));
     }
 }
