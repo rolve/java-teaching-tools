@@ -1,6 +1,7 @@
 package ch.trick17.jtt.grader.test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -13,7 +14,9 @@ public class TestRunConfigTest {
 
     static final String SLASH = escapeJava(separator);
 
-    private final TestRunConfig config = new TestRunConfig(
+    ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+
+    TestRunConfig config = new TestRunConfig(
             "Test",
             List.of("test", "test/more"),
             3,
@@ -22,7 +25,7 @@ public class TestRunConfigTest {
             true,
             List.of("lib/foo.jar", "/lib/bar.jar"));
 
-    private final String json = "{" +
+    String json = "{" +
             "\"testClassName\":\"Test\"," +
             "\"codeUnderTestStrings\":[\"test\",\"test" + SLASH + "more\"]," +
             "\"repetitions\":3," +
@@ -33,12 +36,12 @@ public class TestRunConfigTest {
             "}";
 
     @Test
-    public void testToJson() throws JsonProcessingException {
-        assertEquals(json, config.toJson());
+    public void testWrite() throws JsonProcessingException {
+        assertEquals(json, mapper.writeValueAsString(config));
     }
 
     @Test
-    public void testFromJson() throws JsonProcessingException {
-        assertEquals(config, TestRunConfig.fromJson(json));
+    public void testRead() throws JsonProcessingException {
+        assertEquals(config, mapper.readValue(json, TestRunConfig.class));
     }
 }

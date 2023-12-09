@@ -2,8 +2,6 @@ package ch.trick17.jtt.grader.test;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -17,8 +15,6 @@ import static java.util.stream.Collectors.toList;
 public class TestRunConfig {
 
     // good candidate for a record, once we want to update to that Java version
-
-    private static final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
 
     private final String testClassName;
     private final List<Path> codeUnderTest = new ArrayList<>();
@@ -131,13 +127,5 @@ public class TestRunConfig {
     public int hashCode() {
         return Objects.hash(testClassName, codeUnderTest, repetitions,
                 repTimeout, testTimeout, permRestrictions);
-    }
-
-    public static TestRunConfig fromJson(String json) throws JsonProcessingException {
-        return mapper.readValue(json, TestRunConfig.class);
-    }
-
-    public String toJson() throws JsonProcessingException {
-        return mapper.writeValueAsString(this);
     }
 }

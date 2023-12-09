@@ -10,6 +10,7 @@ import ch.trick17.jtt.grader.result.TsvWriter;
 import ch.trick17.jtt.grader.test.TestResults;
 import ch.trick17.jtt.grader.test.TestRunConfig;
 import ch.trick17.jtt.grader.test.TestRunner;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import javax.tools.Diagnostic;
@@ -52,6 +53,8 @@ public class Grader implements Closeable {
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private static final int TEST_RUNNER_CONNECT_TRIES = 3;
+
+    private final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
 
     private Process testRunner;
     private int testRunnerPort;
@@ -324,7 +327,7 @@ public class Grader implements Closeable {
         for (int tries = 1; ; tries++) {
             ensureTestRunnerRunning();
             try (var socket = new Socket("localhost", testRunnerPort)) {
-                var request = config.toJson() + "\n";
+                var request = mapper.writeValueAsString(config) + "\n";
                 socket.getOutputStream().write(request.getBytes(UTF_8));
                 var response = new String(socket.getInputStream().readAllBytes(), UTF_8);
                 return TestResults.fromJson(response);
