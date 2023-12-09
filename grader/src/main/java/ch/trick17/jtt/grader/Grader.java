@@ -279,7 +279,7 @@ public class Grader implements Closeable {
                 .filter(d -> d.getKind() == ERROR).collect(toList());
 
         errors.forEach(d -> out.println(format(d, srcDir)));
-        return errors.size() > 0;
+        return !errors.isEmpty();
     }
 
     private Path gradingDir(Submission subm, Task task) {
@@ -289,43 +289,45 @@ public class Grader implements Closeable {
     private TestResults runTests(Task task, Submission subm, PrintStream out) throws IOException {
         var gradingDir = gradingDir(subm, task);
         var bin = gradingDir.resolve(GRADING_BIN);
-
         var config = new TestRunConfig(task.testClassName(), List.of(bin),
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permRestrictions(), task.dependencies());
 
+        var results = runTests(config);
+
+        results.forEach(res -> {
+            res.failMsgs().stream()
+                    .flatMap(s -> stream(s.split("\n")))
+                    .map("    "::concat)
+                    .forEach(out::println);
+            if (res.nonDeterm()) {
+                out.println("Non-determinism in " + res.method());
+            }
+            if (res.incompleteReps()) {
+                out.println("Only " + res.repsMade() + " repetitions made in " + res.method());
+            }
+            if (res.timeout()) {
+                out.println("Timeout in " + res.method());
+            }
+            if (res.outOfMemory()) {
+                out.println("Out of memory in " + res.method());
+            }
+            if (!res.illegalOps().isEmpty()) {
+                out.println("Illegal operation(s) in " + res.method() + ": " +
+                            join(", ", res.illegalOps()));
+            }
+        });
+        return results;
+    }
+
+    private TestResults runTests(TestRunConfig config) throws IOException {
         for (int tries = 1; ; tries++) {
             ensureTestRunnerRunning();
             try (var socket = new Socket("localhost", testRunnerPort)) {
                 var request = config.toJson() + "\n";
                 socket.getOutputStream().write(request.getBytes(UTF_8));
                 var response = new String(socket.getInputStream().readAllBytes(), UTF_8);
-                var results = TestResults.fromJson(response);
-
-                results.forEach(res -> {
-                    res.failMsgs().stream()
-                            .flatMap(s -> stream(s.split("\n")))
-                            .map("    "::concat)
-                            .forEach(out::println);
-                    if (res.nonDeterm()) {
-                        out.println("Non-determinism in " + res.method());
-                    }
-                    if (res.incompleteReps()) {
-                        out.println("Only " + res.repsMade() + " repetitions made in " + res.method());
-                    }
-                    if (res.timeout()) {
-                        out.println("Timeout in " + res.method());
-                    }
-                    if (res.outOfMemory()) {
-                        out.println("Out of memory in " + res.method());
-                    }
-                    if (!res.illegalOps().isEmpty()) {
-                        out.println("Illegal operation(s) in " + res.method() + ": " +
-                                join(", ", res.illegalOps()));
-                    }
-                });
-
-                return results;
+                return TestResults.fromJson(response);
             } catch (IOException e) {
                 if (tries == TEST_RUNNER_CONNECT_TRIES) {
                     throw e;
@@ -457,14 +459,12 @@ public class Grader implements Closeable {
         for (int i = start; i < startPos; i++) {
             result.append((unitSource[i] == '\t') ? '\t' : ' ');
         }
-        for (int i = startPos; i <= (endPos >= len ? len - 1 : endPos); i++) {
-            result.append('^');
-        }
+        result.append("^".repeat(Math.max(0, (endPos >= len ? len - 1 : endPos) - startPos + 1)));
         return result;
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         killTestRunner();
     }
 }
