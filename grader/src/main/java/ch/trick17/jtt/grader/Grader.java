@@ -330,7 +330,7 @@ public class Grader implements Closeable {
                 var request = mapper.writeValueAsString(config) + "\n";
                 socket.getOutputStream().write(request.getBytes(UTF_8));
                 var response = new String(socket.getInputStream().readAllBytes(), UTF_8);
-                return TestResults.fromJson(response);
+                return mapper.readValue(response, TestResults.class);
             } catch (IOException e) {
                 if (tries == TEST_RUNNER_CONNECT_TRIES) {
                     throw e;

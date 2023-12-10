@@ -31,7 +31,7 @@ public class TestRunner {
 
             var result = new TestRun(config).execute();
 
-            var out = result.toJson();
+            var out = mapper.writeValueAsString(result);
             socket.getOutputStream().write(out.getBytes(UTF_8));
         } catch (IOException e) {
             e.printStackTrace();

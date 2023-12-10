@@ -2,10 +2,11 @@ package ch.trick17.jtt.grader.test;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -13,8 +14,6 @@ import static java.util.List.copyOf;
 import static java.util.Objects.requireNonNull;
 
 public class TestResults implements Iterable<TestResults.MethodResult> {
-
-    private static final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
 
     private final List<MethodResult> methodResults;
 
@@ -130,13 +129,5 @@ public class TestResults implements Iterable<TestResults.MethodResult> {
         public List<Double> scores() {
             return scores;
         }
-    }
-
-    public static TestResults fromJson(String json) throws JsonProcessingException {
-        return mapper.readValue(json, TestResults.class);
-    }
-
-    public String toJson() throws JsonProcessingException {
-        return mapper.writeValueAsString(this);
     }
 }
