@@ -35,17 +35,11 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
-class TestRun {
+public class TestExecutor {
 
-    private final TestRunConfig config;
-
-    public TestRun(TestRunConfig config) {
-        this.config = config;
-    }
-
-    public TestResults execute() {
+    public static TestResults execute(TestRunConfig config) {
         var methodResults = new ArrayList<MethodResult>();
-        for (var method : findTestMethods()) {
+        for (var method : findTestMethods(config)) {
             var startTime = currentTimeMillis();
 
             var passed = false;
@@ -57,7 +51,7 @@ class TestRun {
             var illegalOps = new ArrayList<String>();
             var scores = new ArrayList<Double>();
             for (int rep = 1; rep <= config.repetitions(); rep++) {
-                var methodResult = runSandboxed(method);
+                var methodResult = runSandboxed(method, config);
 
                 if (methodResult.kind() == TIMEOUT) {
                     timeout = true;
@@ -110,7 +104,7 @@ class TestRun {
         return new TestResults(methodResults);
     }
 
-    private List<MethodSource> findTestMethods() {
+    private static List<MethodSource> findTestMethods(TestRunConfig config) {
         var urls = Stream.of(toUrls(config.codeUnderTest()),
                         toUrls(config.dependencies()),
                         currentClassPath())
@@ -135,7 +129,7 @@ class TestRun {
         });
     }
 
-    private List<URL> currentClassPath() {
+    private static List<URL> currentClassPath() {
         return stream(getProperty("java.class.path").split(pathSeparator))
                 .map(path -> {
                     try {
@@ -148,7 +142,7 @@ class TestRun {
     }
 
     @SuppressWarnings("unchecked")
-    private SandboxResult<Map<String, Object>> runSandboxed(MethodSource test) {
+    private static SandboxResult<Map<String, Object>> runSandboxed(MethodSource test, TestRunConfig config) {
         var sandbox = new JavaSandbox()
                 .permRestrictions(config.permRestrictions())
                 .timeout(config.repTimeout())

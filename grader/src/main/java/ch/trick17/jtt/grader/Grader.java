@@ -1,23 +1,19 @@
 package ch.trick17.jtt.grader;
 
-import ch.trick17.javaprocesses.JavaProcessBuilder;
-import ch.trick17.javaprocesses.util.LineCopier;
-import ch.trick17.javaprocesses.util.LineWriterAdapter;
 import ch.trick17.jtt.grader.Codebase.Submission;
 import ch.trick17.jtt.grader.result.SubmissionResults;
 import ch.trick17.jtt.grader.result.TaskResults;
 import ch.trick17.jtt.grader.result.TsvWriter;
+import ch.trick17.jtt.grader.test.ForkedVmClient;
+import ch.trick17.jtt.grader.test.TestExecutor;
 import ch.trick17.jtt.grader.test.TestResults;
 import ch.trick17.jtt.grader.test.TestRunConfig;
-import ch.trick17.jtt.grader.test.TestRunner;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import java.io.*;
-import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
@@ -52,18 +48,14 @@ public class Grader implements Closeable {
     private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv").toAbsolutePath();
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
-    private static final int TEST_RUNNER_CONNECT_TRIES = 3;
-
-    private final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
-
-    private Process testRunner;
-    private int testRunnerPort;
 
     private Predicate<Submission> filter = p -> true;
     private int parallelism = getCommonPoolParallelism();
     private Path logDir = Path.of(".");
     private Path resultsDir = Path.of(".");
-    private String[] testVmArgs = {"-Dfile.encoding=UTF8"};
+    private List<String> testVmArgs = List.of("-Dfile.encoding=UTF8");
+
+    private ForkedVmClient testRunner;
 
     public void gradeOnly(String... submNames) {
         var set = new HashSet<>(List.of(submNames));
@@ -106,8 +98,8 @@ public class Grader implements Closeable {
         this.resultsDir = resultsDir;
     }
 
-    public String[] getTestVmArgs() {
-        return testVmArgs.clone();
+    public List<String> getTestVmArgs() {
+        return testVmArgs;
     }
 
     /**
@@ -119,7 +111,7 @@ public class Grader implements Closeable {
      * method.
      */
     public void setTestVmArgs(String... testVmArgs) {
-        this.testVmArgs = testVmArgs.clone();
+        this.testVmArgs = List.of(testVmArgs);
     }
 
     public List<TaskResults> run(Codebase codebase, List<Task> tasks) throws IOException {
@@ -290,13 +282,21 @@ public class Grader implements Closeable {
     }
 
     private TestResults runTests(Task task, Submission subm, PrintStream out) throws IOException {
+        if (testRunner == null || !testRunner.getVmArgs().equals(testVmArgs)) {
+            if (testRunner != null) {
+                testRunner.close();
+            }
+            testRunner = new ForkedVmClient(testVmArgs);
+        }
+
         var gradingDir = gradingDir(subm, task);
         var bin = gradingDir.resolve(GRADING_BIN);
         var config = new TestRunConfig(task.testClassName(), List.of(bin),
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permRestrictions(), task.dependencies());
 
-        var results = runTests(config);
+        var results = testRunner.runInForkedVm(TestExecutor.class, "execute",
+                List.of(config), TestResults.class);
 
         results.forEach(res -> {
             res.failMsgs().stream()
@@ -321,48 +321,6 @@ public class Grader implements Closeable {
             }
         });
         return results;
-    }
-
-    private TestResults runTests(TestRunConfig config) throws IOException {
-        for (int tries = 1; ; tries++) {
-            ensureTestRunnerRunning();
-            try (var socket = new Socket("localhost", testRunnerPort)) {
-                var request = mapper.writeValueAsString(config) + "\n";
-                socket.getOutputStream().write(request.getBytes(UTF_8));
-                var response = new String(socket.getInputStream().readAllBytes(), UTF_8);
-                return mapper.readValue(response, TestResults.class);
-            } catch (IOException e) {
-                if (tries == TEST_RUNNER_CONNECT_TRIES) {
-                    throw e;
-                } // else try again
-            }
-            killTestRunner();
-        }
-    }
-
-    private synchronized void ensureTestRunnerRunning() {
-        if (testRunner == null || !testRunner.isAlive()) {
-            try {
-                testRunner = new JavaProcessBuilder(TestRunner.class)
-                        .vmArgs("-XX:-OmitStackTraceInFastThrow")
-                        .addVmArgs(testVmArgs)
-                        .autoExit(true)
-                        .start();
-                var copier = new Thread(new LineCopier(testRunner.getErrorStream(),
-                        new LineWriterAdapter(System.out)));
-                copier.setDaemon(true);
-                copier.start();
-                testRunnerPort = new Scanner(testRunner.getInputStream()).nextInt();
-            } catch (IOException e) {
-                throw new AssertionError(e);
-            }
-        }
-    }
-
-    private void killTestRunner() {
-        if (testRunner != null && testRunner.isAlive()) {
-            testRunner.destroyForcibly();
-        }
     }
 
     private void writeResultsToFile(Collection<TaskResults> results) throws IOException {
@@ -406,28 +364,30 @@ public class Grader implements Closeable {
     private String format(Diagnostic<?> problem, Path srcDir) {
         var path = Path.of(((JavaFileObject) problem.getSource()).toUri());
         return srcDir.relativize(path)
-                + ":" + problem.getLineNumber()
-                + ": " + problem.getKind()
-                + ": " + problem.getMessage(null) + "\n"
-                + formatSource(problem);
+               + ":" + problem.getLineNumber()
+               + ": " + problem.getKind()
+               + ": " + problem.getMessage(null) + "\n"
+               + formatSource(problem);
     }
 
     /**
      * Compiler-independent formatting of source location, based on
-     * {@link org.eclipse.jdt.internal.compiler.problem.DefaultProblem#errorReportSource(char[])}
+     * {@link
+     * org.eclipse.jdt.internal.compiler.problem.DefaultProblem#errorReportSource(char[])}
      */
     private CharSequence formatSource(Diagnostic<?> problem) {
         char[] unitSource = null;
         try (var in = ((JavaFileObject) problem.getSource()).openInputStream()) {
             unitSource = new String(in.readAllBytes(), UTF_8).toCharArray();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
 
         var startPos = (int) problem.getStartPosition();
         var endPos = (int) problem.getEndPosition();
         int len;
         if ((startPos > endPos)
-                || ((startPos == NOPOS) && (endPos == NOPOS))
-                || (unitSource == null) || (len = unitSource.length) == 0) {
+            || ((startPos == NOPOS) && (endPos == NOPOS))
+            || (unitSource == null) || (len = unitSource.length) == 0) {
             return "";
         }
 
@@ -468,6 +428,8 @@ public class Grader implements Closeable {
 
     @Override
     public void close() {
-        killTestRunner();
+        if (testRunner != null) {
+            testRunner.close();
+        }
     }
 }
