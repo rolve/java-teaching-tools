@@ -43,8 +43,11 @@ import static javax.tools.StandardLocation.CLASS_PATH;
 
 public class Grader implements Closeable {
 
-    private static final Path GRADING_SRC = Path.of("src"); // relative to grading dir
-    private static final Path GRADING_BIN = Path.of("bin"); // relative to grading dir
+    private static final Path GRADING_SRC = Path.of("src"); // all relative to grading dir
+    private static final Path GRADING_TEST_SRC = Path.of("test-src");
+    private static final Path GRADING_BIN = Path.of("bin");
+    private static final Path GRADING_TEST_BIN = Path.of("test-bin");
+
     private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv").toAbsolutePath();
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
@@ -203,11 +206,19 @@ public class Grader implements Closeable {
         var gradingDir = gradingDir(subm, task);
         delete(gradingDir, true);
 
+        // create required dirs
+        var srcDir = gradingDir.resolve(GRADING_SRC);
+        var binDir = gradingDir.resolve(GRADING_BIN);
+        var testSrcDir = gradingDir.resolve(GRADING_TEST_SRC);
+        var testBinDir = gradingDir.resolve(GRADING_TEST_BIN);
+        Files.createDirectories(srcDir);
+        Files.createDirectories(binDir);
+        Files.createDirectories(testSrcDir);
+        Files.createDirectories(testBinDir);
+
         // Copy sources
         var origSrcDir = subm.srcDir();
         Files.createDirectories(origSrcDir); // yes, it happened
-        var srcDir = gradingDir.resolve(GRADING_SRC);
-        Files.createDirectories(srcDir);
         try (var walk = Files.walk(origSrcDir)) {
             for (var from : (Iterable<Path>) walk::iterator) {
                 if (from.toString().endsWith(".java")) {
@@ -218,16 +229,14 @@ public class Grader implements Closeable {
             }
         }
 
-        // Copy grading files
+        // Copy tests
         for (var entry : task.filesToCopy().entrySet()) {
-            var path = srcDir.resolve(entry.getKey());
+            var path = testSrcDir.resolve(entry.getKey());
             Files.createDirectories(path.getParent());
             Files.write(path, entry.getValue());
         }
 
         // Copy properties files into bin directory
-        var binDir = gradingDir.resolve(GRADING_BIN);
-        Files.createDirectories(binDir);
         try (var walk = Files.walk(origSrcDir)) {
             for (var from : (Iterable<Path>) walk::iterator) {
                 if (from.toString().endsWith(".properties")) {
@@ -241,30 +250,48 @@ public class Grader implements Closeable {
 
     private boolean compile(Submission subm, Task task, PrintStream out) throws IOException {
         var gradingDir = gradingDir(subm, task);
-        var srcDir = gradingDir.resolve(GRADING_SRC);
 
+        var srcDir = gradingDir.resolve(GRADING_SRC);
+        var binDir = gradingDir.resolve(GRADING_BIN);
+        var submErrors = compile(task.compiler(), srcDir, binDir, task.dependencies(), out);
+
+        var testSrcDir = gradingDir.resolve(GRADING_TEST_SRC);
+        var testBinDir = gradingDir.resolve(GRADING_TEST_BIN);
+        var dependencies = new ArrayList<>(List.of(binDir));
+        dependencies.addAll(task.dependencies());
+        var testErrors = compile(task.compiler(), testSrcDir, testBinDir, dependencies, out);
+
+        return submErrors || testErrors;
+    }
+
+    private boolean compile(Compiler compiler, Path srcDir, Path outDir,
+                            List<Path> dependencies, PrintStream out) throws IOException {
         Set<Path> sources;
         try (var walk = Files.walk(srcDir)) {
             sources = walk
                     .filter(p -> p.toString().endsWith(".java"))
                     .collect(toSet());
         }
+        if (sources.isEmpty()) {
+            out.println("No sources found in " + srcDir);
+            return true;
+        }
+
         var classPath = stream(getProperty("java.class.path").split(pathSeparator))
                 .map(File::new)
                 .collect(toCollection(ArrayList::new));
-        task.dependencies().forEach(p -> classPath.add(p.toFile()));
+        dependencies.forEach(p -> classPath.add(p.toFile()));
 
-        var javaCompiler = task.compiler().create();
-
+        var javaCompiler = compiler.create();
         var collector = new DiagnosticCollector<>();
         var manager = javaCompiler.getStandardFileManager(collector, null, UTF_8);
         manager.setLocation(CLASS_PATH, classPath);
-        manager.setLocation(CLASS_OUTPUT, List.of(gradingDir.resolve(GRADING_BIN).toFile()));
+        manager.setLocation(CLASS_OUTPUT, List.of(outDir.toFile()));
 
         var version = String.valueOf(Runtime.version().feature());
         var options = new ArrayList<>(List.of(
                 "-source", version, "-target", version));
-        if (task.compiler() == ECLIPSE) {
+        if (compiler == ECLIPSE) {
             options.add("-proceedOnError");
         }
         javaCompiler.getTask(nullWriter(), manager, collector, options, null,
@@ -277,10 +304,6 @@ public class Grader implements Closeable {
         return !errors.isEmpty();
     }
 
-    private Path gradingDir(Submission subm, Task task) {
-        return subm.dir().resolve("grading-" + task.testClassName());
-    }
-
     private TestResults runTests(Task task, Submission subm, PrintStream out) throws IOException {
         if (testRunner == null || !testRunner.getVmArgs().equals(testVmArgs)) {
             if (testRunner != null) {
@@ -291,7 +314,8 @@ public class Grader implements Closeable {
 
         var gradingDir = gradingDir(subm, task);
         var bin = gradingDir.resolve(GRADING_BIN);
-        var config = new TestRunConfig(task.testClassName(), List.of(bin),
+        var testBin = gradingDir.resolve(GRADING_TEST_BIN);
+        var config = new TestRunConfig(task.testClassName(), bin, testBin,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permRestrictions(), task.dependencies());
 
@@ -321,6 +345,10 @@ public class Grader implements Closeable {
             }
         });
         return results;
+    }
+
+    private Path gradingDir(Submission subm, Task task) {
+        return subm.dir().resolve("grading-" + task.testClassName());
     }
 
     private void writeResultsToFile(Collection<TaskResults> results) throws IOException {

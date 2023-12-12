@@ -16,7 +16,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Stream;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
@@ -29,7 +28,8 @@ import static java.lang.System.currentTimeMillis;
 import static java.lang.System.getProperty;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
@@ -105,15 +105,17 @@ public class TestExecutor {
     }
 
     private static List<MethodSource> findTestMethods(TestRunConfig config) {
-        var urls = Stream.of(toUrls(config.codeUnderTest()),
-                        toUrls(config.dependencies()),
-                        currentClassPath())
-                .flatMap(List::stream)
-                .toArray(URL[]::new);
+        var urls = new ArrayList<URL>();
+        urls.add(toUrl(config.codeUnderTest()));
+        urls.add(toUrl(config.testCode()));
+        config.dependencies().forEach(p -> urls.add(toUrl(p)));
+        urls.addAll(currentClassPath());
+
         // to discover test classes, JUnit needs to *load* them, so we create
-        // a custom class loader with a classpath that includes the code under
-        // test and set it as the "context class loader" of the current thread
-        var loader = new URLClassLoader(urls, currentThread().getContextClassLoader());
+        // a custom class loader with a classpath that includes the test code
+        // and set it as the "context class loader" of the current thread
+        var loader = new URLClassLoader(urls.toArray(URL[]::new),
+                currentThread().getContextClassLoader());
         return new CustomCxtClassLoaderRunner(loader).run(() -> {
             var launcher = LauncherFactory.create();
             var classReq = request()
@@ -131,26 +133,24 @@ public class TestExecutor {
 
     private static List<URL> currentClassPath() {
         return stream(getProperty("java.class.path").split(pathSeparator))
-                .map(path -> {
-                    try {
-                        return Path.of(path).toUri().toURL();
-                    } catch (MalformedURLException e) {
-                        throw new AssertionError(e);
-                    }
-                })
+                .map(path -> toUrl(Path.of(path)))
                 .collect(toList());
     }
 
     @SuppressWarnings("unchecked")
     private static SandboxResult<Map<String, Object>> runSandboxed(MethodSource test, TestRunConfig config) {
+        var restricted = List.of(toUrl(config.codeUnderTest()));
+        var unrestricted = new ArrayList<URL>();
+        unrestricted.add(toUrl(config.testCode()));
+        config.dependencies().forEach(p -> unrestricted.add(toUrl(p)));
+        unrestricted.addAll(currentClassPath());
+
         var sandbox = new JavaSandbox()
                 .permRestrictions(config.permRestrictions())
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());
-        var unrestricted = toUrls(config.dependencies());
-        unrestricted.addAll(currentClassPath());
-        var result = sandbox.run(toUrls(config.codeUnderTest()), unrestricted, Sandboxed.class,
+        var result = sandbox.run(restricted, unrestricted, Sandboxed.class,
                 "run", List.of(String.class, String.class), args, Map.class);
         return (SandboxResult<Map<String, Object>>) (Object) result;
     }
@@ -198,13 +198,11 @@ public class TestExecutor {
         }
     }
 
-    private static ArrayList<URL> toUrls(List<Path> paths) {
-        return paths.stream().map(uri -> {
-            try {
-                return uri.toUri().toURL();
-            } catch (MalformedURLException e) {
-                throw new AssertionError(e);
-            }
-        }).collect(toCollection(ArrayList::new));
+    private static URL toUrl(Path p) {
+        try {
+            return p.toUri().toURL();
+        } catch (MalformedURLException e) {
+            throw new AssertionError(e);
+        }
     }
 }

@@ -18,7 +18,8 @@ public class TestRunConfigTest {
 
     TestRunConfig config = new TestRunConfig(
             "Test",
-            List.of("test", "test/more"),
+            "bin",
+            "bla/test-bin",
             3,
             6000,
             10000,
@@ -27,7 +28,8 @@ public class TestRunConfigTest {
 
     String json = "{" +
             "\"testClassName\":\"Test\"," +
-            "\"codeUnderTestStrings\":[\"test\",\"test" + SLASH + "more\"]," +
+            "\"codeUnderTestString\":\"bin\"," +
+            "\"testCodeString\":\"bla" + SLASH + "test-bin\"," +
             "\"repetitions\":3," +
             "\"repTimeoutMillis\":6000," +
             "\"testTimeoutMillis\":10000," +

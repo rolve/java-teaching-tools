@@ -17,7 +17,8 @@ public class TestRunConfig {
     // good candidate for a record, once we want to update to that Java version
 
     private final String testClassName;
-    private final List<Path> codeUnderTest = new ArrayList<>();
+    private final Path codeUnderTest;
+    private final Path testCode;
     private final int repetitions;
     private final Duration repTimeout;
     private final Duration testTimeout;
@@ -26,14 +27,16 @@ public class TestRunConfig {
 
     public TestRunConfig(
             String testClassName,
-            List<Path> codeUnderTest,
+            Path codeUnderTest,
+            Path testCode,
             int repetitions,
             Duration repTimeout,
             Duration testTimeout,
             boolean permRestrictions,
             List<Path> dependencies) {
         this.testClassName = requireNonNull(testClassName);
-        this.codeUnderTest.addAll(codeUnderTest);
+        this.codeUnderTest = codeUnderTest;
+        this.testCode = testCode;
         this.repetitions = repetitions;
         this.repTimeout = requireNonNull(repTimeout);
         this.testTimeout = requireNonNull(testTimeout);
@@ -44,14 +47,16 @@ public class TestRunConfig {
     @JsonCreator
     public TestRunConfig(
             String testClassName,
-            List<String> codeUnderTestStrings,
+            String codeUnderTestString,
+            String testCodeString,
             int repetitions,
             int repTimeoutMillis,
             int testTimeoutMillis,
             boolean permRestrictions,
             List<String> dependenciesStrings) {
         this(testClassName,
-                codeUnderTestStrings.stream().map(Path::of).collect(toList()),
+                Path.of(codeUnderTestString),
+                Path.of(testCodeString),
                 repetitions,
                 Duration.ofMillis(repTimeoutMillis),
                 Duration.ofMillis(testTimeoutMillis),
@@ -65,12 +70,21 @@ public class TestRunConfig {
     }
 
     @JsonProperty
-    public List<String> codeUnderTestStrings() {
-        return codeUnderTest.stream().map(Path::toString).collect(toList());
+    public String codeUnderTestString() {
+        return codeUnderTest.toString();
     }
 
-    public List<Path> codeUnderTest() {
+    public Path codeUnderTest() {
         return codeUnderTest;
+    }
+
+    @JsonProperty
+    public String testCodeString() {
+        return testCode.toString();
+    }
+
+    public Path testCode() {
+        return testCode;
     }
 
     @JsonProperty
