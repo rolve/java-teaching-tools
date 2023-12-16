@@ -5,7 +5,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Locale;
 
-import static ch.trick17.jtt.sandbox.JavaSandbox.SANDBOX;
+import static ch.trick17.jtt.sandbox.Sandbox.SANDBOX;
 
 class SandboxPrintStream extends PrintStream {
 

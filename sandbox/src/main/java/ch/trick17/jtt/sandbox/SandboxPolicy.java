@@ -8,7 +8,7 @@ import java.security.ProtectionDomain;
 import java.util.Collection;
 import java.util.Set;
 
-import static ch.trick17.jtt.sandbox.JavaSandbox.SANDBOX;
+import static ch.trick17.jtt.sandbox.Sandbox.SANDBOX;
 import static java.util.Set.copyOf;
 
 class SandboxPolicy extends Policy {

@@ -2,7 +2,7 @@ package ch.trick17.jtt.grader.test;
 
 import ch.trick17.jtt.grader.test.TestResults.MethodResult;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
-import ch.trick17.jtt.sandbox.JavaSandbox;
+import ch.trick17.jtt.sandbox.Sandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.reporting.ReportEntry;
@@ -146,7 +146,7 @@ public class TestExecutor {
         unrestricted.addAll(config.dependencies());
         unrestricted.addAll(currentClassPath());
 
-        var sandbox = new JavaSandbox()
+        var sandbox = new Sandbox()
                 .permRestrictions(config.permRestrictions())
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);

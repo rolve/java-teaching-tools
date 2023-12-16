@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import static ch.trick17.jtt.sandbox.JavaSandbox.SANDBOX;
+import static ch.trick17.jtt.sandbox.Sandbox.SANDBOX;
 
 class SandboxInputStream extends InputStream {
 
