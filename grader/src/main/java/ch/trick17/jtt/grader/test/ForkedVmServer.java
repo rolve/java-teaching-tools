@@ -51,26 +51,17 @@ public class ForkedVmServer {
 
     private static Class<?> findClass(String className) {
         try {
-            switch (className) {
-                case "byte":
-                    return byte.class;
-                case "short":
-                    return short.class;
-                case "int":
-                    return int.class;
-                case "long":
-                    return long.class;
-                case "float":
-                    return float.class;
-                case "double":
-                    return double.class;
-                case "boolean":
-                    return boolean.class;
-                case "char":
-                    return char.class;
-                default:
-                    return Class.forName(className);
-            }
+            return switch (className) {
+                case "byte" -> byte.class;
+                case "short" -> short.class;
+                case "int" -> int.class;
+                case "long" -> long.class;
+                case "float" -> float.class;
+                case "double" -> double.class;
+                case "boolean" -> boolean.class;
+                case "char" -> char.class;
+                default -> Class.forName(className);
+            };
         } catch (ClassNotFoundException e) {
             throw new AssertionError(e);
         }

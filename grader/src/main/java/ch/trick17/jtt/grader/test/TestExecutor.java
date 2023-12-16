@@ -28,6 +28,7 @@ import static java.lang.System.currentTimeMillis;
 import static java.lang.System.getProperty;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.stream;
+import static java.util.List.copyOf;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
@@ -97,7 +98,7 @@ public class TestExecutor {
                 name = prefix + "." + name;
             }
             var incompleteReps = repsMade < config.repetitions();
-            methodResults.add(new MethodResult(name, passed, failMsgs, nonDeterm,
+            methodResults.add(new MethodResult(name, passed, copyOf(failMsgs), nonDeterm,
                     repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
         }
 

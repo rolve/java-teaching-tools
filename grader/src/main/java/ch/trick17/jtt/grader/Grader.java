@@ -35,7 +35,8 @@ import static java.util.Arrays.stream;
 import static java.util.Comparator.reverseOrder;
 import static java.util.List.copyOf;
 import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toSet;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.NOPOS;
 import static javax.tools.StandardLocation.CLASS_OUTPUT;
@@ -131,7 +132,7 @@ public class Grader implements Closeable {
 
         var submissions = codebase.submissions().stream()
                 .filter(filter)
-                .collect(toList());
+                .toList();
 
         var results = new LinkedHashMap<Task, TaskResults>();
         tasks.forEach(t -> results.put(t, new TaskResults(t)));
@@ -295,10 +296,10 @@ public class Grader implements Closeable {
             options.add("-proceedOnError");
         }
         javaCompiler.getTask(nullWriter(), manager, collector, options, null,
-                manager.getJavaFileObjectsFromPaths((Iterable<Path>) sources)).call();
+                manager.getJavaFileObjectsFromPaths(sources)).call();
 
         var errors = collector.getDiagnostics().stream()
-                .filter(d -> d.getKind() == ERROR).collect(toList());
+                .filter(d -> d.getKind() == ERROR).toList();
 
         errors.forEach(d -> out.println(format(d, srcDir)));
         return !errors.isEmpty();
@@ -322,7 +323,7 @@ public class Grader implements Closeable {
         var results = testRunner.runInForkedVm(TestExecutor.class, "execute",
                 List.of(config), TestResults.class);
 
-        results.forEach(res -> {
+        results.methodResults().forEach(res -> {
             res.failMsgs().stream()
                     .flatMap(s -> stream(s.split("\n")))
                     .map("    "::concat)
