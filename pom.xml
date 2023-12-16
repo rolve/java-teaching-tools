@@ -17,7 +17,6 @@
         <module>code-tags</module>
         <module>grader</module>
         <module>sandbox</module>
-        <module>sandbox-truffle</module>
         <module>junit-extensions</module>
     </modules>
 
