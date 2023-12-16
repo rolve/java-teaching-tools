@@ -110,7 +110,7 @@ public class TestExecutor {
         urls.add(toUrl(config.codeUnderTest()));
         urls.add(toUrl(config.testCode()));
         config.dependencies().forEach(p -> urls.add(toUrl(p)));
-        urls.addAll(currentClassPath());
+        currentClassPath().forEach(p -> urls.add(toUrl(p)));
 
         // to discover test classes, JUnit needs to *load* them, so we create
         // a custom class loader with a classpath that includes the test code
@@ -132,18 +132,18 @@ public class TestExecutor {
         });
     }
 
-    private static List<URL> currentClassPath() {
+    private static List<Path> currentClassPath() {
         return stream(getProperty("java.class.path").split(pathSeparator))
-                .map(path -> toUrl(Path.of(path)))
-                .collect(toList());
+                .map(Path::of)
+                .toList();
     }
 
     @SuppressWarnings("unchecked")
     private static SandboxResult<Map<String, Object>> runSandboxed(MethodSource test, TestRunConfig config) {
-        var restricted = List.of(toUrl(config.codeUnderTest()));
-        var unrestricted = new ArrayList<URL>();
-        unrestricted.add(toUrl(config.testCode()));
-        config.dependencies().forEach(p -> unrestricted.add(toUrl(p)));
+        var restricted = List.of(config.codeUnderTest());
+        var unrestricted = new ArrayList<Path>();
+        unrestricted.add(config.testCode());
+        unrestricted.addAll(config.dependencies());
         unrestricted.addAll(currentClassPath());
 
         var sandbox = new JavaSandbox()

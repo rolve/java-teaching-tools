@@ -6,10 +6,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Path;
 import java.security.Permission;
 import java.security.Policy;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -24,9 +27,7 @@ import static java.io.InputStream.nullInputStream;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Thread.currentThread;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.stream.Stream.concat;
 
 /**
  * A {@link Sandbox} based on standard Java technology, including class loading
@@ -65,9 +66,11 @@ public class JavaSandbox extends Sandbox {
      * classes loaded by the bootstrap class loader, like String).
      */
     @Override
-    public <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
+    public <T> SandboxResult<T> run(List<Path> restrictedCode,
+                                    List<Path> unrestrictedCode,
                                     String className, String methodName,
-                                    List<Class<?>> paramTypes, List<?> args, Class<T> resultType) {
+                                    List<Class<?>> paramTypes, List<?> args,
+                                    Class<T> resultType) {
         Callable<T> action = () -> {
             var cls = currentThread().getContextClassLoader().loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
@@ -80,11 +83,10 @@ public class JavaSandbox extends Sandbox {
 
         Callable<T> timed = timeout != null ? () -> runWithTimeout(action) : action;
 
+        var urls = toUrls(restrictedCode, unrestrictedCode);
         Callable<T> isolated = staticStateIsolation ? () -> {
-            var allCode = concat(restrictedCode.stream(), unrestrictedCode.stream())
-                    .toArray(URL[]::new);
             var parent = currentThread().getContextClassLoader().getParent();
-            var loader = new URLClassLoader(allCode, parent);
+            var loader = new URLClassLoader(urls, parent);
             return new CustomCxtClassLoaderRunner(loader).call(timed);
         } : timed;
 
@@ -141,6 +143,21 @@ public class JavaSandbox extends Sandbox {
             }
         } else {
             return asResult.get();
+        }
+    }
+
+    @SafeVarargs
+    private static URL[] toUrls(List<Path>... code) {
+        try {
+            var urls = new ArrayList<URL>();
+            for (var list : code) {
+                for (var path : list) {
+                    urls.add(path.toUri().toURL());
+                }
+            }
+            return urls.toArray(URL[]::new);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException(e);
         }
     }
 

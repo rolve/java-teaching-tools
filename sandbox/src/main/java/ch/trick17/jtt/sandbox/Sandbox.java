@@ -1,7 +1,7 @@
 package ch.trick17.jtt.sandbox;
 
 import java.io.PrintStream;
-import java.net.URL;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
@@ -66,13 +66,22 @@ public abstract class Sandbox {
         return this;
     }
 
-    public abstract <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
-                                             String className, String methodName,
-                                             List<Class<?>> paramTypes, List<?> args, Class<T> resultType);
+    public abstract <T> SandboxResult<T> run(List<Path> restrictedCode,
+                                             List<Path> unrestrictedCode,
+                                             String className,
+                                             String methodName,
+                                             List<Class<?>> paramTypes,
+                                             List<?> args,
+                                             Class<T> resultType);
 
-    public <T> SandboxResult<T> run(List<URL> restrictedCode, List<URL> unrestrictedCode,
-                                    Class<?> cls, String methodName,
-                                    List<Class<?>> paramTypes, List<?> args, Class<T> resultType) {
-        return run(restrictedCode, unrestrictedCode, cls.getName(), methodName, paramTypes, args, resultType);
+    public <T> SandboxResult<T> run(List<Path> restrictedCode,
+                                    List<Path> unrestrictedCode,
+                                    Class<?> cls,
+                                    String methodName,
+                                    List<Class<?>> paramTypes,
+                                    List<?> args,
+                                    Class<T> resultType) {
+        return run(restrictedCode, unrestrictedCode, cls.getName(),
+                methodName, paramTypes, args, resultType);
     }
 }

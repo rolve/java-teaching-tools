@@ -1,7 +1,10 @@
 package ch.trick17.jtt.sandbox;
 
-import java.net.URL;
-import java.security.*;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.security.Permission;
+import java.security.Policy;
+import java.security.ProtectionDomain;
 import java.util.Collection;
 import java.util.Set;
 
@@ -10,9 +13,9 @@ import static java.util.Set.copyOf;
 
 class SandboxPolicy extends Policy {
 
-    private final ThreadLocal<Set<URL>> unrestricted = new InheritableThreadLocal<>();
+    private final ThreadLocal<Set<Path>> unrestricted = new InheritableThreadLocal<>();
 
-    public void activate(Collection<URL> unrestrictedCode) {
+    public void activate(Collection<Path> unrestrictedCode) {
         SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
             securityManager.checkPermission(SANDBOX);
@@ -31,8 +34,14 @@ class SandboxPolicy extends Policy {
     @Override
     public boolean implies(ProtectionDomain domain, Permission permission) {
         // very simple policy: all or nothing, based on code source
-        return domain.getCodeSource() == null
-                || unrestricted.get() == null
-                || unrestricted.get().contains(domain.getCodeSource().getLocation());
+        if (domain.getCodeSource() == null || unrestricted.get() == null) {
+            return true;
+        }
+        try {
+            var location = Path.of(domain.getCodeSource().getLocation().toURI());
+            return unrestricted.get().contains(location);
+        } catch (URISyntaxException e) {
+            return true;
+        }
     }
 }
