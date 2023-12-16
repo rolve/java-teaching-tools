@@ -24,7 +24,7 @@ public class ScoreExtension implements AfterEachCallback {
         var instance = context.getRequiredTestInstance();
         var testClass = instance.getClass();
         var scoreFields = findFields(testClass, this::isScoreField, BOTTOM_UP);
-        if (scoreFields.size() == 0) {
+        if (scoreFields.isEmpty()) {
             throw new AssertionError("no @Score field found on class " + testClass
                     + " (must be public, non-static, with type Double)");
         } else if (scoreFields.size() > 1) {
