@@ -1,5 +1,7 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.sandbox.Whitelist;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -36,7 +38,7 @@ public class Task {
     private int repetitions = DEFAULT_REPETITIONS;
     private Duration repTimeout = DEFAULT_REP_TIMEOUT;
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
-    private boolean permRestrictions = true;
+    private String permittedCalls = Whitelist.DEFAULT_WHITELIST_DEF;
     private List<Path> dependencies = emptyList();
 
     public static Task fromString(String testClassCode) {
@@ -147,8 +149,8 @@ public class Task {
         return this;
     }
 
-    public Task permRestrictions(boolean permRestrictions) {
-        this.permRestrictions = permRestrictions;
+    public Task permittedCalls(String permittedCalls) {
+        this.permittedCalls = permittedCalls;
         return this;
     }
 
@@ -181,8 +183,8 @@ public class Task {
         return testTimeout;
     }
 
-    public boolean permRestrictions() {
-        return permRestrictions;
+    public String permittedCalls() {
+        return permittedCalls;
     }
 
     public List<Path> dependencies() {

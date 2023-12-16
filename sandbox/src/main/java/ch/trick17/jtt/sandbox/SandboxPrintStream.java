@@ -5,8 +5,6 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Locale;
 
-import static ch.trick17.jtt.sandbox.Sandbox.SANDBOX;
-
 class SandboxPrintStream extends PrintStream {
 
     private final ThreadLocal<PrintStream> sandboxed = new InheritableThreadLocal<>();
@@ -19,19 +17,11 @@ class SandboxPrintStream extends PrintStream {
     }
 
     public void activate(OutputStream sandboxedStream) {
-        SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(SANDBOX);
-        }
         sandboxed.set(new PrintStream(sandboxedStream));
     }
 
     public void deactivate() {
-        SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(SANDBOX);
-        }
-        sandboxed.set(null);
+        sandboxed.remove();
     }
 
     private PrintStream delegate() {

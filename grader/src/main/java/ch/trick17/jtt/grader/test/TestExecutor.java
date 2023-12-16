@@ -4,6 +4,7 @@ import ch.trick17.jtt.grader.test.TestResults.MethodResult;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.Sandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
+import ch.trick17.jtt.sandbox.Whitelist;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.reporting.ReportEntry;
 import org.junit.platform.engine.support.descriptor.MethodSource;
@@ -147,7 +148,7 @@ public class TestExecutor {
         unrestricted.addAll(currentClassPath());
 
         var sandbox = new Sandbox()
-                .permRestrictions(config.permRestrictions())
+                .permittedCalls(Whitelist.parse(config.permittedCalls()))
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());

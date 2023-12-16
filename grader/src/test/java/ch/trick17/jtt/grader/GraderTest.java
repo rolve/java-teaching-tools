@@ -14,6 +14,7 @@ import java.util.Set;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
 import static ch.trick17.jtt.grader.Compiler.JAVAC;
+import static ch.trick17.jtt.sandbox.Whitelist.DEFAULT_WHITELIST_DEF;
 import static java.nio.file.Files.list;
 import static java.nio.file.Files.readAllLines;
 import static java.util.Collections.emptyList;
@@ -288,7 +289,9 @@ public class GraderTest {
         // of nondeterminism in other tests, as was previously the case
         var tasks = List.of(Task.fromClassName("SubtractTest", TEST_SRC_DIR)
                 .repetitions(5)
-                .permRestrictions(false)); // needs access to system properties
+                .permittedCalls(DEFAULT_WHITELIST_DEF + """
+                        java.lang.System.setProperty
+                        """));
         grader.gradeOnly("0", "9");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-SubtractTest.tsv"));
@@ -497,7 +500,11 @@ public class GraderTest {
 
     @Test
     public void testEncoding() throws IOException {
-        var tasks = List.of(Task.fromClassName("EncodingTest", TEST_SRC_DIR).compiler(ECLIPSE));
+        var tasks = List.of(Task.fromClassName("EncodingTest", TEST_SRC_DIR)
+                .compiler(ECLIPSE)
+                .permittedCalls(DEFAULT_WHITELIST_DEF + """
+                        java.io.InputStreamReader.<init>
+                        """));
         var resultsFile = Path.of("results-EncodingTest.tsv");
         grader.gradeOnly("0", "1");
         grader.run(ECLIPSE_BASE, tasks);
@@ -516,7 +523,7 @@ public class GraderTest {
             expected = List.of(
                     "Name\tcompiled\ttestEncoding",
                     "0\t1\t1",
-                    "1\t1\t0"); // submission should fail because encoding is not explicitly defined
+                    "1\t1\t0");
             assertEquals(expected, results);
         }
     }
@@ -525,7 +532,10 @@ public class GraderTest {
     public void testClassPathJavac() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
                 .compiler(JAVAC)
-                .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar")));
+                .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar"))
+                .permittedCalls(DEFAULT_WHITELIST_DEF + """
+                        org.apache.commons.math3.util.FastMath.abs
+                        """));
         grader.gradeOnly("0", "1", "15"); // 15 uses external lib
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
@@ -541,7 +551,10 @@ public class GraderTest {
     public void testClassPathEclipse() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
                 .compiler(ECLIPSE)
-                .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar")));
+                .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar"))
+                .permittedCalls(DEFAULT_WHITELIST_DEF + """
+                        org.apache.commons.math3.util.FastMath.abs
+                        """));
         grader.gradeOnly("0", "1", "15"); // 15 uses external lib
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));

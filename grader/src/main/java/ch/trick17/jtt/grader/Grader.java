@@ -318,7 +318,7 @@ public class Grader implements Closeable {
         var testBin = gradingDir.resolve(GRADING_TEST_BIN);
         var config = new TestRunConfig(task.testClassName(), bin, testBin,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
-                task.permRestrictions(), task.dependencies());
+                task.permittedCalls(), task.dependencies());
 
         var results = testRunner.runInForkedVm(TestExecutor.class, "execute",
                 List.of(config), TestResults.class);

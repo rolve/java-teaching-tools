@@ -11,6 +11,6 @@ public record TestRunConfig(
         int repetitions,
         Duration repTimeout,
         Duration testTimeout,
-        boolean permRestrictions,
+        String permittedCalls,
         List<Path> dependencies) {
 }

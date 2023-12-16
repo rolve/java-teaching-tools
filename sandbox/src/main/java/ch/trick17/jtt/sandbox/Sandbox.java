@@ -11,8 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
-import java.security.Permission;
-import java.security.Policy;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +25,7 @@ import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.*;
 import static java.io.InputStream.nullInputStream;
 import static java.io.OutputStream.nullOutputStream;
+import static java.lang.ClassLoader.getPlatformClassLoader;
 import static java.lang.Thread.currentThread;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -34,15 +33,11 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class Sandbox {
 
-    // could be anything at the moment, as the policy is all-or-nothing anyway
-    static final Permission SANDBOX = new RuntimePermission("sandbox");
-
-    private static volatile SandboxPolicy policy;
     private static volatile SandboxInputStream stdIn;
     private static volatile SandboxPrintStream stdOut;
     private static volatile SandboxPrintStream stdErr;
 
-    private boolean permRestrictions = true;
+    private Whitelist permittedCalls = Whitelist.getDefault();
     private Duration timeout = null;
     private InputMode stdInMode = InputMode.NORMAL;
     private OutputMode stdOutMode = NORMAL;
@@ -50,14 +45,12 @@ public class Sandbox {
     private boolean staticStateIsolation = true;
 
     /**
-     * Enables or disables permission restrictions. If enabled, a
-     * {@link SecurityManager} will restrict the permissions for the code
-     * specified as 'restricted' when the
-     * {@link #run(List, List, String, String, List, List, Class)} method is
-     * called. By default, restrictions are enabled.
+     * Sets the list of permitted method/constructor calls for the sandbox. If
+     * not set, the whitelist returned by {@link Whitelist#getDefault()} is
+     * used. If set to <code>null</code>, no restrictions are applied.
      */
-    public Sandbox permRestrictions(boolean permRestrictions) {
-        this.permRestrictions = permRestrictions;
+    public Sandbox permittedCalls(Whitelist permittedCalls) {
+        this.permittedCalls = permittedCalls;
         return this;
     }
 
@@ -100,11 +93,14 @@ public class Sandbox {
     }
 
     /**
-     * Enables or disables isolated execution. If enabled, the code is
-     * executed with freshly loaded classes, so that no interference
-     * via static fields is possible. This does not apply to system
-     * classes loaded by a parent class loader (such as
-     * {@link java.util.Random}). By default, this isolation is enabled.
+     * Enables or disables isolated execution. If enabled, the code is executed
+     * with freshly loaded classes, so that no interference via static fields is
+     * possible. This does not apply to system classes loaded by a parent class
+     * loader (such as {@link java.util.Random}). By default, this isolation is
+     * enabled.
+     * <p>
+     * Note that if the whitelist of permitted method calls is non-null, the
+     * isolation is always enabled, regardless of this setting.
      */
     public Sandbox staticStateIsolation(boolean staticStateIsolation) {
         this.staticStateIsolation = staticStateIsolation;
@@ -112,12 +108,12 @@ public class Sandbox {
     }
 
     /**
-     * Runs the specified static (!) method with the given parameters
-     * in the sandbox. The return value of the method is returned, but
-     * be aware that it could be an object of a class loaded by a
-     * different class loader (if static state isolation is enabled),
-     * making it unusable without reflection. (This is not the case for
-     * classes loaded by the bootstrap class loader, like String).
+     * Runs the specified static (!) method with the given parameters in the
+     * sandbox. The return value of the method is returned, but be aware that it
+     * could be an object of a class loaded by a different class loader (if
+     * static state isolation is enabled), making it unusable without
+     * reflection. (This is not the case for classes loaded by the bootstrap
+     * class loader, like String).
      */
     public <T> SandboxResult<T> run(List<Path> restrictedCode,
                                     List<Path> unrestrictedCode,
@@ -131,12 +127,12 @@ public class Sandbox {
     }
 
     /**
-     * Runs the specified static (!) method with the given parameters
-     * in the sandbox. The return value of the method is returned, but
-     * be aware that it could be an object of a class loaded by a
-     * different class loader (if static state isolation is enabled),
-     * making it unusable without reflection. (This is not the case for
-     * classes loaded by the bootstrap class loader, like String).
+     * Runs the specified static (!) method with the given parameters in the
+     * sandbox. The return value of the method is returned, but be aware that it
+     * could be an object of a class loaded by a different class loader (if
+     * static state isolation is enabled), making it unusable without
+     * reflection. (This is not the case for classes loaded by the bootstrap
+     * class loader, like String).
      */
     public <T> SandboxResult<T> run(List<Path> restrictedCode,
                                     List<Path> unrestrictedCode,
@@ -155,26 +151,22 @@ public class Sandbox {
 
         Callable<T> timed = timeout != null ? () -> runWithTimeout(action) : action;
 
-        var urls = toUrls(restrictedCode, unrestrictedCode);
-        Callable<T> isolated = staticStateIsolation ? () -> {
-            var parent = currentThread().getContextClassLoader().getParent();
-            var loader = new URLClassLoader(urls, parent);
+        Callable<T> isolatedRestricted = staticStateIsolation || permittedCalls != null ? () -> {
+            ClassLoader loader;
+            if (permittedCalls != null) {
+                loader = new RestrictingClassLoader(restrictedCode,
+                        unrestrictedCode, permittedCalls);
+            } else {
+                loader = new URLClassLoader(
+                        toUrls(restrictedCode, unrestrictedCode),
+                        getPlatformClassLoader());
+            }
             return new CustomCxtClassLoaderRunner(loader).call(timed);
         } : timed;
 
-        Callable<T> restricted = permRestrictions ? () -> {
-            ensureSecurityInstalled();
-            policy.activate(unrestrictedCode);
-            try {
-                return isolated.call();
-            } finally {
-                policy.deactivate();
-            }
-        } : isolated;
-
         Supplier<SandboxResult<T>> asResult = () -> {
             try {
-                return SandboxResult.normal(restricted.call());
+                return SandboxResult.normal(isolatedRestricted.call());
             } catch (TimeoutException e) {
                 return SandboxResult.timeout();
             } catch (OutOfMemoryError e) {
@@ -194,7 +186,8 @@ public class Sandbox {
                 if (stdInMode == InputMode.CLOSED) {
                     try {
                         stdIn.close();
-                    } catch (IOException ignored) {}
+                    } catch (IOException ignored) {
+                    }
                 }
             }
             var outRecorder = activatePrintStream(stdOut, stdOutMode);
@@ -237,9 +230,9 @@ public class Sandbox {
     }
 
     /**
-     * Runs the code in a different thread, so it can be killed after the timeout.
-     * This is a very hard timeout ({@link Thread#stop()}) that should be able
-     * to handle pretty much anything.
+     * Runs the code in a different thread, so it can be killed after the
+     * timeout. This is a very hard timeout ({@link Thread#stop()}) that should
+     * be able to handle pretty much anything.
      */
     private <V> V runWithTimeout(Callable<V> action) throws Exception {
         var task = new FutureTask<>(action);
@@ -296,20 +289,6 @@ public class Sandbox {
         }
     }
 
-    private static void ensureSecurityInstalled() {
-        if (policy == null) {
-            synchronized (Sandbox.class) {
-                if (policy == null) {
-                    var pol = new SandboxPolicy();
-                    Policy.setPolicy(pol);
-                    System.setSecurityManager(new SecurityManager());
-
-                    policy = pol; // signal for other threads that everything is ready
-                }
-            }
-        }
-    }
-
     private static Exception asException(Throwable t) {
         if (t instanceof Error) {
             throw (Error) t;
@@ -321,9 +300,9 @@ public class Sandbox {
     }
 
     /**
-     * Uses the infamous {@link Thread#stop()} method to kill the thread.
-     * And, just in case someone tries to catch the thrown
-     * {@link ThreadDeath}, more of them are thrown, faster and faster.
+     * Uses the infamous {@link Thread#stop()} method to kill the thread. And,
+     * just in case someone tries to catch the thrown {@link ThreadDeath}, more
+     * of them are thrown, faster and faster.
      */
     @SuppressWarnings("deprecation")
     private void kill(Thread thread) {

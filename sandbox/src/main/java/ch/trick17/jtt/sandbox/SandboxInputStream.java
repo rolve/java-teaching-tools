@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import static ch.trick17.jtt.sandbox.Sandbox.SANDBOX;
-
 class SandboxInputStream extends InputStream {
 
     private final ThreadLocal<InputStream> sandboxed = new InheritableThreadLocal<>();
@@ -17,19 +15,11 @@ class SandboxInputStream extends InputStream {
     }
 
     public void activate(InputStream sandboxedStream) {
-        SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(SANDBOX);
-        }
         sandboxed.set(sandboxedStream);
     }
 
     public void deactivate() {
-        SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(SANDBOX);
-        }
-        sandboxed.set(null);
+        sandboxed.remove();
     }
 
     private InputStream delegate() {

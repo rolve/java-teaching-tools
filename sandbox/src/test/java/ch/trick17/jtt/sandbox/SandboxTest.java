@@ -9,7 +9,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 
 import static ch.trick17.jtt.sandbox.InputMode.CLOSED;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
@@ -45,11 +48,8 @@ public class SandboxTest {
 
     @Test
     public void testInputModeNormal() {
-        var sandbox = new Sandbox()
-                .staticStateIsolation(false)
-                .permRestrictions(false)
-                .stdInMode(InputMode.NORMAL);
-        var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
+        var sandbox = new Sandbox().stdInMode(InputMode.NORMAL);
+        var result = sandbox.run(code(), emptyList(), InputTestCode.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.NORMAL, result.kind());
         assertEquals("Hello", result.value());
@@ -57,11 +57,8 @@ public class SandboxTest {
 
     @Test
     public void testInputModeEmpty() {
-        var sandbox = new Sandbox()
-                .staticStateIsolation(false)
-                .permRestrictions(false)
-                .stdInMode(EMPTY);
-        var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
+        var sandbox = new Sandbox().stdInMode(EMPTY);
+        var result = sandbox.run(code(), emptyList(), InputTestCode.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.NORMAL, result.kind());
         assertEquals("", result.value());
@@ -69,11 +66,8 @@ public class SandboxTest {
 
     @Test
     public void testInputModeClosed() {
-        var sandbox = new Sandbox()
-                .staticStateIsolation(false)
-                .permRestrictions(false)
-                .stdInMode(CLOSED);
-        var result = sandbox.run(emptyList(), emptyList(), InputTestCode.class, "run",
+        var sandbox = new Sandbox().stdInMode(CLOSED);
+        var result = sandbox.run(code(), emptyList(), InputTestCode.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.EXCEPTION, result.kind());
         assertEquals(IOException.class, result.exception().getClass());
@@ -82,10 +76,9 @@ public class SandboxTest {
     @Test
     public void testOutputModeNormal() {
         var sandbox = new Sandbox()
-                .staticStateIsolation(false)
-                .permRestrictions(false)
-                .stdOutMode(NORMAL).stdErrMode(NORMAL);
-        var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
+                .stdOutMode(NORMAL)
+                .stdErrMode(NORMAL);
+        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertNull(result.stdOut());
@@ -97,10 +90,9 @@ public class SandboxTest {
     @Test
     public void testOutputModeDiscard() {
         var sandbox = new Sandbox()
-                .staticStateIsolation(false)
-                .permRestrictions(false)
-                .stdOutMode(DISCARD).stdErrMode(DISCARD);
-        var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
+                .stdOutMode(DISCARD)
+                .stdErrMode(DISCARD);
+        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertNull(result.stdOut());
@@ -112,10 +104,9 @@ public class SandboxTest {
     @Test
     public void testOutputModeRecord() {
         var sandbox = new Sandbox()
-                .staticStateIsolation(false)
-                .permRestrictions(false)
-                .stdOutMode(RECORD).stdErrMode(RECORD);
-        var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
+                .stdOutMode(RECORD)
+                .stdErrMode(RECORD);
+        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
@@ -127,11 +118,10 @@ public class SandboxTest {
     @Test
     public void testOutputModeRecordTimeout() {
         var sandbox = new Sandbox()
-                .staticStateIsolation(false)
-                .permRestrictions(false)
                 .timeout(Duration.ofSeconds(1))
-                .stdOutMode(RECORD).stdErrMode(RECORD);
-        var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
+                .stdOutMode(RECORD)
+                .stdErrMode(RECORD);
+        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
@@ -143,16 +133,24 @@ public class SandboxTest {
     @Test
     public void testOutputModeRecordForward() {
         var sandbox = new Sandbox()
-                .staticStateIsolation(false)
-                .permRestrictions(false)
-                .stdOutMode(RECORD_FORWARD).stdErrMode(RECORD_FORWARD);
-        var result = sandbox.run(emptyList(), emptyList(), OutputTestCode.class, "run",
+                .stdOutMode(RECORD_FORWARD)
+                .stdErrMode(RECORD_FORWARD);
+        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
         assertEquals("This goes err", result.stdErr());
         assertEquals("This goes out", outRecorder.toString());
         assertEquals("This goes err", errRecorder.toString());
+    }
+
+    private List<Path> code() {
+        var url = SandboxTest.class.getProtectionDomain().getCodeSource().getLocation();
+        try {
+            return List.of(Path.of(url.toURI()));
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static class InputTestCode {
