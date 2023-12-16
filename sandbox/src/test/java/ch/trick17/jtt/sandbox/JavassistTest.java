@@ -3,6 +3,10 @@ package ch.trick17.jtt.sandbox;
 import javassist.*;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
+import javassist.expr.NewExpr;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 import static java.lang.String.join;
 import static java.lang.Thread.currentThread;
@@ -12,10 +16,14 @@ public class JavassistTest {
 
     sealed interface WhitelistEntry {
         boolean matches(MethodCall m);
+        boolean matches(NewExpr m);
     }
 
     record WildcardEntry(String className) implements WhitelistEntry {
         public boolean matches(MethodCall m) {
+            return m.getClassName().equals(this.className);
+        }
+        public boolean matches(NewExpr m) {
             return m.getClassName().equals(this.className);
         }
     }
@@ -24,11 +32,18 @@ public class JavassistTest {
         public boolean matches(MethodCall m) {
             return m.getClassName().equals(this.className) && m.getMethodName().equals(this.methodName);
         }
+        public boolean matches(NewExpr m) {
+            return m.getClassName().equals(this.className) && "<init>".equals(this.methodName);
+        }
     }
 
     public static void main(String[] args) throws Exception {
         var whitelist = """
+                java.lang.Integer.*
+                java.lang.Double.*
+                java.lang.String.*
                 java.lang.Math.*
+                java.lang.Throwable.*
                 java.lang.System.currentTimeMillis
                 """;
 
@@ -53,18 +68,32 @@ public class JavassistTest {
             public void start(ClassPool pool) {}
             public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
                 var cls = pool.get(classname);
-                for (var method : cls.getDeclaredMethods()) {
-                    method.instrument(new ExprEditor() {
-                        public void edit(MethodCall m) throws CannotCompileException {
-                            if (parsed.stream().noneMatch(entry -> entry.matches(m))) {
-                                m.replace("""
-                                        {
-                                            throw new SecurityException("Illegal method call: %s");
-                                            $_ = $proceed($$);
-                                        }""".formatted(m.getClassName() + "." + m.getMethodName()));
-                            }
+                var editor = new ExprEditor() {
+                    public void edit(MethodCall m) throws CannotCompileException {
+                        if (parsed.stream().noneMatch(entry -> entry.matches(m))) {
+                            m.replace(createThrows(m.getClassName(), m.getMethodName()));
                         }
-                    });
+                    }
+                    public void edit(NewExpr e) throws CannotCompileException {
+                        if (parsed.stream().noneMatch(entry -> entry.matches(e))) {
+                            e.replace(createThrows(e.getClassName(), "<init>"));
+                        }
+                    }
+                    private String createThrows(String className, String methodName) {
+                        return """
+                                {
+                                    if (true) { // weirdly, doesn't work without this
+                                        throw new SecurityException("Illegal call: %s");
+                                    }
+                                    $_ = $proceed($$);
+                                }""".formatted(className + "." + methodName);
+                    }
+                };
+                for (var constructor : cls.getDeclaredConstructors()) {
+                    constructor.instrument(editor);
+                }
+                for (var method : cls.getDeclaredMethods()) {
+                    method.instrument(editor);
                 }
             }
         });
@@ -78,12 +107,15 @@ public class JavassistTest {
 
     public static class ClassUnderTest {
 
-        public static void foo() {
+        public static void foo() throws IOException {
             var y = Math.sin(Math.PI);
-            System.out.println(y);
+            var bytes = Double.toString(y).getBytes();
+            try (var out = new FileOutputStream("foo")) {
+                out.write(bytes);
+            }
         }
 
-        public static void main(String[] args) {
+        public static void main(String[] args) throws IOException {
             foo();
         }
     }
