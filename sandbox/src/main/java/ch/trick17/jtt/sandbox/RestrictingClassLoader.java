@@ -4,6 +4,8 @@ import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.NotFoundException;
+import javassist.bytecode.BadBytecode;
+import javassist.bytecode.SignatureAttribute.Type;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
 import javassist.expr.NewExpr;
@@ -18,7 +20,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
+import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
 public class RestrictingClassLoader extends ClassLoader {
 
@@ -103,19 +107,35 @@ public class RestrictingClassLoader extends ClassLoader {
         }
         var editor = new ExprEditor() {
             public void edit(MethodCall m) throws CannotCompileException {
-                var cls = m.getClassName();
-                var method = m.getMethodName();
-                if (!restrictedClasses.contains(cls) &&
-                    !permittedCalls.methodPermitted(cls, method)) {
-                    m.replace(createThrows(cls, method));
+                try {
+                    var cls = m.getClassName();
+                    var method = m.getMethodName();
+                    var sig = toMethodSignature(m.getSignature());
+                    var paramTypes = stream(sig.getParameterTypes())
+                            .map(Type::toString)
+                            .toList();
+                    if (!restrictedClasses.contains(cls) &&
+                        !permittedCalls.methodPermitted(cls, method, paramTypes)) {
+                        m.replace(createThrows(cls, method));
+                    }
+                } catch (BadBytecode e) {
+                    throw new CannotCompileException(e);
                 }
             }
 
             public void edit(NewExpr e) throws CannotCompileException {
-                var cls = e.getClassName();
-                if (!restrictedClasses.contains(cls) &&
-                    !permittedCalls.constructorPermitted(cls)) {
-                    e.replace(createThrows(cls, "<init>"));
+                try {
+                    var cls = e.getClassName();
+                    var sig = toMethodSignature(e.getSignature());
+                    var paramTypes = stream(sig.getParameterTypes())
+                            .map(Type::toString)
+                            .toList();
+                    if (!restrictedClasses.contains(cls) &&
+                        !permittedCalls.constructorPermitted(cls, paramTypes)) {
+                        e.replace(createThrows(cls, "<init>"));
+                    }
+                } catch (BadBytecode bb) {
+                    throw new CannotCompileException(bb);
                 }
             }
 

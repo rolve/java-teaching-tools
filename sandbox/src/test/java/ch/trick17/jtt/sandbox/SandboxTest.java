@@ -13,6 +13,8 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Random;
+import java.util.Scanner;
 
 import static ch.trick17.jtt.sandbox.InputMode.CLOSED;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
@@ -144,15 +146,6 @@ public class SandboxTest {
         assertEquals("This goes err", errRecorder.toString());
     }
 
-    private List<Path> code() {
-        var url = SandboxTest.class.getProtectionDomain().getCodeSource().getLocation();
-        try {
-            return List.of(Path.of(url.toURI()));
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public static class InputTestCode {
         public static String run() throws IOException {
             return new String(System.in.readNBytes(5));
@@ -163,6 +156,51 @@ public class SandboxTest {
         public static void run() {
             System.out.print("This goes out");
             System.err.print("This goes err");
+        }
+    }
+
+    @Test
+    public void testWhitelistPermitted() {
+        var sandbox = new Sandbox();
+        var result = sandbox.run(code(), emptyList(), WhitelistPermittedTestCode.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.NORMAL, result.kind());
+    }
+
+    @Test
+    public void testWhitelistForbidden() {
+        var sandbox = new Sandbox();
+        var result = sandbox.run(code(), emptyList(), WhitelistForbiddenTestCode.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.ILLEGAL_OPERATION, result.kind());
+        assertEquals(SecurityException.class, result.exception().getClass());
+    }
+
+    public static class WhitelistPermittedTestCode {
+        public static void run() {
+            // all of the following are permitted by the default whitelist,
+            // including the constructor of Scanner that takes a String
+            var scanner = new Scanner("Hello 2 World");
+            System.out.println(scanner.next());
+            System.out.println(Math.abs(scanner.nextInt()));
+            System.out.println(new Random().nextInt());
+        }
+    }
+
+    public static class WhitelistForbiddenTestCode {
+        public static void run() throws IOException {
+            // this constructor is forbidden, as it allows reading from a file:
+            var scanner = new Scanner(Path.of("test.txt"));
+            System.out.println(scanner.next());
+        }
+    }
+
+    private List<Path> code() {
+        var url = SandboxTest.class.getProtectionDomain().getCodeSource().getLocation();
+        try {
+            return List.of(Path.of(url.toURI()));
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
     }
 }
