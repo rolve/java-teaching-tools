@@ -148,7 +148,9 @@ public class TestExecutor {
         unrestricted.addAll(currentClassPath());
 
         var sandbox = new Sandbox()
-                .permittedCalls(Whitelist.parse(config.permittedCalls()))
+                .permittedCalls(config.permittedCalls() != null
+                        ? Whitelist.parse(config.permittedCalls())
+                        : null)
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());

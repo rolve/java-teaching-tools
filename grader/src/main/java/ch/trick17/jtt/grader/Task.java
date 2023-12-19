@@ -149,6 +149,24 @@ public class Task {
         return this;
     }
 
+    /**
+     * Sets the whitelist of permitted method/constructor calls, in the
+     * following format:
+     * <pre>
+     *     package.Class1.*
+     *
+     *     package.Class2.method1
+     *     package.Class2.method2(java.util.String)
+     *     package.Class2.&lt;init&gt;
+     *
+     *     package.Class3.&lt;init&gt;(int)
+     *     package.Class3.&lt;init&gt;(double)
+     * </pre>
+     * <p>
+     * If set to <code>null</code>, all method/constructor calls are permitted.
+     * <p>
+     * By default, {@link Whitelist#DEFAULT_WHITELIST_DEF} is used.
+     */
     public Task permittedCalls(String permittedCalls) {
         this.permittedCalls = permittedCalls;
         return this;
