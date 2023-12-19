@@ -20,8 +20,7 @@ import static ch.trick17.jtt.sandbox.InputMode.CLOSED;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.*;
 import static java.util.Collections.emptyList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SandboxTest {
 
@@ -174,6 +173,7 @@ public class SandboxTest {
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.ILLEGAL_OPERATION, result.kind());
         assertEquals(SecurityException.class, result.exception().getClass());
+        assertTrue(result.exception().getMessage().contains("java.util.Scanner(java.nio.file.Path)"));
     }
 
     public static class WhitelistPermittedTestCode {

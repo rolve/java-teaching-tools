@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static java.lang.String.join;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static javassist.bytecode.SignatureAttribute.toMethodSignature;
@@ -116,7 +117,9 @@ public class RestrictingClassLoader extends ClassLoader {
                             .toList();
                     if (!restrictedClasses.contains(cls) &&
                         !permittedCalls.methodPermitted(cls, method, paramTypes)) {
-                        m.replace(createThrows(cls, method));
+                        var params = "(" + join(",", paramTypes) + ")";
+                        m.replace(createThrows(
+                                "Illegal call: " + cls + "." + method + params));
                     }
                 } catch (BadBytecode e) {
                     throw new CannotCompileException(e);
@@ -132,21 +135,23 @@ public class RestrictingClassLoader extends ClassLoader {
                             .toList();
                     if (!restrictedClasses.contains(cls) &&
                         !permittedCalls.constructorPermitted(cls, paramTypes)) {
-                        e.replace(createThrows(cls, "<init>"));
+                        var params = "(" + join(",", paramTypes) + ")";
+                        e.replace(createThrows(
+                                "Illegal constructor call: new " + cls + params));
                     }
                 } catch (BadBytecode bb) {
                     throw new CannotCompileException(bb);
                 }
             }
 
-            private String createThrows(String className, String methodName) {
+            private String createThrows(String message) {
                 return """
                         {
                             if (true) { // weirdly, doesn't work without this
-                                throw new SecurityException("Illegal call: %s");
+                                throw new SecurityException("%s");
                             }
                             $_ = $proceed($$);
-                        }""".formatted(className + "." + methodName);
+                        }""".formatted(message);
             }
         };
         try {
