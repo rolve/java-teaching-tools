@@ -5,6 +5,8 @@ import java.util.List;
 public interface Whitelist {
 
     String DEFAULT_WHITELIST_DEF = """
+                java.lang.Object.*
+                
                 java.lang.Byte.*
                 java.lang.Short.*
                 java.lang.Integer.*
@@ -15,9 +17,11 @@ public interface Whitelist {
                 java.lang.Character.*
                 
                 java.lang.String.*
+                java.lang.StringBuilder.*
                 java.lang.Math.*
                 java.lang.Iterable.*
                 java.lang.Comparable.*
+                java.lang.Runnable.*
                 
                 java.lang.Throwable.*
                 java.lang.Error.*
@@ -29,8 +33,30 @@ public interface Whitelist {
                 java.lang.System.currentTimeMillis
                 java.lang.System.nanoTime
                 
-                java.util.Random.*
                 java.util.Objects.*
+                java.util.Random.*
+                java.util.Arrays.*
+                java.util.Collections.*
+                java.util.Comparator.*
+                
+                java.util.Collection.*
+                java.util.Iterator.*
+                java.util.List.*
+                java.util.ArrayList.*
+                java.util.LinkedList.*
+                java.util.Set.*
+                java.util.HashSet.*
+                java.util.LinkedHashSet.*
+                java.util.TreeSet.*
+                java.util.Map.*
+                java.util.HashMap.*
+                java.util.LinkedHashMap.*
+                java.util.TreeMap.*
+                
+                java.util.Optional.*
+                java.util.OptionalInt.*
+                java.util.OptionalLong.*
+                java.util.OptionalDouble.*
                 
                 java.util.Scanner.<init>(java.lang.Readable)
                 java.util.Scanner.<init>(java.io.InputStream)
@@ -73,27 +99,49 @@ public interface Whitelist {
                 java.util.Scanner.tokens
                 java.util.Scanner.findAll
                 
-                java.util.Collection.*
-                java.util.Iterator.*
-                java.util.List.*
-                java.util.ArrayList.*
-                java.util.LinkedList.*
-                java.util.Set.*
-                java.util.HashSet.*
-                java.util.LinkedHashSet.*
-                java.util.TreeSet.*
-                java.util.Map.*
-                java.util.HashMap.*
-                java.util.LinkedHashMap.*
-                java.util.TreeMap.*
-                
-                java.util.Arrays.*
-                java.util.Collections.*
-                
-                java.util.Optional.*
-                java.util.OptionalInt.*
-                java.util.OptionalLong.*
-                java.util.OptionalDouble.*
+                java.util.function.BiConsumer.*
+                java.util.function.BiFunction.*
+                java.util.function.BinaryOperator.*
+                java.util.function.BiPredicate.*
+                java.util.function.BooleanSupplier.*
+                java.util.function.Consumer.*
+                java.util.function.DoubleBinaryOperator.*
+                java.util.function.DoubleConsumer.*
+                java.util.function.DoubleFunction.*
+                java.util.function.DoublePredicate.*
+                java.util.function.DoubleSupplier.*
+                java.util.function.DoubleToIntFunction.*
+                java.util.function.DoubleToLongFunction.*
+                java.util.function.DoubleUnaryOperator.*
+                java.util.function.Function.*
+                java.util.function.IntBinaryOperator.*
+                java.util.function.IntConsumer.*
+                java.util.function.IntFunction.*
+                java.util.function.IntPredicate.*
+                java.util.function.IntSupplier.*
+                java.util.function.IntToDoubleFunction.*
+                java.util.function.IntToLongFunction.*
+                java.util.function.IntUnaryOperator.*
+                java.util.function.LongBinaryOperator.*
+                java.util.function.LongConsumer.*
+                java.util.function.LongFunction.*
+                java.util.function.LongPredicate.*
+                java.util.function.LongSupplier.*
+                java.util.function.LongToDoubleFunction.*
+                java.util.function.LongToIntFunction.*
+                java.util.function.LongUnaryOperator.*
+                java.util.function.ObjDoubleConsumer.*
+                java.util.function.ObjIntConsumer.*
+                java.util.function.ObjLongConsumer.*
+                java.util.function.Predicate.*
+                java.util.function.Supplier.*
+                java.util.function.ToDoubleBiFunction.*
+                java.util.function.ToDoubleFunction.*
+                java.util.function.ToIntBiFunction.*
+                java.util.function.ToIntFunction.*
+                java.util.function.ToLongBiFunction.*
+                java.util.function.ToLongFunction.*
+                java.util.function.UnaryOperator.*
                 
                 java.util.stream.Stream.*
                 java.util.stream.IntStream.*
@@ -105,13 +153,19 @@ public interface Whitelist {
                 java.util.regex.Matcher.*
                 
                 java.io.IOException.*
+                java.io.UncheckedIOException.*
+                java.io.Closeable.*
                 java.io.InputStream.*
                 java.io.OutputStream.*
-                java.io.BufferedReader.*
-                java.io.BufferedWriter.*
                 java.io.PrintStream.print
                 java.io.PrintStream.printf
                 java.io.PrintStream.println
+                java.io.Reader.*
+                java.io.Writer.*
+                java.io.InputStreamReader.*
+                java.io.OutputStreamWriter.*
+                java.io.BufferedReader.*
+                java.io.BufferedWriter.*
                 
                 java.nio.file.Path.of
                 java.nio.file.Path.isAbsolute

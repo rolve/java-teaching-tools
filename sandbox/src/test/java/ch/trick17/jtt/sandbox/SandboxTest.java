@@ -179,8 +179,10 @@ public class SandboxTest {
     public static class WhitelistPermittedTestCode {
         public static void run() {
             // all of the following are permitted by the default whitelist,
-            // including the constructor of Scanner that takes a String
-            var scanner = new Scanner("Hello 2 World");
+            // including Path operations (that don't access the file system)
+            // and the constructor of Scanner that uses a String as the source
+            var path = Path.of("Hello/World");
+            var scanner = new Scanner("Hello " + 2 + " " + path.getFileName());
             System.out.println(scanner.next());
             System.out.println(Math.abs(scanner.nextInt()));
             System.out.println(new Random().nextInt());
