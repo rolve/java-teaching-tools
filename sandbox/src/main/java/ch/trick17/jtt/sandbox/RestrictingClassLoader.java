@@ -22,10 +22,9 @@ import java.util.Set;
 
 import static java.lang.String.join;
 import static java.util.Arrays.stream;
-import static java.util.Objects.requireNonNull;
 import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
-public class RestrictingClassLoader extends ClassLoader {
+public class RestrictingClassLoader extends URLClassLoader {
 
     private final ClassPool pool = new ClassPool(true);
     private final Whitelist permittedCalls;
@@ -33,8 +32,9 @@ public class RestrictingClassLoader extends ClassLoader {
 
     public RestrictingClassLoader(List<Path> restrictedCode,
                                   List<Path> unrestrictedCode,
-                                  Whitelist permittedCalls) throws IOException {
-        super(createParent(unrestrictedCode));
+                                  Whitelist permittedCalls,
+                                  ClassLoader parent) throws IOException {
+        super(toUrls(unrestrictedCode), parent);
         try {
             for (var path : restrictedCode) {
                 pool.appendClassPath(path.toString());
@@ -60,8 +60,8 @@ public class RestrictingClassLoader extends ClassLoader {
         }
     }
 
-    private static ClassLoader createParent(List<Path> unrestrictedCode) {
-        var urls = unrestrictedCode.stream()
+    private static URL[] toUrls(List<Path> paths) {
+        return paths.stream()
                 .map(path -> {
                     try {
                         return path.toUri().toURL();
@@ -70,36 +70,14 @@ public class RestrictingClassLoader extends ClassLoader {
                     }
                 })
                 .toArray(URL[]::new);
-        return new URLClassLoader(urls, getPlatformClassLoader());
-    }
-
-    @Override
-    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        // if the class is in the restricted set, load it with this class loader
-        if (restrictedClasses.contains(name)) {
-            return findClass(name);
-        }
-
-        // otherwise, use standard class loading delegation...
-        var cls = super.loadClass(name, resolve);
-        if (cls.getClassLoader() == null) {
-            return cls;
-        }
-
-        // ... but, to ensure that classes referred to by the loaded class are
-        // also loaded by this class loader (and not the parent), reload the
-        // class with this class loader
-        var classFile = "/" + name.replace('.', '/') + ".class";
-        try (var in = cls.getResourceAsStream(classFile)) {
-            var bytecode = requireNonNull(in).readAllBytes();
-            return defineClass(name, bytecode, 0, bytecode.length);
-        } catch (NullPointerException | IOException e) {
-            throw new AssertionError(name, e);
-        }
     }
 
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
+        if (!restrictedClasses.contains(name)) {
+            return super.findClass(name);
+        }
+
         CtClass cls;
         try {
             cls = pool.get(name);

@@ -155,7 +155,7 @@ public class Sandbox {
             ClassLoader loader;
             if (permittedCalls != null) {
                 loader = new RestrictingClassLoader(restrictedCode,
-                        unrestrictedCode, permittedCalls);
+                        unrestrictedCode, permittedCalls, getPlatformClassLoader());
             } else {
                 loader = new URLClassLoader(
                         toUrls(restrictedCode, unrestrictedCode),
