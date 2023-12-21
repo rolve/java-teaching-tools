@@ -14,7 +14,6 @@
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
     <modules>
-        <module>code-tags</module>
         <module>grader</module>
         <module>sandbox</module>
         <module>junit-extensions</module>
