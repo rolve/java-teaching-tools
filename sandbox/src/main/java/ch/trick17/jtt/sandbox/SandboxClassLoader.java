@@ -85,11 +85,13 @@ public class SandboxClassLoader extends URLClassLoader {
             throw new ClassNotFoundException("class not found in pool", e);
         }
         try {
-            for (var constructor : cls.getDeclaredConstructors()) {
-                constructor.instrument(new RestrictionsAdder());
-            }
-            for (var method : cls.getDeclaredMethods()) {
-                method.instrument(new RestrictionsAdder());
+            if (permittedCalls != null) {
+                for (var constructor : cls.getDeclaredConstructors()) {
+                    constructor.instrument(new RestrictionsAdder());
+                }
+                for (var method : cls.getDeclaredMethods()) {
+                    method.instrument(new RestrictionsAdder());
+                }
             }
             var bytecode = cls.toBytecode();
             return defineClass(name, bytecode, 0, bytecode.length);

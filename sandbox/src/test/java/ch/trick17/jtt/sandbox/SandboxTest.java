@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -162,7 +163,7 @@ public class SandboxTest {
     @Test
     public void testRestrictionsPermitted() {
         var sandbox = new Sandbox();
-        var result = sandbox.run(code(), emptyList(), PermittedTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), WhitelistedTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.NORMAL, result.kind());
     }
@@ -170,7 +171,7 @@ public class SandboxTest {
     @Test
     public void testRestrictionsForbidden() {
         var sandbox = new Sandbox();
-        var result = sandbox.run(code(), emptyList(), ForbiddenTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), IOTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.ILLEGAL_OPERATION, result.kind());
         assertEquals(SecurityException.class, result.exception().getClass());
@@ -187,7 +188,29 @@ public class SandboxTest {
         assertTrue(result.exception().getMessage().contains("java.nio.file.Files.list"));
     }
 
-    public static class PermittedTestCode {
+    @Test
+    public void testCustomRestrictions() {
+        var permitted = Whitelist.parse(Whitelist.DEFAULT_WHITELIST_DEF
+                                        + "java.util.Scanner.<init>(java.nio.file.Path)");
+        var sandbox = new Sandbox().permittedCalls(permitted);
+        var result = sandbox.run(code(), emptyList(), IOTestCode.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.EXCEPTION, result.kind());
+        assertEquals(NoSuchFileException.class, result.exception().getClass());
+        assertTrue(result.exception().getMessage().contains("test.txt"));
+    }
+
+    @Test
+    public void testNoRestrictions() {
+        var sandbox = new Sandbox().permittedCalls(null);
+        var result = sandbox.run(code(), emptyList(), IOTestCode.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.EXCEPTION, result.kind());
+        assertEquals(NoSuchFileException.class, result.exception().getClass());
+        assertTrue(result.exception().getMessage().contains("test.txt"));
+    }
+
+    public static class WhitelistedTestCode {
         public static void run() {
             // all of the following are permitted by the default whitelist,
             // including Path operations (that don't access the file system)
@@ -200,7 +223,7 @@ public class SandboxTest {
         }
     }
 
-    public static class ForbiddenTestCode {
+    public static class IOTestCode {
         public static void run() throws IOException {
             // this constructor is forbidden, as it allows reading from a file:
             var scanner = new Scanner(Path.of("test.txt"));
