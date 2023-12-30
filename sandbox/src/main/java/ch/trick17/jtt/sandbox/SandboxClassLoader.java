@@ -1,9 +1,6 @@
 package ch.trick17.jtt.sandbox;
 
-import javassist.CannotCompileException;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.NotFoundException;
+import javassist.*;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.SignatureAttribute.Type;
 import javassist.expr.ExprEditor;
@@ -141,12 +138,11 @@ public class SandboxClassLoader extends URLClassLoader {
 
         private String createThrows(String message) {
             return """
-                    {
-                        if (true) { // weirdly, doesn't work without this
-                            throw new SecurityException("%s");
-                        }
-                        $_ = $proceed($$);
-                    }""".formatted(message);
+                    if (true) { // weirdly, doesn't work without this
+                        throw new SecurityException("%s");
+                    }
+                    $_ = $proceed($$);
+                    """.formatted(message);
         }
     }
 }

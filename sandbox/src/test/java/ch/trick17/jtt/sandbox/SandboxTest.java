@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -159,24 +160,34 @@ public class SandboxTest {
     }
 
     @Test
-    public void testWhitelistPermitted() {
+    public void testRestrictionsPermitted() {
         var sandbox = new Sandbox();
-        var result = sandbox.run(code(), emptyList(), WhitelistPermittedTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), PermittedTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.NORMAL, result.kind());
     }
 
     @Test
-    public void testWhitelistForbidden() {
+    public void testRestrictionsForbidden() {
         var sandbox = new Sandbox();
-        var result = sandbox.run(code(), emptyList(), WhitelistForbiddenTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), ForbiddenTestCode.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.ILLEGAL_OPERATION, result.kind());
         assertEquals(SecurityException.class, result.exception().getClass());
         assertTrue(result.exception().getMessage().contains("java.util.Scanner(java.nio.file.Path)"));
     }
 
-    public static class WhitelistPermittedTestCode {
+    @Test
+    public void testRestrictionsTryCatchReturn() {
+        var sandbox = new Sandbox();
+        var result = sandbox.run(code(), emptyList(), TryCatchReturnTestCode.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.ILLEGAL_OPERATION, result.kind(), result.exception().toString());
+        assertEquals(SecurityException.class, result.exception().getClass());
+        assertTrue(result.exception().getMessage().contains("java.nio.file.Files.list"));
+    }
+
+    public static class PermittedTestCode {
         public static void run() {
             // all of the following are permitted by the default whitelist,
             // including Path operations (that don't access the file system)
@@ -189,11 +200,24 @@ public class SandboxTest {
         }
     }
 
-    public static class WhitelistForbiddenTestCode {
+    public static class ForbiddenTestCode {
         public static void run() throws IOException {
             // this constructor is forbidden, as it allows reading from a file:
             var scanner = new Scanner(Path.of("test.txt"));
             System.out.println(scanner.next());
+        }
+    }
+
+    public static class TryCatchReturnTestCode {
+        public static int run() {
+            // this construct leads to a weird "Illegal exception table" error
+            // if not for the "if (true)" workaround in SandboxClassLoader
+            try {
+                return (int) Files.list(Path.of(".")).count(); // not permitted
+            } catch (IOException e) {
+                e.printStackTrace();
+                return 0;
+            }
         }
     }
 
