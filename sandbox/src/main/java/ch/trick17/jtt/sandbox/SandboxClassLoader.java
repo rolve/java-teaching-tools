@@ -86,11 +86,8 @@ public class SandboxClassLoader extends URLClassLoader {
         }
         try {
             if (permittedCalls != null) {
-                for (var constructor : cls.getDeclaredConstructors()) {
-                    constructor.instrument(new RestrictionsAdder());
-                }
-                for (var method : cls.getDeclaredMethods()) {
-                    method.instrument(new RestrictionsAdder());
+                for (var b : cls.getDeclaredBehaviors()) {
+                    b.instrument(new RestrictionsAdder());
                 }
             }
             var bytecode = cls.toBytecode();
