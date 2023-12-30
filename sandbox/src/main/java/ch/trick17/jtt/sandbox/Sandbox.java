@@ -7,12 +7,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -26,11 +22,16 @@ import static ch.trick17.jtt.sandbox.OutputMode.*;
 import static java.io.InputStream.nullInputStream;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.ClassLoader.getPlatformClassLoader;
-import static java.lang.Thread.currentThread;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+/**
+ * A sandbox for running code in isolation. Isolated code is (re)loaded using a
+ * separate class loader, so its changes to static state are not visible to the
+ * caller. In addition, the code can be run with restricted permissions, with a
+ * timeout, and/or with custom standard input/output handling.
+ */
 public class Sandbox {
 
     private static volatile SandboxInputStream stdIn;
@@ -42,7 +43,6 @@ public class Sandbox {
     private InputMode stdInMode = InputMode.NORMAL;
     private OutputMode stdOutMode = NORMAL;
     private OutputMode stdErrMode = NORMAL;
-    private boolean staticStateIsolation = true;
 
     /**
      * Sets the list of permitted method/constructor calls for the sandbox. If
@@ -93,21 +93,6 @@ public class Sandbox {
     }
 
     /**
-     * Enables or disables isolated execution. If enabled, the code is executed
-     * with freshly loaded classes, so that no interference via static fields is
-     * possible. This does not apply to system classes loaded by a parent class
-     * loader (such as {@link java.util.Random}). By default, this isolation is
-     * enabled.
-     * <p>
-     * Note that if the whitelist of permitted method calls is non-null, the
-     * isolation is always enabled, regardless of this setting.
-     */
-    public Sandbox staticStateIsolation(boolean staticStateIsolation) {
-        this.staticStateIsolation = staticStateIsolation;
-        return this;
-    }
-
-    /**
      * Runs the specified static (!) method with the given parameters in the
      * sandbox. The return value of the method is returned, but be aware that it
      * could be an object of a class loaded by a different class loader (if
@@ -129,44 +114,33 @@ public class Sandbox {
     /**
      * Runs the specified static (!) method with the given parameters in the
      * sandbox. The return value of the method is returned, but be aware that it
-     * could be an object of a class loaded by a different class loader (if
-     * static state isolation is enabled), making it unusable without
-     * reflection. (This is not the case for classes loaded by the bootstrap
-     * class loader, like String).
+     * could be an object of a class loaded by a different class loader, making
+     * it unusable without reflection. (This is not the case for classes loaded
+     * by the bootstrap class loader, like String).
      */
     public <T> SandboxResult<T> run(List<Path> restrictedCode,
                                     List<Path> unrestrictedCode,
                                     String className, String methodName,
                                     List<Class<?>> paramTypes, List<?> args,
                                     Class<T> resultType) {
-        Callable<T> action = () -> {
-            var cls = currentThread().getContextClassLoader().loadClass(className);
+        Callable<T> isolated = () -> {
+            var loader = new SandboxClassLoader(restrictedCode,
+                    unrestrictedCode, permittedCalls, getPlatformClassLoader());
+            var cls = loader.loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
+            var runner = new CustomCxtClassLoaderRunner(loader);
             try {
-                return resultType.cast(method.invoke(null, args.toArray()));
+                return runner.call(() -> resultType.cast(method.invoke(null, args.toArray())));
             } catch (InvocationTargetException e) {
                 throw asException(e.getTargetException());
             }
         };
 
-        Callable<T> timed = timeout != null ? () -> runWithTimeout(action) : action;
-
-        Callable<T> isolatedRestricted = staticStateIsolation || permittedCalls != null ? () -> {
-            ClassLoader loader;
-            if (permittedCalls != null) {
-                loader = new SandboxClassLoader(restrictedCode,
-                        unrestrictedCode, permittedCalls, getPlatformClassLoader());
-            } else {
-                loader = new URLClassLoader(
-                        toUrls(restrictedCode, unrestrictedCode),
-                        getPlatformClassLoader());
-            }
-            return new CustomCxtClassLoaderRunner(loader).call(timed);
-        } : timed;
+        Callable<T> timed = timeout != null ? () -> runWithTimeout(isolated) : isolated;
 
         Supplier<SandboxResult<T>> asResult = () -> {
             try {
-                return SandboxResult.normal(isolatedRestricted.call());
+                return SandboxResult.normal(timed.call());
             } catch (TimeoutException e) {
                 return SandboxResult.timeout();
             } catch (OutOfMemoryError e) {
@@ -257,21 +231,6 @@ public class Sandbox {
         }
     }
 
-    @SafeVarargs
-    private static URL[] toUrls(List<Path>... code) {
-        try {
-            var urls = new ArrayList<URL>();
-            for (var list : code) {
-                for (var path : list) {
-                    urls.add(path.toUri().toURL());
-                }
-            }
-            return urls.toArray(URL[]::new);
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException(e);
-        }
-    }
-
     private static void ensureStreamsInstalled() {
         if (stdIn == null) {
             synchronized (Sandbox.class) {
@@ -313,7 +272,8 @@ public class Sandbox {
                 try {
                     Thread.sleep(waitTime);
                     waitTime /= 2;
-                } catch (InterruptedException ignored) {}
+                } catch (InterruptedException ignored) {
+                }
             }
         } while (thread.isAlive());
     }
