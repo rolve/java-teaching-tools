@@ -154,7 +154,7 @@ public class Sandbox {
         Callable<T> isolatedRestricted = staticStateIsolation || permittedCalls != null ? () -> {
             ClassLoader loader;
             if (permittedCalls != null) {
-                loader = new RestrictingClassLoader(restrictedCode,
+                loader = new SandboxClassLoader(restrictedCode,
                         unrestrictedCode, permittedCalls, getPlatformClassLoader());
             } else {
                 loader = new URLClassLoader(

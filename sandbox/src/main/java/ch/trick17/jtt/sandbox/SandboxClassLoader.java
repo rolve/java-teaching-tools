@@ -24,16 +24,19 @@ import static java.lang.String.join;
 import static java.util.Arrays.stream;
 import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
-public class RestrictingClassLoader extends URLClassLoader {
+/**
+ *
+ */
+public class SandboxClassLoader extends URLClassLoader {
 
     private final ClassPool pool = new ClassPool(true);
     private final Whitelist permittedCalls;
     private final Set<String> restrictedClasses;
 
-    public RestrictingClassLoader(List<Path> restrictedCode,
-                                  List<Path> unrestrictedCode,
-                                  Whitelist permittedCalls,
-                                  ClassLoader parent) throws IOException {
+    public SandboxClassLoader(List<Path> restrictedCode,
+                              List<Path> unrestrictedCode,
+                              Whitelist permittedCalls,
+                              ClassLoader parent) throws IOException {
         super(toUrls(unrestrictedCode), parent);
         try {
             for (var path : restrictedCode) {
@@ -84,65 +87,66 @@ public class RestrictingClassLoader extends URLClassLoader {
         } catch (NotFoundException e) {
             throw new ClassNotFoundException("class not found in pool", e);
         }
-        var editor = new ExprEditor() {
-            public void edit(MethodCall m) throws CannotCompileException {
-                try {
-                    var cls = m.getClassName();
-                    var method = m.getMethodName();
-                    var sig = toMethodSignature(m.getSignature());
-                    var paramTypes = stream(sig.getParameterTypes())
-                            .map(Type::toString)
-                            .toList();
-                    if (!restrictedClasses.contains(cls) &&
-                        !permittedCalls.methodPermitted(cls, method, paramTypes)) {
-                        var params = "(" + join(",", paramTypes) + ")";
-                        m.replace(createThrows(
-                                "Illegal call: " + cls + "." + method + params));
-                    }
-                } catch (BadBytecode e) {
-                    throw new CannotCompileException(e);
-                }
-            }
-
-            public void edit(NewExpr e) throws CannotCompileException {
-                try {
-                    var cls = e.getClassName();
-                    var sig = toMethodSignature(e.getSignature());
-                    var paramTypes = stream(sig.getParameterTypes())
-                            .map(Type::toString)
-                            .toList();
-                    if (!restrictedClasses.contains(cls) &&
-                        !permittedCalls.constructorPermitted(cls, paramTypes)) {
-                        var params = "(" + join(",", paramTypes) + ")";
-                        e.replace(createThrows(
-                                "Illegal constructor call: new " + cls + params));
-                    }
-                } catch (BadBytecode bb) {
-                    throw new CannotCompileException(bb);
-                }
-            }
-
-            private String createThrows(String message) {
-                return """
-                        {
-                            if (true) { // weirdly, doesn't work without this
-                                throw new SecurityException("%s");
-                            }
-                            $_ = $proceed($$);
-                        }""".formatted(message);
-            }
-        };
         try {
             for (var constructor : cls.getDeclaredConstructors()) {
-                constructor.instrument(editor);
+                constructor.instrument(new RestrictionsAdder());
             }
             for (var method : cls.getDeclaredMethods()) {
-                method.instrument(editor);
+                method.instrument(new RestrictionsAdder());
             }
             var bytecode = cls.toBytecode();
             return defineClass(name, bytecode, 0, bytecode.length);
         } catch (CannotCompileException | IOException e) {
             throw new AssertionError(e);
+        }
+    }
+
+    private class RestrictionsAdder extends ExprEditor {
+        public void edit(MethodCall m) throws CannotCompileException {
+            try {
+                var cls = m.getClassName();
+                var method = m.getMethodName();
+                var sig = toMethodSignature(m.getSignature());
+                var paramTypes = stream(sig.getParameterTypes())
+                        .map(Type::toString)
+                        .toList();
+                if (!restrictedClasses.contains(cls) &&
+                    !permittedCalls.methodPermitted(cls, method, paramTypes)) {
+                    var params = "(" + join(",", paramTypes) + ")";
+                    m.replace(createThrows(
+                            "Illegal call: " + cls + "." + method + params));
+                }
+            } catch (BadBytecode e) {
+                throw new CannotCompileException(e);
+            }
+        }
+
+        public void edit(NewExpr e) throws CannotCompileException {
+            try {
+                var cls = e.getClassName();
+                var sig = toMethodSignature(e.getSignature());
+                var paramTypes = stream(sig.getParameterTypes())
+                        .map(Type::toString)
+                        .toList();
+                if (!restrictedClasses.contains(cls) &&
+                    !permittedCalls.constructorPermitted(cls, paramTypes)) {
+                    var params = "(" + join(",", paramTypes) + ")";
+                    e.replace(createThrows(
+                            "Illegal constructor call: new " + cls + params));
+                }
+            } catch (BadBytecode bb) {
+                throw new CannotCompileException(bb);
+            }
+        }
+
+        private String createThrows(String message) {
+            return """
+                    {
+                        if (true) { // weirdly, doesn't work without this
+                            throw new SecurityException("%s");
+                        }
+                        $_ = $proceed($$);
+                    }""".formatted(message);
         }
     }
 }
