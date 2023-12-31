@@ -2,7 +2,11 @@ package ch.trick17.jtt.sandbox;
 
 import javassist.*;
 import javassist.bytecode.BadBytecode;
+import javassist.bytecode.CodeIterator;
 import javassist.bytecode.SignatureAttribute.Type;
+import javassist.bytecode.analysis.ControlFlow;
+import javassist.bytecode.analysis.ControlFlow.Block;
+import javassist.compiler.Javac;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
 import javassist.expr.NewExpr;
@@ -13,12 +17,14 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static java.lang.String.join;
+import static java.lang.management.ManagementFactory.getRuntimeMXBean;
 import static java.util.Arrays.stream;
+import static java.util.Comparator.comparing;
+import static javassist.Modifier.isStatic;
+import static javassist.bytecode.Opcode.GOTO;
 import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
 /**
@@ -28,13 +34,17 @@ public class SandboxClassLoader extends URLClassLoader {
 
     private final ClassPool pool = new ClassPool(true);
     private final Whitelist permittedCalls;
+    private final boolean makeInterruptible;
+
     private final Set<String> restrictedClasses;
 
     public SandboxClassLoader(List<Path> restrictedCode,
                               List<Path> unrestrictedCode,
                               Whitelist permittedCalls,
+                              boolean makeInterruptible,
                               ClassLoader parent) throws IOException {
         super(toUrls(unrestrictedCode), parent);
+        this.makeInterruptible = makeInterruptible;
         try {
             for (var path : restrictedCode) {
                 pool.appendClassPath(path.toString());
@@ -85,14 +95,27 @@ public class SandboxClassLoader extends URLClassLoader {
             throw new ClassNotFoundException("class not found in pool", e);
         }
         try {
-            if (permittedCalls != null) {
-                for (var b : cls.getDeclaredBehaviors()) {
-                    b.instrument(new RestrictionsAdder());
+            for (var behavior : cls.getDeclaredBehaviors()) {
+                if (makeInterruptible) {
+                    makeInterruptible(behavior);
+                }
+                if (permittedCalls != null) {
+                    behavior.instrument(new RestrictionsAdder());
                 }
             }
             var bytecode = cls.toBytecode();
+
+            if (isDebugged()) {
+                var classFile = Path.of(cls.getURL().toURI());
+                var instrName = classFile.getFileName().toString()
+                        .replace(".class", "-instrumented.class");
+                var instrClassFile = classFile.resolveSibling(instrName);
+                Files.write(instrClassFile, bytecode);
+                instrClassFile.toFile().deleteOnExit();
+            }
+
             return defineClass(name, bytecode, 0, bytecode.length);
-        } catch (CannotCompileException | IOException e) {
+        } catch (Exception e) {
             throw new AssertionError(e);
         }
     }
@@ -143,5 +166,102 @@ public class SandboxClassLoader extends URLClassLoader {
                     $_ = $proceed($$);
                     """.formatted(message);
         }
+    }
+
+    private void makeInterruptible(CtBehavior behavior) throws Exception {
+        // Inserts a check for Thread.interrupted() at the end of each loop.
+        // Loops have no direct representation in bytecode, but we can use
+        // the control flow graph to find basic blocks with back edges.
+
+        // In case of multiple loops, we need to recreate the control flow graph
+        // after each insertion, because the start positions and even the length
+        // of the blocks may change (e.g. due to a goto becoming a goto_w).
+        var processedBlocks = 0;
+        while (true) { // condition can only be checked once we have the blocks
+            var cfg = new ControlFlow(behavior.getDeclaringClass(), behavior.getMethodInfo());
+            var backEdgeBlocks = findBlocksWithBackEdges(cfg);
+
+            if (processedBlocks == backEdgeBlocks.size()) {
+                break;
+            }
+
+            var block = backEdgeBlocks.get(processedBlocks++);
+            var firstInstrIndex = block.position();
+            var iterator = behavior.getMethodInfo().getCodeAttribute().iterator();
+            iterator.move(firstInstrIndex);
+
+            // find last instruction in block
+            var prev = iterator.lookAhead();
+            while (iterator.lookAhead() < firstInstrIndex + block.length()) {
+                prev = iterator.lookAhead();
+                iterator.next();
+            }
+            iterator.move(prev);
+
+            insertInterruptedCheck(behavior, iterator);
+        }
+    }
+
+    private List<Block> findBlocksWithBackEdges(ControlFlow cfg) {
+        var entry = cfg.basicBlocks()[0];
+        var visited = new HashSet<Block>();
+        var stack = new ArrayDeque<Block>();
+        var result = new HashSet<Block>();
+        collectBlocksWithBackEdges(entry, visited, stack, result);
+        return result.stream()
+                .sorted(comparing(Block::position))
+                .toList();
+    }
+
+    private void collectBlocksWithBackEdges(Block block, Set<Block> visited,
+                                            Deque<Block> stack, Set<Block> result) {
+        visited.add(block);
+        stack.push(block);
+        for (int i = 0; i < block.exits(); i++) {
+            var exit = block.exit(i);
+            if (!visited.contains(exit)) {
+                collectBlocksWithBackEdges(exit, visited, stack, result);
+            } else if (stack.contains(exit)) {
+                result.add(block);
+            }
+        }
+        stack.pop();
+    }
+
+    private void insertInterruptedCheck(CtBehavior behavior, CodeIterator iterator) throws Exception {
+        // Adapted from CtBehavior.insertAt(). Cannot use the simpler insertAt()
+        // directly because it is based on line numbers, which cannot represent
+        // the end of a loop.
+        var codeAttribute = iterator.get();
+        var compiler = new Javac(behavior.getDeclaringClass());
+        compiler.recordParams(behavior.getParameterTypes(), isStatic(behavior.getModifiers()));
+        compiler.setMaxLocals(codeAttribute.getMaxLocals());
+        compiler.compileStmnt("""
+                if (Thread.interrupted()) {
+                    throw new InterruptedException();
+                }
+                """);
+        var bytecode = compiler.getBytecode();
+        codeAttribute.setMaxLocals(bytecode.getMaxLocals());
+        if (bytecode.getMaxStack() > codeAttribute.getMaxStack()) {
+            codeAttribute.setMaxStack(bytecode.getMaxStack());
+        }
+        var insertedIndex = iterator.insert(bytecode.get());
+        iterator.insert(bytecode.getExceptionTable(), insertedIndex);
+
+        // Apparently, for empty loops (e.g. "while(true);"), which correspond
+        // to a single "goto [this]" instruction, the jump offset is not
+        // updated, so we do it manually.
+        var nextIndex = iterator.next();
+        if (iterator.byteAt(nextIndex) == GOTO && iterator.s16bitAt(nextIndex + 1) == 0) {
+            iterator.write16bit(insertedIndex - nextIndex, nextIndex + 1);
+        }
+
+        behavior.getMethodInfo().rebuildStackMap(pool);
+    }
+
+    private static boolean isDebugged() {
+        var args = getRuntimeMXBean().getInputArguments();
+        return args.toString().contains("jdwp");
     }
 }

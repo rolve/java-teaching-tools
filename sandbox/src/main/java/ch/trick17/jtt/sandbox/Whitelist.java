@@ -29,9 +29,12 @@ public interface Whitelist {
                 java.lang.RuntimeException.*
                 java.lang.IllegalArgumentException.*
                 java.lang.IllegalStateException.*
+                java.lang.InterruptedException.*
                 
                 java.lang.System.currentTimeMillis
                 java.lang.System.nanoTime
+                
+                java.lang.Thread.interrupted
                 
                 java.util.Objects.*
                 java.util.Random.*

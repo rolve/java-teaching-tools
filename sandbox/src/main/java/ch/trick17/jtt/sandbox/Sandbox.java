@@ -124,8 +124,8 @@ public class Sandbox {
                                     List<Class<?>> paramTypes, List<?> args,
                                     Class<T> resultType) {
         Callable<T> isolated = () -> {
-            var loader = new SandboxClassLoader(restrictedCode,
-                    unrestrictedCode, permittedCalls, getPlatformClassLoader());
+            var loader = new SandboxClassLoader(restrictedCode, unrestrictedCode,
+                    permittedCalls, timeout != null, getPlatformClassLoader());
             var cls = loader.loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
             var runner = new CustomCxtClassLoaderRunner(loader);
@@ -204,30 +204,33 @@ public class Sandbox {
     }
 
     /**
-     * Runs the code in a different thread, so it can be killed after the
-     * timeout. This is a very hard timeout ({@link Thread#stop()}) that should
-     * be able to handle pretty much anything.
+     * Runs the code in a different thread, so it can be "killed" after the
+     * timeout. Killing the thread works by simply interrupting it. The bytecode
+     * instrumentation performed by the SandboxClassLoader ensures that the
+     * sandboxed code actually reacts to the interruption.
      */
     private <V> V runWithTimeout(Callable<V> action) throws Exception {
         var task = new FutureTask<>(action);
         var thread = new Thread(task);
-        // we should be able to kill the thread (see below), but just in
-        // case, if everything else fails, the thread is set to "daemon", so
-        // that it is finally killed when the JVM exists:
+        // we should be able to kill the thread, but just in case, the thread is
+        // set to "daemon", so that it does not prevent the JVM from exiting.
         thread.setDaemon(true);
         thread.start();
 
         while (true) {
             try {
-                return task.get(MILLISECONDS.convert(timeout), MILLISECONDS);
-            } catch (InterruptedException e) {
-                // ignore, try again
-            } catch (ExecutionException e) {
-                throw asException(e.getCause());
-            } catch (TimeoutException e) {
-                kill(thread);
-                throw e;
-            }
+                try {
+                    return task.get(MILLISECONDS.convert(timeout), MILLISECONDS);
+                } catch (ExecutionException e) {
+                    throw asException(e.getCause());
+                } catch (TimeoutException e) {
+                    while (thread.isAlive()) {
+                        thread.interrupt();
+                        MILLISECONDS.sleep(50);
+                    }
+                    throw e;
+                }
+            } catch (InterruptedException ignored) {}
         }
     }
 
@@ -256,25 +259,5 @@ public class Sandbox {
         } else { // Throwable or weird subclass of it...
             throw new AssertionError(t);
         }
-    }
-
-    /**
-     * Uses the infamous {@link Thread#stop()} method to kill the thread. And,
-     * just in case someone tries to catch the thrown {@link ThreadDeath}, more
-     * of them are thrown, faster and faster.
-     */
-    @SuppressWarnings("deprecation")
-    private void kill(Thread thread) {
-        int waitTime = 100;
-        do {
-            thread.stop();
-            if (waitTime > 0) {
-                try {
-                    Thread.sleep(waitTime);
-                    waitTime /= 2;
-                } catch (InterruptedException ignored) {
-                }
-            }
-        } while (thread.isAlive());
     }
 }

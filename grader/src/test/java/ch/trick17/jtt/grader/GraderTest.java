@@ -318,9 +318,9 @@ public class GraderTest {
     }
 
     @Test
-    public void testCatchThreadDeath() throws IOException {
+    public void testCatchInterruptedException() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3));
-        grader.gradeOnly("0", "11"); // contains infinite loop plus catch(ThreadDeath)
+        grader.gradeOnly("0", "11"); // contains infinite loop plus catch(InterruptedException)
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(

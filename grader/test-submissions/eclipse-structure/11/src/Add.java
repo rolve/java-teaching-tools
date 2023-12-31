@@ -5,7 +5,10 @@ public class Add {
             try {
                 i++;
                 j--;
-            } catch (ThreadDeath e) {
+                if (Math.random() < Double.MIN_VALUE) {
+                    throw new InterruptedException();
+                }
+            } catch (InterruptedException e) {
                 // happily ignore
             }
         }

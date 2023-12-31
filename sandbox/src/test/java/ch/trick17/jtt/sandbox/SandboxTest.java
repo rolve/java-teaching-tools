@@ -52,7 +52,7 @@ public class SandboxTest {
     @Test
     public void testInputModeNormal() {
         var sandbox = new Sandbox().stdInMode(InputMode.NORMAL);
-        var result = sandbox.run(code(), emptyList(), InputTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Input.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.NORMAL, result.kind());
         assertEquals("Hello", result.value());
@@ -61,7 +61,7 @@ public class SandboxTest {
     @Test
     public void testInputModeEmpty() {
         var sandbox = new Sandbox().stdInMode(EMPTY);
-        var result = sandbox.run(code(), emptyList(), InputTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Input.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.NORMAL, result.kind());
         assertEquals("", result.value());
@@ -70,7 +70,7 @@ public class SandboxTest {
     @Test
     public void testInputModeClosed() {
         var sandbox = new Sandbox().stdInMode(CLOSED);
-        var result = sandbox.run(code(), emptyList(), InputTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Input.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.EXCEPTION, result.kind());
         assertEquals(IOException.class, result.exception().getClass());
@@ -81,7 +81,7 @@ public class SandboxTest {
         var sandbox = new Sandbox()
                 .stdOutMode(NORMAL)
                 .stdErrMode(NORMAL);
-        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertNull(result.stdOut());
@@ -95,7 +95,7 @@ public class SandboxTest {
         var sandbox = new Sandbox()
                 .stdOutMode(DISCARD)
                 .stdErrMode(DISCARD);
-        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertNull(result.stdOut());
@@ -109,7 +109,7 @@ public class SandboxTest {
         var sandbox = new Sandbox()
                 .stdOutMode(RECORD)
                 .stdErrMode(RECORD);
-        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
@@ -124,7 +124,7 @@ public class SandboxTest {
                 .timeout(Duration.ofSeconds(1))
                 .stdOutMode(RECORD)
                 .stdErrMode(RECORD);
-        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
@@ -138,7 +138,7 @@ public class SandboxTest {
         var sandbox = new Sandbox()
                 .stdOutMode(RECORD_FORWARD)
                 .stdErrMode(RECORD_FORWARD);
-        var result = sandbox.run(code(), emptyList(), OutputTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
@@ -147,13 +147,13 @@ public class SandboxTest {
         assertEquals("This goes err", errRecorder.toString());
     }
 
-    public static class InputTestCode {
+    public static class Input {
         public static String run() throws IOException {
             return new String(System.in.readNBytes(5));
         }
     }
 
-    public static class OutputTestCode {
+    public static class Output {
         public static void run() {
             System.out.print("This goes out");
             System.err.print("This goes err");
@@ -163,7 +163,7 @@ public class SandboxTest {
     @Test
     public void testRestrictionsPermitted() {
         var sandbox = new Sandbox();
-        var result = sandbox.run(code(), emptyList(), WhitelistedTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), Whitelisted.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.NORMAL, result.kind());
     }
@@ -171,7 +171,7 @@ public class SandboxTest {
     @Test
     public void testRestrictionsForbidden() {
         var sandbox = new Sandbox();
-        var result = sandbox.run(code(), emptyList(), IOTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), IO.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.ILLEGAL_OPERATION, result.kind());
         assertEquals(SecurityException.class, result.exception().getClass());
@@ -181,7 +181,7 @@ public class SandboxTest {
     @Test
     public void testRestrictionsTryCatchReturn() {
         var sandbox = new Sandbox();
-        var result = sandbox.run(code(), emptyList(), TryCatchReturnTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), TryCatchReturn.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.ILLEGAL_OPERATION, result.kind(), result.exception().toString());
         assertEquals(SecurityException.class, result.exception().getClass());
@@ -193,7 +193,7 @@ public class SandboxTest {
         var permitted = Whitelist.parse(Whitelist.DEFAULT_WHITELIST_DEF
                                         + "java.util.Scanner.<init>(java.nio.file.Path)");
         var sandbox = new Sandbox().permittedCalls(permitted);
-        var result = sandbox.run(code(), emptyList(), IOTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), IO.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.EXCEPTION, result.kind());
         assertEquals(NoSuchFileException.class, result.exception().getClass());
@@ -203,14 +203,14 @@ public class SandboxTest {
     @Test
     public void testNoRestrictions() {
         var sandbox = new Sandbox().permittedCalls(null);
-        var result = sandbox.run(code(), emptyList(), IOTestCode.class, "run",
+        var result = sandbox.run(code(), emptyList(), IO.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.EXCEPTION, result.kind());
         assertEquals(NoSuchFileException.class, result.exception().getClass());
         assertTrue(result.exception().getMessage().contains("test.txt"));
     }
 
-    public static class WhitelistedTestCode {
+    public static class Whitelisted {
         public static void run() {
             // all of the following are permitted by the default whitelist,
             // including Path operations (that don't access the file system)
@@ -223,7 +223,7 @@ public class SandboxTest {
         }
     }
 
-    public static class IOTestCode {
+    public static class IO {
         public static void run() throws IOException {
             // this constructor is forbidden, as it allows reading from a file:
             var scanner = new Scanner(Path.of("test.txt"));
@@ -231,7 +231,7 @@ public class SandboxTest {
         }
     }
 
-    public static class TryCatchReturnTestCode {
+    public static class TryCatchReturn {
         public static int run() {
             // this construct leads to a weird "Illegal exception table" error
             // if not for the "if (true)" workaround in SandboxClassLoader
@@ -240,6 +240,94 @@ public class SandboxTest {
             } catch (IOException e) {
                 e.printStackTrace();
                 return 0;
+            }
+        }
+    }
+
+    @Test
+    public void testTimeoutNormalLoop() {
+        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
+        var result = sandbox.run(code(), emptyList(), NormalLoop.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.TIMEOUT, result.kind());
+    }
+
+    @Test
+    public void testTimeoutTightLoop() {
+        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
+        var result = sandbox.run(code(), emptyList(), TightLoop.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.TIMEOUT, result.kind());
+    }
+
+    @Test
+    public void testTimeoutMultipleLoops() {
+        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
+        var result = sandbox.run(code(), emptyList(), MultipleLoops.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.TIMEOUT, result.kind());
+    }
+
+    @Test
+    public void testTimeoutNestedLoops() {
+        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
+        var result = sandbox.run(code(), emptyList(), NestedLoops.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.TIMEOUT, result.kind());
+    }
+
+    @Test
+    public void testTimeoutNestedTightLoops() {
+        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
+        var result = sandbox.run(code(), emptyList(), NestedTightLoops.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.TIMEOUT, result.kind());
+    }
+
+    public static class NormalLoop {
+        public static void run() {
+            int counter = 0;
+            while (Math.random() > 0) {
+                counter++;
+            }
+            System.out.println(counter);
+        }
+    }
+
+    public static class TightLoop {
+        public static void run() {
+            while (true);
+        }
+    }
+
+    public static class MultipleLoops {
+        public static void run() {
+            // this loop is fine
+            for (int i = 0; i < 10; i++) {
+                System.out.println(i);
+            }
+            // but not this one
+            for (int i = 9; i >= 0; i--) {
+                i++;
+            }
+        }
+    }
+
+    public static class NestedLoops {
+        public static void run() {
+            while (true) {
+                System.out.println("outer");
+                while (true) {
+                    System.out.println("inner");
+                }
+            }
+        }
+    }
+
+    public static class NestedTightLoops {
+        public static void run() {
+            while (true) {
+                while (true);
             }
         }
     }
