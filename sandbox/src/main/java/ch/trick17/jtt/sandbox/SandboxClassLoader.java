@@ -8,6 +8,7 @@ import javassist.bytecode.analysis.ControlFlow;
 import javassist.bytecode.analysis.ControlFlow.Block;
 import javassist.compiler.Javac;
 import javassist.expr.ExprEditor;
+import javassist.expr.Handler;
 import javassist.expr.MethodCall;
 import javassist.expr.NewExpr;
 
@@ -121,6 +122,7 @@ public class SandboxClassLoader extends URLClassLoader {
     }
 
     private class RestrictionsAdder extends ExprEditor {
+        @Override
         public void edit(MethodCall m) throws CannotCompileException {
             try {
                 var cls = m.getClassName();
@@ -140,6 +142,7 @@ public class SandboxClassLoader extends URLClassLoader {
             }
         }
 
+        @Override
         public void edit(NewExpr e) throws CannotCompileException {
             try {
                 var cls = e.getClassName();
@@ -200,6 +203,9 @@ public class SandboxClassLoader extends URLClassLoader {
 
             insertInterruptedCheck(behavior, iterator);
         }
+
+        // Also, need to make sure InterruptedExceptions are not swallowed
+        behavior.instrument(new RethrowAdder());
     }
 
     private List<Block> findBlocksWithBackEdges(ControlFlow cfg) {
@@ -258,6 +264,19 @@ public class SandboxClassLoader extends URLClassLoader {
         }
 
         behavior.getMethodInfo().rebuildStackMap(pool);
+    }
+
+    private static class RethrowAdder extends ExprEditor {
+        @Override
+        public void edit(Handler h) throws CannotCompileException {
+            if (!h.isFinally()) {
+                h.insertBefore("""
+                        if ($1 instanceof InterruptedException) {
+                            throw (InterruptedException) $1;
+                        }
+                        """);
+            }
+        }
     }
 
     private static boolean isDebugged() {

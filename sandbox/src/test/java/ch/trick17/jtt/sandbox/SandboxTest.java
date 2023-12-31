@@ -284,6 +284,14 @@ public class SandboxTest {
         assertEquals(Kind.TIMEOUT, result.kind());
     }
 
+    @Test
+    public void testCatchesInterruptedException() {
+        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
+        var result = sandbox.run(code(), emptyList(), CatchesInterruptedException.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.TIMEOUT, result.kind());
+    }
+
     public static class NormalLoop {
         public static void run() {
             int counter = 0;
@@ -328,6 +336,21 @@ public class SandboxTest {
         public static void run() {
             while (true) {
                 while (true);
+            }
+        }
+    }
+
+    public static class CatchesInterruptedException {
+        public static void run() {
+            while (true) {
+                try {
+                    if (Math.random() < Double.MIN_VALUE) {
+                        throw new InterruptedException();
+                    }
+                    while (true);
+                } catch (InterruptedException e) {
+                    // happily ignore
+                }
             }
         }
     }
