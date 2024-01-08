@@ -219,13 +219,14 @@ public class Grader implements Closeable {
 
         // Copy sources
         var origSrcDir = subm.srcDir();
-        Files.createDirectories(origSrcDir); // yes, it happened
-        try (var walk = Files.walk(origSrcDir)) {
-            for (var from : (Iterable<Path>) walk::iterator) {
-                if (from.toString().endsWith(".java")) {
-                    var to = srcDir.resolve(origSrcDir.relativize(from));
-                    Files.createDirectories(to.getParent());
-                    Files.copy(from, to);
+        if (Files.isDirectory(origSrcDir)) { // yes, it happened
+            try (var walk = Files.walk(origSrcDir)) {
+                for (var from : (Iterable<Path>) walk::iterator) {
+                    if (from.toString().endsWith(".java")) {
+                        var to = srcDir.resolve(origSrcDir.relativize(from));
+                        Files.createDirectories(to.getParent());
+                        Files.copy(from, to);
+                    }
                 }
             }
         }
@@ -238,12 +239,14 @@ public class Grader implements Closeable {
         }
 
         // Copy properties files into bin directory
-        try (var walk = Files.walk(origSrcDir)) {
-            for (var from : (Iterable<Path>) walk::iterator) {
-                if (from.toString().endsWith(".properties")) {
-                    var to = binDir.resolve(origSrcDir.relativize(from));
-                    Files.createDirectories(to.getParent());
-                    Files.copy(from, to);
+        if (Files.isDirectory(origSrcDir)) {
+            try (var walk = Files.walk(origSrcDir)) {
+                for (var from : (Iterable<Path>) walk::iterator) {
+                    if (from.toString().endsWith(".properties")) {
+                        var to = binDir.resolve(origSrcDir.relativize(from));
+                        Files.createDirectories(to.getParent());
+                        Files.copy(from, to);
+                    }
                 }
             }
         }
