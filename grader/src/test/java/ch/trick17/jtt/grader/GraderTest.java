@@ -174,48 +174,6 @@ public class GraderTest {
     }
 
     @Test
-    @Disabled // TODO
-    public void testSingleDeduction() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR));
-        grader.gradeOnly("0", "4");
-        grader.run(ECLIPSE_BASE, tasks);
-        var results = readAllLines(Path.of("results-AddTest.tsv"));
-        var expected = List.of(
-                "Name\tcompiled\tchanged signature\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "4\t1\t1\t1\t1");
-        assertEquals(expected, results);
-    }
-
-    @Test
-    @Disabled // TODO
-    public void testMultipleDeductions() throws IOException {
-        var tasks = List.of(Task.fromClassName("DivideTest", TEST_SRC_DIR));
-        grader.gradeOnly("0", "4");
-        grader.run(ECLIPSE_BASE, tasks);
-        var results = readAllLines(Path.of("results-DivideTest.tsv"));
-        var expected = List.of(
-                "Name\tcompiled\tchanged signature\twrong package\ttestDivide",
-                "0\t1\t0\t0\t1",
-                "4\t1\t1\t1\t1");
-        assertEquals(expected, results);
-    }
-
-    @Test
-    @Disabled // TODO
-    public void testDeductionsPackage() throws IOException {
-        var tasks = List.of(Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR));
-        grader.gradeOnly("0", "4");
-        grader.run(ECLIPSE_BASE, tasks);
-        var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
-        var expected = List.of(
-                "Name\tcompiled\tchanged signature\ttestMultiply1\ttestMultiply2",
-                "0\t1\t0\t1\t1",
-                "4\t1\t1\t1\t1");
-        assertEquals(expected, results);
-    }
-
-    @Test
     public void testTimeout() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3));
         grader.gradeOnly("0", "5"); // contains infinite loop
