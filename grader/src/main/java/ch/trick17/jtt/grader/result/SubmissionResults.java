@@ -23,12 +23,14 @@ import static java.util.stream.Collectors.toList;
 public record SubmissionResults(
         String submissionName,
         boolean compileErrors,
+        boolean testCompileErrors,
         boolean compiled,
         TestResults testResults) {
 
     public List<Property> properties() {
         var withNull = Stream.of(
                 compileErrors ? COMPILE_ERRORS : null,
+                testCompileErrors ? TEST_COMPILE_ERRORS : null,
                 compiled ? COMPILED : null,
                 anyMatch(MethodResult::nonDeterm) ? NONDETERMINISTIC : null,
                 anyMatch(MethodResult::timeout) ? TIMEOUT : null,

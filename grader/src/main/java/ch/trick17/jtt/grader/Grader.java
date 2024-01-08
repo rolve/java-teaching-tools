@@ -190,13 +190,28 @@ public class Grader implements Closeable {
             throws IOException {
         return tryFinally(() -> {
             prepareProject(subm, task);
-            var errors = compile(subm, task, out);
-            var compiled = !errors || task.compiler() == ECLIPSE;
+            var gradingDir = gradingDir(subm, task);
+
+            var compileErrors = compile(task.compiler(),
+                    gradingDir.resolve(GRADING_SRC),
+                    gradingDir.resolve(GRADING_BIN),
+                    task.dependencies(), out);
+
+            var dependencies = new ArrayList<>(List.of(gradingDir.resolve(GRADING_BIN)));
+            dependencies.addAll(task.dependencies());
+            var testCompileErrors = compile(task.compiler(),
+                    gradingDir.resolve(GRADING_TEST_SRC),
+                    gradingDir.resolve(GRADING_TEST_BIN),
+                    dependencies, out);
+
+            var compiled = !compileErrors && !testCompileErrors
+                           || task.compiler() == ECLIPSE;
             TestResults testResults = null;
             if (compiled) {
                 testResults = runTests(task, subm, out);
             }
-            return new SubmissionResults(subm.name(), errors, compiled, testResults);
+            return new SubmissionResults(subm.name(), compileErrors,
+                    testCompileErrors, compiled, testResults);
         }, () -> {
             delete(gradingDir(subm, task), false);
         });
@@ -250,22 +265,6 @@ public class Grader implements Closeable {
                 }
             }
         }
-    }
-
-    private boolean compile(Submission subm, Task task, PrintStream out) throws IOException {
-        var gradingDir = gradingDir(subm, task);
-
-        var srcDir = gradingDir.resolve(GRADING_SRC);
-        var binDir = gradingDir.resolve(GRADING_BIN);
-        var submErrors = compile(task.compiler(), srcDir, binDir, task.dependencies(), out);
-
-        var testSrcDir = gradingDir.resolve(GRADING_TEST_SRC);
-        var testBinDir = gradingDir.resolve(GRADING_TEST_BIN);
-        var dependencies = new ArrayList<>(List.of(binDir));
-        dependencies.addAll(task.dependencies());
-        var testErrors = compile(task.compiler(), testSrcDir, testBinDir, dependencies, out);
-
-        return submErrors || testErrors;
     }
 
     private boolean compile(Compiler compiler, Path srcDir, Path outDir,

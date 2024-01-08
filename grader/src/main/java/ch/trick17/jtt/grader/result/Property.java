@@ -22,6 +22,14 @@ public enum Property {
     COMPILE_ERRORS,
 
     /**
+     * There are compile errors in the tests when compiled against the
+     * submission. This is independent of whether the submission could be
+     * compiled by itself.
+     * @see #COMPILE_ERRORS
+     */
+    TEST_COMPILE_ERRORS,
+
+    /**
      * The submission produced different outcomes for at least one test when
      * executed multiple times.
      */
