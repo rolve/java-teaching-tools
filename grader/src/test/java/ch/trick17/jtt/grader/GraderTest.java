@@ -31,14 +31,14 @@ public class GraderTest {
 
     static final List<String> EXPECTED_ADD_SIMPLE_EC = List.of(
             "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-            "0\t1\t0\t1\t1",
-            "1\t1\t0\t1\t0",
-            "2\t1\t1\t0\t0");
+            "compile-error\t1\t1\t0\t0",
+            "correct\t1\t0\t1\t1",
+            "fails-test\t1\t0\t1\t0");
     static final List<String> EXPECTED_ADD_SIMPLE_JC = List.of(
             "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-            "0\t1\t0\t1\t1",
-            "1\t1\t0\t1\t0",
-            "2\t0\t1\t0\t0");
+            "compile-error\t0\t1\t0\t0",
+            "correct\t1\t0\t1\t1",
+            "fails-test\t1\t0\t1\t0");
 
     private static Grader grader;
 
@@ -51,28 +51,28 @@ public class GraderTest {
     @Test
     public void testResults() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC));
-        grader.gradeOnly("0", "1", "2");
+        grader.gradeOnly("correct", "fails-test", "compile-error");
         var resultsList = grader.run(ECLIPSE_BASE, tasks);
 
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
         assertEquals(3, results.submissionResults().size());
 
-        assertTrue(results.get("0").testResults().methodResults().get(0).passed());
-        assertTrue(results.get("0").testResults().methodResults().get(1).passed());
+        assertTrue(results.get("correct").testResults().methodResults().get(0).passed());
+        assertTrue(results.get("correct").testResults().methodResults().get(1).passed());
 
-        assertTrue(results.get("1").testResults().methodResults().get(0).passed());
-        assertFalse(results.get("1").testResults().methodResults().get(1).passed());
+        assertTrue(results.get("fails-test").testResults().methodResults().get(0).passed());
+        assertFalse(results.get("fails-test").testResults().methodResults().get(1).passed());
 
-        assertTrue(results.get("2").compileErrors());
-        assertFalse(results.get("2").compiled());
-        assertNull(results.get("2").testResults());
+        assertTrue(results.get("compile-error").compileErrors());
+        assertFalse(results.get("compile-error").compiled());
+        assertNull(results.get("compile-error").testResults());
     }
 
     @Test
     public void testEclipseStructureEclipseCompiler() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0", "1", "2");
+        grader.gradeOnly("correct", "fails-test", "compile-error");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE_EC, results);
@@ -81,7 +81,7 @@ public class GraderTest {
     @Test
     public void testEclipseStructureJavac() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC));
-        grader.gradeOnly("0", "1", "2");
+        grader.gradeOnly("correct", "fails-test", "compile-error");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE_JC, results);
@@ -90,7 +90,7 @@ public class GraderTest {
     @Test
     public void testMavenStructureEclipseCompiler() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0", "1", "2");
+        grader.gradeOnly("correct", "fails-test", "compile-error");
         grader.run(MVN_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE_EC, results);
@@ -99,7 +99,7 @@ public class GraderTest {
     @Test
     public void testMavenStructureJavac() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC));
-        grader.gradeOnly("0", "1", "2");
+        grader.gradeOnly("correct", "fails-test", "compile-error");
         grader.run(MVN_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE_JC, results);
@@ -108,121 +108,121 @@ public class GraderTest {
     @Test
     public void testPackageEclipseCompiler() throws IOException {
         var tasks = List.of(Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0", "1", "2");
+        grader.gradeOnly("correct", "fails-test", "compile-error");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tcompile errors\ttestMultiply1\ttestMultiply2",
-                "0\t1\t0\t1\t1",
-                "1\t1\t0\t1\t0",
-                "2\t1\t1\t0\t0");
+                "compile-error\t1\t1\t0\t0",
+                "correct\t1\t0\t1\t1",
+                "fails-test\t1\t0\t1\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testPackageJavac() throws IOException {
         var tasks = List.of(Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR).compiler(JAVAC));
-        grader.gradeOnly("0", "1", "2");
+        grader.gradeOnly("correct", "fails-test", "compile-error");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tcompile errors\ttestMultiply1\ttestMultiply2",
-                "0\t1\t0\t1\t1",
-                "1\t1\t0\t1\t0",
-                "2\t0\t1\t0\t0");
+                "compile-error\t0\t1\t0\t0",
+                "correct\t1\t0\t1\t1",
+                "fails-test\t1\t0\t1\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testUnrelatedCompileErrorEclipseCompiler() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0", "3");
+        grader.gradeOnly("correct", "unrelated-compile-error");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "3\t1\t1\t1\t1");
+                "correct\t1\t0\t1\t1",
+                "unrelated-compile-error\t1\t1\t1\t1");
         assertEquals(expected, results);
     }
 
     @Test
     public void testUnrelatedCompileErrorJavac() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC));
-        grader.gradeOnly("0", "3");
+        grader.gradeOnly("correct", "unrelated-compile-error");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "3\t0\t1\t0\t0");
+                "correct\t1\t0\t1\t1",
+                "unrelated-compile-error\t0\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testCustomDir() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", Path.of("tests-custom-dir")));
-        grader.gradeOnly("0", "1", "2");
+        grader.gradeOnly("correct", "fails-test", "compile-error");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tcompile errors\ttestAdd",
-                "0\t1\t0\t1",
-                "1\t1\t0\t0",
-                "2\t1\t1\t0");
+                "compile-error\t1\t1\t0",
+                "correct\t1\t0\t1",
+                "fails-test\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testTimeout() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3));
-        grader.gradeOnly("0", "5"); // contains infinite loop
+        grader.gradeOnly("correct", "infinite-loop"); // contains infinite loop
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttimeout\tincomplete repetitions\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t0\t1\t1",
-                "5\t1\t1\t1\t0\t0");
+                "correct\t1\t0\t0\t1\t1",
+                "infinite-loop\t1\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testMissingClassUnderTestEclipseCompiler() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR));
-        grader.gradeOnly("0", "6");
+        grader.gradeOnly("correct", "missing-class");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         // TODO: would be nice to have an entry for this
         var expected = List.of(
                 "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "6\t1\t1\t0\t0");
+                "correct\t1\t0\t1\t1",
+                "missing-class\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testMissingClassUnderTestJavac() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC));
-        grader.gradeOnly("0", "6");
+        grader.gradeOnly("correct", "missing-class");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "6\t0\t1\t0\t0");
+                "correct\t1\t0\t1\t1",
+                "missing-class\t0\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testMissingSrcDir() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR));
-        grader.gradeOnly("0", "7");
+        grader.gradeOnly("correct", "missing-src");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "7\t1\t1\t0\t0");
+                "correct\t1\t0\t1\t1",
+                "missing-src\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -231,13 +231,13 @@ public class GraderTest {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
                 .repetitions(50)
                 .timeouts(Duration.ofSeconds(5), Duration.ofSeconds(60)));
-        grader.gradeOnly("0", "8");
+        grader.gradeOnly("correct", "nondeterministic");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tnondeterministic\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "8\t1\t1\t0\t0");
+                "correct\t1\t0\t1\t1",
+                "nondeterministic\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -250,13 +250,13 @@ public class GraderTest {
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
                         java.lang.System.setProperty
                         """));
-        grader.gradeOnly("0", "9");
+        grader.gradeOnly("correct", "nondeterministic-infinite-loop");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-SubtractTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tnondeterministic\ttimeout\tincomplete repetitions\ttestSubtract1\ttestSubtract2\ttestSubtract3\ttestSubtract4\ttestSubtract5\ttestSubtract6",
-                "0\t1\t0\t0\t0\t1\t1\t1\t1\t1\t1",
-                "9\t1\t1\t1\t1\t0\t0\t0\t0\t0\t0");
+                "correct\t1\t0\t0\t0\t1\t1\t1\t1\t1\t1",
+                "nondeterministic-infinite-loop\t1\t1\t1\t1\t0\t0\t0\t0\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -265,72 +265,72 @@ public class GraderTest {
         // ensure that classes are reloaded for each test run, meaning
         // that tests cannot interfere via static fields
         var tasks = List.of(Task.fromClassName("SubtractTest", TEST_SRC_DIR));
-        grader.gradeOnly("0", "10");
+        grader.gradeOnly("correct", "static-state");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-SubtractTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttestSubtract1\ttestSubtract2\ttestSubtract3\ttestSubtract4\ttestSubtract5\ttestSubtract6",
-                "0\t1\t1\t1\t1\t1\t1\t1",
-                "10\t1\t1\t1\t1\t1\t1\t1");
+                "correct\t1\t1\t1\t1\t1\t1\t1",
+                "static-state\t1\t1\t1\t1\t1\t1\t1");
         assertEquals(expected, results);
     }
 
     @Test
     public void testCatchInterruptedException() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3));
-        grader.gradeOnly("0", "11"); // contains infinite loop plus catch(InterruptedException)
+        grader.gradeOnly("correct", "catch-interrupted-exception"); // contains infinite loop plus catch(InterruptedException)
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttimeout\tincomplete repetitions\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t0\t1\t1",
-                "11\t1\t1\t1\t0\t0");
+                "catch-interrupted-exception\t1\t1\t1\t0\t0",
+                "correct\t1\t0\t0\t1\t1");
         assertEquals(expected, results);
     }
 
     @Test
     public void testSystemIn() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3));
-        grader.gradeOnly("0", "12");
+        grader.gradeOnly("correct", "reads-system-in");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttestAdd1\ttestAdd2",
-                "0\t1\t1\t1",
-                "12\t1\t0\t0");
+                "correct\t1\t1\t1",
+                "reads-system-in\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testIllegalOperationIO() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR));
-        grader.gradeOnly("0", "13"); // tries to read from the file system
+        grader.gradeOnly("correct", "illegal-io"); // tries to read from the file system
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tillegal operation\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "13\t1\t1\t0\t0");
+                "correct\t1\t0\t1\t1",
+                "illegal-io\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testIllegalOperationReflection() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR));
-        grader.gradeOnly("0", "14"); // uses getDeclaredMethods()
+        grader.gradeOnly("correct", "illegal-reflect"); // uses getDeclaredMethods()
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\tillegal operation\ttestAdd1\ttestAdd2",
-                "0\t1\t0\t1\t1",
-                "14\t1\t1\t0\t0");
+                "correct\t1\t0\t1\t1",
+                "illegal-reflect\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testNoTests() throws IOException {
         var tasks = List.of(Task.fromClassName("NoTests", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0");
+        grader.gradeOnly("correct");
         var resultsList = grader.run(ECLIPSE_BASE, tasks);
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
@@ -343,7 +343,7 @@ public class GraderTest {
     @Test
     public void testNestedTestClasses() throws IOException {
         var tasks = List.of(Task.fromClassName("NestedTestClass", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0", "2");
+        grader.gradeOnly("correct", "compile-error");
         var resultsList = grader.run(ECLIPSE_BASE, tasks);
 
         assertEquals(1, resultsList.size());
@@ -351,23 +351,23 @@ public class GraderTest {
         assertEquals(2, results.submissionResults().size());
 
         var allTests = List.of("MultiplyTest.testMultiply1", "MultiplyTest.testMultiply2"); // note alphabetical order
-        assertEquals(allTests, results.get("0").passedTests());
-        assertEquals(emptyList(), results.get("0").failedTests());
-        assertEquals(emptyList(), results.get("2").passedTests());
-        assertEquals(allTests, results.get("2").failedTests());
+        assertEquals(allTests, results.get("correct").passedTests());
+        assertEquals(emptyList(), results.get("correct").failedTests());
+        assertEquals(emptyList(), results.get("compile-error").passedTests());
+        assertEquals(allTests, results.get("compile-error").failedTests());
     }
 
     @Test
     public void testAssumptions() throws IOException {
         var tasks = List.of(Task.fromClassName("TestWithAssumption", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0");
+        grader.gradeOnly("correct");
         var resultsList = grader.run(ECLIPSE_BASE, tasks);
 
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
         assertEquals(1, results.submissionResults().size());
 
-        var testResults = results.get("0").testResults();
+        var testResults = results.get("correct").testResults();
         assertTrue(testResults.methodResultFor("testNormal").get().passed());
         assertFalse(testResults.methodResultFor("testFailedAssumption").get().passed());
     }
@@ -375,14 +375,14 @@ public class GraderTest {
     @Test
     public void testDisabled() throws IOException {
         var tasks = List.of(Task.fromClassName("DisabledTest", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0");
+        grader.gradeOnly("correct");
         var resultsList = grader.run(ECLIPSE_BASE, tasks);
 
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
         assertEquals(1, results.submissionResults().size());
 
-        var testResults = results.get("0").testResults();
+        var testResults = results.get("correct").testResults();
         assertTrue(testResults.methodResultFor("testNormal").get().passed());
         assertTrue(testResults.methodResultFor("testDisabled").get().passed());
 
@@ -392,35 +392,35 @@ public class GraderTest {
     @Test
     public void testDefaultMethodOrder() throws IOException {
         var tasks = List.of(Task.fromClassName("TestWithDisplayNames", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0");
+        grader.gradeOnly("correct");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-TestWithDisplayNames.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttest3\ttest2\ttest4\ttest1",
-                "0\t1\t1\t0\t1\t0");
+                "correct\t1\t1\t0\t1\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testCustomMethodOrder() throws IOException {
         var tasks = List.of(Task.fromClassName("TestWithMethodOrder", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.gradeOnly("0");
+        grader.gradeOnly("correct");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-TestWithMethodOrder.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttest4\ttest3\ttest2\ttest1",
-                "0\t1\t1\t1\t0\t0");
+                "correct\t1\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
     @Test
     public void testScore() throws IOException {
         var tasks = List.of(Task.fromClassName("TestWithScore", TEST_SRC_DIR).compiler(ECLIPSE).repetitions(20));
-        grader.gradeOnly("0", "1");
+        grader.gradeOnly("correct", "fails-test");
         var resultsList = grader.run(ECLIPSE_BASE, tasks);
 
         // submission 0 passes all tests
-        var results0 = resultsList.get(0).get("0").testResults();
+        var results0 = resultsList.get(0).get("correct").testResults();
         assertTrue(results0.methodResultFor("testWithScore").get().passed());
         var scores = results0.methodResultFor("testWithScore").get().scores();
         assertEquals(20, scores.size());
@@ -440,7 +440,7 @@ public class GraderTest {
         assertEquals(Set.of(100.0), Set.copyOf(scores));
 
         // submission 1 fails all tests
-        var results1 = resultsList.get(0).get("1").testResults();
+        var results1 = resultsList.get(0).get("fails-test").testResults();
         assertFalse(results1.methodResultFor("testWithScore").get().passed());
         assertTrue(results1.methodResultFor("testWithScore").get().scores().isEmpty());
 
@@ -464,24 +464,24 @@ public class GraderTest {
                         java.io.InputStreamReader.<init>
                         """));
         var resultsFile = Path.of("results-EncodingTest.tsv");
-        grader.gradeOnly("0", "1");
+        grader.gradeOnly("correct", "fails-test");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(resultsFile);
         var expected = List.of(
                 "Name\tcompiled\ttestEncoding",
-                "0\t1\t1",
-                "1\t1\t1");
+                "correct\t1\t1",
+                "fails-test\t1\t1");
         assertEquals(expected, results);
 
         try (var other = new Grader()) {
             other.setTestVmArgs("-Dfile.encoding=ASCII");
-            other.gradeOnly("0", "1");
+            other.gradeOnly("correct", "fails-test");
             other.run(ECLIPSE_BASE, tasks);
             results = readAllLines(resultsFile);
             expected = List.of(
                     "Name\tcompiled\ttestEncoding",
-                    "0\t1\t1",
-                    "1\t1\t0");
+                    "correct\t1\t1",
+                    "fails-test\t1\t0");
             assertEquals(expected, results);
         }
     }
@@ -494,14 +494,14 @@ public class GraderTest {
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
                         org.apache.commons.math3.util.FastMath.abs
                         """));
-        grader.gradeOnly("0", "1", "15"); // 15 uses external lib
+        grader.gradeOnly("correct", "fails-test", "external-lib"); // 15 uses external lib
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttestAdd1\ttestAdd2",
-                "0\t1\t1\t1",
-                "1\t1\t1\t0",
-                "15\t1\t1\t1");
+                "correct\t1\t1\t1",
+                "external-lib\t1\t1\t1",
+                "fails-test\t1\t1\t0");
         assertEquals(expected, results);
     }
 
@@ -513,14 +513,14 @@ public class GraderTest {
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
                         org.apache.commons.math3.util.FastMath.abs
                         """));
-        grader.gradeOnly("0", "1", "15"); // 15 uses external lib
+        grader.gradeOnly("correct", "fails-test", "external-lib"); // 15 uses external lib
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
                 "Name\tcompiled\ttestAdd1\ttestAdd2",
-                "0\t1\t1\t1",
-                "1\t1\t1\t0",
-                "15\t1\t1\t1");
+                "correct\t1\t1\t1",
+                "external-lib\t1\t1\t1",
+                "fails-test\t1\t1\t0");
         assertEquals(expected, results);
     }
 
