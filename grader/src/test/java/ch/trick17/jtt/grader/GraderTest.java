@@ -35,10 +35,10 @@ public class GraderTest {
             "correct\t1\t0\t1\t1",
             "fails-test\t1\t0\t1\t0");
     static final List<String> EXPECTED_ADD_SIMPLE_JC = List.of(
-            "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-            "compile-error\t0\t1\t0\t0",
-            "correct\t1\t0\t1\t1",
-            "fails-test\t1\t0\t1\t0");
+            "Name\tcompiled\tcompile errors\ttest compile errors\ttestAdd1\ttestAdd2",
+            "compile-error\t0\t1\t1\t0\t0",
+            "correct\t1\t0\t0\t1\t1",
+            "fails-test\t1\t0\t0\t1\t0");
 
     private static Grader grader;
 
@@ -126,10 +126,10 @@ public class GraderTest {
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-MultiplyTest.tsv"));
         var expected = List.of(
-                "Name\tcompiled\tcompile errors\ttestMultiply1\ttestMultiply2",
-                "compile-error\t0\t1\t0\t0",
-                "correct\t1\t0\t1\t1",
-                "fails-test\t1\t0\t1\t0");
+                "Name\tcompiled\tcompile errors\ttest compile errors\ttestMultiply1\ttestMultiply2",
+                "compile-error\t0\t1\t1\t0\t0",
+                "correct\t1\t0\t0\t1\t1",
+                "fails-test\t1\t0\t0\t1\t0");
         assertEquals(expected, results);
     }
 
@@ -153,9 +153,9 @@ public class GraderTest {
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
-                "correct\t1\t0\t1\t1",
-                "unrelated-compile-error\t0\t1\t0\t0");
+                "Name\tcompiled\tcompile errors\ttest compile errors\ttestAdd1\ttestAdd2",
+                "correct\t1\t0\t0\t1\t1",
+                "unrelated-compile-error\t0\t1\t1\t0\t0");
         assertEquals(expected, results);
     }
 
@@ -194,7 +194,7 @@ public class GraderTest {
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         // TODO: would be nice to have an entry for this
         var expected = List.of(
-                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+                "Name\tcompiled\ttest compile errors\ttestAdd1\ttestAdd2",
                 "correct\t1\t0\t1\t1",
                 "missing-class\t1\t1\t0\t0");
         assertEquals(expected, results);
@@ -207,7 +207,7 @@ public class GraderTest {
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+                "Name\tcompiled\ttest compile errors\ttestAdd1\ttestAdd2",
                 "correct\t1\t0\t1\t1",
                 "missing-class\t0\t1\t0\t0");
         assertEquals(expected, results);
@@ -220,7 +220,7 @@ public class GraderTest {
         grader.run(ECLIPSE_BASE, tasks);
         var results = readAllLines(Path.of("results-AddTest.tsv"));
         var expected = List.of(
-                "Name\tcompiled\tcompile errors\ttestAdd1\ttestAdd2",
+                "Name\tcompiled\ttest compile errors\ttestAdd1\ttestAdd2",
                 "correct\t1\t0\t1\t1",
                 "missing-src\t1\t1\t0\t0");
         assertEquals(expected, results);

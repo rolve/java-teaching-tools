@@ -277,7 +277,7 @@ public class Grader implements Closeable {
         }
         if (sources.isEmpty()) {
             out.println("No sources found in " + srcDir);
-            return true;
+            return false;
         }
 
         var classPath = stream(getProperty("java.class.path").split(pathSeparator))
