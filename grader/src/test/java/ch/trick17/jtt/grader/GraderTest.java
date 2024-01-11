@@ -548,6 +548,21 @@ public class GraderTest {
         assertEquals(expected, results);
     }
 
+    @Test
+    public void testModificationToGivenClass() throws IOException {
+        var tasks = List.of(Task.fromClassName("students.StudentClientTest",
+                TEST_SRC_DIR, "students/Student.java"));
+        grader.gradeOnly("correct", "modifies-given-class");
+        grader.run(ECLIPSE_BASE, tasks);
+        var results = readString(Path.of("results-StudentClientTest.tsv"));
+        var expected = withTabs("""
+                Name                  compiled  compile errors  testFullName
+                correct               1         0               1
+                modifies-given-class  1         1               0
+                """);
+        assertEquals(expected, results);
+    }
+
     @AfterAll
     public static void tearDown() throws IOException {
         grader.close();
