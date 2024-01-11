@@ -252,19 +252,6 @@ public class Grader implements Closeable {
             Files.createDirectories(path.getParent());
             Files.write(path, entry.getValue());
         }
-
-        // Copy properties files into bin directory
-        if (Files.isDirectory(origSrcDir)) {
-            try (var walk = Files.walk(origSrcDir)) {
-                for (var from : (Iterable<Path>) walk::iterator) {
-                    if (from.toString().endsWith(".properties")) {
-                        var to = binDir.resolve(origSrcDir.relativize(from));
-                        Files.createDirectories(to.getParent());
-                        Files.copy(from, to);
-                    }
-                }
-            }
-        }
     }
 
     private boolean compile(Compiler compiler, Path srcDir, Path outDir,
