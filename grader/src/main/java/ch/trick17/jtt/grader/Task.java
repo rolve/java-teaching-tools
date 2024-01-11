@@ -5,21 +5,19 @@ import ch.trick17.jtt.sandbox.Whitelist;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
 import static java.io.File.separatorChar;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.Files.readAllBytes;
+import static java.nio.file.Files.readString;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.unmodifiableMap;
+import static java.util.Collections.*;
 import static java.util.List.copyOf;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Stream.concat;
 
 public class Task {
 
@@ -32,7 +30,8 @@ public class Task {
     private static final Pattern CLASS_NAME = Pattern.compile("\\bclass\\s+([^\\s{]+)");
 
     private final String testClassName;
-    private final Map<Path, byte[]> filesToCopy;
+    private final Map<Path, String> testClasses;
+    private final Map<Path, String> givenClasses;
 
     private Compiler compiler = ECLIPSE;
     private int repetitions = DEFAULT_REPETITIONS;
@@ -42,11 +41,12 @@ public class Task {
     private List<Path> dependencies = emptyList();
 
     public static Task fromString(String testClassCode) {
-        var packageName = firstMatch(testClassCode, PACKAGE_NAME);
         var simpleName = firstMatch(testClassCode, CLASS_NAME)
                 .orElseThrow(() -> new IllegalArgumentException("no class name found"));
-        var testClassName = concat(packageName.stream(), Stream.of(simpleName)).collect(joining("."));
-        return new Task(testClassName, Map.of(toPath(testClassName), testClassCode.getBytes(UTF_8)));
+        var testClassName = firstMatch(testClassCode, PACKAGE_NAME)
+                .map(packageName -> packageName + "." + simpleName)
+                .orElse(simpleName);
+        return new Task(testClassName, Map.of(toPath(testClassName), testClassCode), emptyMap());
     }
 
     private static Optional<String> firstMatch(String code, Pattern pattern) {
@@ -57,37 +57,58 @@ public class Task {
                 .findFirst();
     }
 
+    public static Task from(Class<?> testClass,
+                            String... givenSrcFiles) throws IOException {
+        return from(testClass, DEFAULT_TEST_SRC_DIR, givenSrcFiles);
+    }
+
+    public static Task from(Class<?> testClass, Path testSrcDir,
+                            String... givenSrcFiles) throws IOException {
+        return fromClassName(testClass.getName(), testSrcDir, givenSrcFiles);
+    }
+
+    public static Task fromClassName(String testClassName,
+                                     String... givenSrcFiles) throws IOException {
+        return fromClassName(testClassName, DEFAULT_TEST_SRC_DIR, givenSrcFiles);
+    }
+
+    public static Task fromClassName(String testClassName, Path testSrcDir,
+                                     String... givenSrcFiles) throws IOException {
+        return fromClassName(testClassName, testSrcDir, asList(givenSrcFiles), emptyList());
+    }
+
+    public static Task fromClassName(String testClassName, Path testSrcDir,
+                                     List<String> givenSrcFiles,
+                                     List<String> moreTestSrcFiles) throws IOException {
+        var givenClasses = readSrcFiles(testSrcDir, givenSrcFiles);
+        var testClasses = readSrcFiles(testSrcDir, moreTestSrcFiles);
+        var testPath = toPath(testClassName);
+        testClasses.put(testPath, readString(testSrcDir.resolve(testPath)));
+        return new Task(testClassName, testClasses, givenClasses);
+    }
+
+    private static Map<Path, String> readSrcFiles(Path dir, List<String> srcFiles) throws IOException {
+        var givenClasses = new HashMap<Path, String>();
+        for (var file : srcFiles) {
+            if (!file.endsWith(".java")) {
+                throw new IllegalArgumentException("source file must end with .java");
+            }
+            var path = Path.of(file);
+            givenClasses.put(path, readString(dir.resolve(path)));
+        }
+        return givenClasses;
+    }
+
     private static Path toPath(String className) {
         return Path.of(className.replace('.', separatorChar) + ".java");
     }
 
-    public static Task from(Class<?> testClass, String... moreFiles) throws IOException {
-        return from(testClass, DEFAULT_TEST_SRC_DIR, moreFiles);
-    }
-
-    public static Task from(Class<?> testClass, Path testSrcDir,
-                            String... moreFiles) throws IOException {
-        return fromClassName(testClass.getName(), testSrcDir, moreFiles);
-    }
-
-    public static Task fromClassName(String testClassName, String... moreFiles) throws IOException {
-        return fromClassName(testClassName, DEFAULT_TEST_SRC_DIR, moreFiles);
-    }
-
-    public static Task fromClassName(String testClassName, Path testSrcDir,
-                                     String... moreFiles) throws IOException {
-        var testPath = toPath(testClassName);
-        var filesToCopy = new HashMap<>(Map.of(testPath, readAllBytes(testSrcDir.resolve(testPath))));
-        for (var file : moreFiles) {
-            var path = Path.of(file);
-            filesToCopy.put(path, readAllBytes(testSrcDir.resolve(path)));
-        }
-        return new Task(testClassName, filesToCopy);
-    }
-
-    private Task(String testClassName, Map<Path, byte[]> filesToCopy) {
+    private Task(String testClassName,
+                 Map<Path, String> testClasses,
+                 Map<Path, String> givenClasses) {
         this.testClassName = testClassName;
-        this.filesToCopy = filesToCopy;
+        this.testClasses = testClasses;
+        this.givenClasses = givenClasses;
     }
 
     /**
@@ -181,8 +202,12 @@ public class Task {
         return parts[parts.length - 1];
     }
 
-    public Map<Path, byte[]> filesToCopy() {
-        return unmodifiableMap(filesToCopy);
+    public Map<Path, String> testClasses() {
+        return unmodifiableMap(testClasses);
+    }
+
+    public Map<Path, String> givenClasses() {
+        return unmodifiableMap(givenClasses);
     }
 
     public Compiler compiler() {

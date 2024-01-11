@@ -232,7 +232,7 @@ public class Grader implements Closeable {
         Files.createDirectories(testSrcDir);
         Files.createDirectories(testBinDir);
 
-        // Copy sources
+        // Copy submission
         var origSrcDir = subm.srcDir();
         if (Files.isDirectory(origSrcDir)) { // yes, it happened
             try (var walk = Files.walk(origSrcDir)) {
@@ -246,11 +246,18 @@ public class Grader implements Closeable {
             }
         }
 
-        // Copy tests
-        for (var entry : task.filesToCopy().entrySet()) {
+        // Copy given classes
+        for (var entry : task.givenClasses().entrySet()) {
+            var path = srcDir.resolve(entry.getKey());
+            Files.createDirectories(path.getParent());
+            Files.writeString(path, entry.getValue());
+        }
+
+        // Copy test classes
+        for (var entry : task.testClasses().entrySet()) {
             var path = testSrcDir.resolve(entry.getKey());
             Files.createDirectories(path.getParent());
-            Files.write(path, entry.getValue());
+            Files.writeString(path, entry.getValue());
         }
     }
 
