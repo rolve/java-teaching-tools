@@ -92,7 +92,7 @@ public class InMemFileManagerTest {
     }
 
     @Test
-    void compileWithClassPath() {
+    void compileWithFileClassPath() {
         var sources = List.of(new InMemSource("""
                 import static java.util.Collections.emptyList;
                 import ch.trick17.jtt.memcompile.ClassPath;
@@ -122,6 +122,42 @@ public class InMemFileManagerTest {
                 .collect(joining("\n")));
         assertNotEquals(0, diagnostics.getDiagnostics().size());
         assertEquals(0, manager.getOutput().size());
+    }
+
+    @Test
+    void compileWithMemClassPath() {
+        var sources = List.of(new InMemSource("""
+                package greeting;
+                public class Greeter {
+                    public String greet() {
+                        return "Hello, World!";
+                    }
+                }
+                """));
+
+        var manager = new InMemFileManager(ClassPath.empty());
+        var success = compile(manager, sources);
+        assertTrue(success, diagnostics.getDiagnostics().stream()
+                .map(Object::toString)
+                .collect(joining("\n")));
+        assertEquals(0, diagnostics.getDiagnostics().size());
+        assertEquals(1, manager.getOutput().size());
+
+        sources = List.of(new InMemSource("""
+                package greeting;
+                public class GreetingApp {
+                    public static void main(String[] args) {
+                        System.out.println(new Greeter().greet());
+                    }
+                }
+                """));
+        manager = new InMemFileManager(ClassPath.fromMemory(manager.getOutput()));
+        success = compile(manager, sources);
+        assertTrue(success, diagnostics.getDiagnostics().stream()
+                .map(Object::toString)
+                .collect(joining("\n")));
+        assertEquals(0, diagnostics.getDiagnostics().size());
+        assertEquals(1, manager.getOutput().size());
     }
 
     private boolean compile(InMemFileManager manager, List<InMemSource> sources) {

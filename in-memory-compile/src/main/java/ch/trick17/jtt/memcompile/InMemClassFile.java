@@ -1,8 +1,7 @@
 package ch.trick17.jtt.memcompile;
 
 import javax.tools.SimpleJavaFileObject;
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.URI;
 
 import static javax.tools.JavaFileObject.Kind.CLASS;
@@ -29,6 +28,14 @@ public class InMemClassFile extends SimpleJavaFileObject {
     public String getPackageName() {
         var lastDot = className.lastIndexOf('.');
         return lastDot == -1 ? "" : className.substring(0, lastDot);
+    }
+
+    @Override
+    public InputStream openInputStream() {
+        if (content == null) {
+            throw new IllegalStateException("no content");
+        }
+        return new ByteArrayInputStream(content);
     }
 
     @Override

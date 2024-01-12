@@ -62,6 +62,15 @@ public class InMemFileManager
         return classFile;
     }
 
+    @Override
+    public String inferBinaryName(Location location, JavaFileObject file) {
+        if (file instanceof InMemClassFile) {
+            return ((InMemClassFile) file).getClassName();
+        } else {
+            return super.inferBinaryName(location, file);
+        }
+    }
+
     public List<InMemClassFile> getOutput() {
         return unmodifiableList(outputClassFiles);
     }

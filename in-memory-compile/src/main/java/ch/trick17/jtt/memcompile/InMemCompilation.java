@@ -11,6 +11,7 @@ import java.util.List;
 
 import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static java.io.Writer.nullWriter;
+import static java.util.Locale.ROOT;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.NOPOS;
 
@@ -48,7 +49,13 @@ public class InMemCompilation {
 
             var errors = collector.getDiagnostics().stream()
                     .filter(d -> d.getKind() == ERROR).toList();
-
+            var unexpected = errors.stream()
+                    .filter(d -> d.getSource() == null)
+                    .findFirst();
+            if (unexpected.isPresent()) {
+                throw new AssertionError("unexpected compiler error: "
+                                         + unexpected.get().getMessage(ROOT));
+            }
             errors.forEach(d -> diagnosticsOut.println(format(d)));
             return new Result(!errors.isEmpty(), fileManager.getOutput());
         }
