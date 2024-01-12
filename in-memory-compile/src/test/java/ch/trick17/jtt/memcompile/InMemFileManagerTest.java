@@ -3,14 +3,9 @@ package ch.trick17.jtt.memcompile;
 import org.junit.jupiter.api.Test;
 
 import javax.tools.DiagnosticCollector;
-import java.nio.file.Path;
 import java.util.List;
 
-import static java.io.File.pathSeparator;
 import static java.io.Writer.nullWriter;
-import static java.lang.System.getProperty;
-import static java.util.Arrays.stream;
-import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.joining;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,7 +23,7 @@ public class InMemFileManagerTest {
                     }
                 }
                 """));
-        var manager = new InMemFileManager(emptyList(), emptyList());
+        var manager = new InMemFileManager(ClassPath.empty());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -55,7 +50,7 @@ public class InMemFileManagerTest {
                     }
                 }
                 """));
-        var manager = new InMemFileManager(emptyList(), emptyList());
+        var manager = new InMemFileManager(ClassPath.empty());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -83,7 +78,7 @@ public class InMemFileManagerTest {
                     }
                 }
                 """));
-        var manager = new InMemFileManager(emptyList(), emptyList());
+        var manager = new InMemFileManager(ClassPath.empty());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -100,20 +95,18 @@ public class InMemFileManagerTest {
     void compileWithClassPath() {
         var sources = List.of(new InMemSource("""
                 import static java.util.Collections.emptyList;
+                import ch.trick17.jtt.memcompile.ClassPath;
                 import ch.trick17.jtt.memcompile.InMemFileManager;
                 
                 public class InMemoryFileManagerClient {
                     public static void main(String[] args) {
-                        var manager = new InMemFileManager(emptyList(), emptyList());
+                        var manager = new InMemFileManager(ClassPath.empty());
                         System.out.println(manager.getOutput().size());
                     }
                 }
                 """));
 
-        var classPath = stream(getProperty("java.class.path").split(pathSeparator))
-                .map(Path::of)
-                .toList();
-        var manager = new InMemFileManager(emptyList(), classPath);
+        var manager = new InMemFileManager(ClassPath.fromCurrent());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -122,7 +115,7 @@ public class InMemFileManagerTest {
         assertEquals(1, manager.getOutput().size());
 
         // with empty classpath, compilation should fail
-        manager = new InMemFileManager(emptyList(), emptyList());
+        manager = new InMemFileManager(ClassPath.empty());
         success = compile(manager, sources);
         assertFalse(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)

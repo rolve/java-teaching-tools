@@ -13,12 +13,11 @@ import static java.util.stream.Collectors.toMap;
 public class InMemClassLoader extends URLClassLoader {
     private final Map<String, InMemClassFile> memClassPath;
 
-    public InMemClassLoader(List<InMemClassFile> memClassPath,
-                            List<Path> fileClassPath, ClassLoader parent) {
-        super(fileClassPath.stream()
+    public InMemClassLoader(ClassPath classPath, ClassLoader parent) {
+        super(classPath.fileClassPath().stream()
                 .map(p -> toUrl(p))
                 .toArray(URL[]::new), parent);
-        this.memClassPath = memClassPath.stream()
+        this.memClassPath = classPath.memClassPath().stream()
                 .collect(toMap(InMemClassFile::getClassName, identity()));
     }
 

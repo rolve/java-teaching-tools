@@ -19,8 +19,7 @@ public class InMemCompilation {
     public record Result(boolean errors, List<InMemClassFile> output) {}
 
     public static Result compile(Compiler compiler, Path sourcesDir,
-                                 List<InMemClassFile> memClasspath,
-                                 List<Path> fileClasspath, PrintStream out)
+                                 ClassPath classPath, PrintStream out)
             throws IOException {
         var sources = new ArrayList<InMemSource>();
         try (var javaFiles = Files.walk(sourcesDir)
@@ -30,13 +29,12 @@ public class InMemCompilation {
                 sources.add(InMemSource.fromFile(file));
             }
         }
-        return compile(compiler, sources, memClasspath, fileClasspath, out);
+        return compile(compiler, sources, classPath, out);
     }
 
     public static Result compile(Compiler compiler, List<InMemSource> sources,
-                                 List<InMemClassFile> memClasspath, List<Path> fileClasspath,
-                                 PrintStream diagnosticsOut) throws IOException {
-        try (var fileManager = new InMemFileManager(memClasspath, fileClasspath)) {
+                                 ClassPath classPath, PrintStream diagnosticsOut) throws IOException {
+        try (var fileManager = new InMemFileManager(classPath)) {
             var javaCompiler = compiler.create();
             var collector = new DiagnosticCollector<>();
             var version = Integer.toString(Runtime.version().feature());

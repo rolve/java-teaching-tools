@@ -8,8 +8,6 @@ import java.io.PrintStream;
 import java.util.List;
 
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
-import static java.util.Collections.emptyList;
-import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class InMemCompilationTest {
@@ -24,7 +22,7 @@ public class InMemCompilationTest {
                 }
                 """));
         var result = InMemCompilation.compile(JAVAC, sources,
-                emptyList(), emptyList(), System.out);
+                ClassPath.empty(), System.out);
         assertFalse(result.errors());
         assertEquals(1, result.output().size());
         assertEquals("HelloWorld", result.output().get(0).getClassName());
@@ -41,7 +39,7 @@ public class InMemCompilationTest {
                 """));
         var diagnosticsOut = new ByteArrayOutputStream();
         var result = InMemCompilation.compile(JAVAC, sources,
-                emptyList(), emptyList(), new PrintStream(diagnosticsOut));
+                ClassPath.empty(), new PrintStream(diagnosticsOut));
         assertFalse(result.errors());
         assertEquals("", diagnosticsOut.toString());
 
@@ -53,7 +51,7 @@ public class InMemCompilationTest {
                 }
                 """));
         result = InMemCompilation.compile(JAVAC, sources,
-                emptyList(), emptyList(), new PrintStream(diagnosticsOut));
+                ClassPath.empty(), new PrintStream(diagnosticsOut));
         assertTrue(result.errors());
         var diagnostics = diagnosticsOut.toString();
         assertTrue(diagnostics.contains("';' expected"), diagnostics);

@@ -1,11 +1,10 @@
 package ch.trick17.jtt.memcompile;
 
-import java.util.function.Supplier;
+import org.eclipse.jdt.internal.compiler.tool.EclipseCompiler;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
-
-import org.eclipse.jdt.internal.compiler.tool.EclipseCompiler;
+import java.util.function.Supplier;
 
 public enum Compiler {
 

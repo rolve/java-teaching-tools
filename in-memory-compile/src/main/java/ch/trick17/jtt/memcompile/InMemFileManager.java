@@ -6,7 +6,6 @@ import javax.tools.JavaFileObject;
 import javax.tools.JavaFileObject.Kind;
 import javax.tools.StandardJavaFileManager;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,15 +27,14 @@ public class InMemFileManager
     private final Map<String, List<InMemClassFile>> memClassPath;
     private final List<InMemClassFile> outputClassFiles = new ArrayList<>();
 
-    public InMemFileManager(List<InMemClassFile> memClassPath,
-                            List<Path> fileClassPath) {
+    public InMemFileManager(ClassPath classPath) {
         super(getSystemJavaCompiler().getStandardFileManager(null, ROOT, UTF_8));
         try {
-            fileManager.setLocationFromPaths(CLASS_PATH, fileClassPath);
+            fileManager.setLocationFromPaths(CLASS_PATH, classPath.fileClassPath());
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
-        this.memClassPath = memClassPath.stream()
+        this.memClassPath = classPath.memClassPath().stream()
                 .collect(groupingBy(InMemClassFile::getPackageName));
     }
 

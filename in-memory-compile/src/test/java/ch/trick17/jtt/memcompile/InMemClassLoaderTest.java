@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static java.lang.ClassLoader.getSystemClassLoader;
-import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InMemClassLoaderTest {
@@ -18,7 +17,7 @@ public class InMemClassLoaderTest {
             classFile = new InMemClassFile(Greeter.class.getName(), bytes);
         }
 
-        var loader = new InMemClassLoader(List.of(classFile), emptyList(),
+        var loader = new InMemClassLoader(ClassPath.fromMemory(List.of(classFile)),
                 getSystemClassLoader());
         var greeter = loader.loadClass(Greeter.class.getName(), false);
 
