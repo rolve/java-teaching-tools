@@ -35,7 +35,7 @@ public class InMemCompilation {
 
     public static Result compile(Compiler compiler, List<InMemSource> sources,
                                  ClassPath classPath, PrintStream diagnosticsOut) throws IOException {
-        try (var fileManager = new InMemFileManager(classPath)) {
+        try (var fileManager = new InMemFileManager(sources, classPath)) {
             var javaCompiler = compiler.create();
             var collector = new DiagnosticCollector<>();
             var version = Integer.toString(Runtime.version().feature());

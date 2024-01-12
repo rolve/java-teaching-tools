@@ -1,11 +1,14 @@
 package ch.trick17.jtt.memcompile;
 
+import org.eclipse.jdt.internal.compiler.tool.EclipseCompiler;
 import org.junit.jupiter.api.Test;
 
 import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
 import java.util.List;
 
 import static java.io.Writer.nullWriter;
+import static java.util.Locale.ROOT;
 import static java.util.stream.Collectors.joining;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,7 +26,7 @@ public class InMemFileManagerTest {
                     }
                 }
                 """));
-        var manager = new InMemFileManager(ClassPath.empty());
+        var manager = new InMemFileManager(sources, ClassPath.empty());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -50,7 +53,7 @@ public class InMemFileManagerTest {
                     }
                 }
                 """));
-        var manager = new InMemFileManager(ClassPath.empty());
+        var manager = new InMemFileManager(sources, ClassPath.empty());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -78,7 +81,7 @@ public class InMemFileManagerTest {
                     }
                 }
                 """));
-        var manager = new InMemFileManager(ClassPath.empty());
+        var manager = new InMemFileManager(sources, ClassPath.empty());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -97,16 +100,16 @@ public class InMemFileManagerTest {
                 import static java.util.Collections.emptyList;
                 import ch.trick17.jtt.memcompile.ClassPath;
                 import ch.trick17.jtt.memcompile.InMemFileManager;
-                
+                                
                 public class InMemoryFileManagerClient {
                     public static void main(String[] args) {
-                        var manager = new InMemFileManager(ClassPath.empty());
+                        var manager = new InMemFileManager(emptyList(), ClassPath.empty());
                         System.out.println(manager.getOutput().size());
                     }
                 }
                 """));
 
-        var manager = new InMemFileManager(ClassPath.fromCurrent());
+        var manager = new InMemFileManager(sources, ClassPath.fromCurrent());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -115,7 +118,7 @@ public class InMemFileManagerTest {
         assertEquals(1, manager.getOutput().size());
 
         // with empty classpath, compilation should fail
-        manager = new InMemFileManager(ClassPath.empty());
+        manager = new InMemFileManager(sources, ClassPath.empty());
         success = compile(manager, sources);
         assertFalse(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -135,7 +138,7 @@ public class InMemFileManagerTest {
                 }
                 """));
 
-        var manager = new InMemFileManager(ClassPath.empty());
+        var manager = new InMemFileManager(sources, ClassPath.empty());
         var success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -151,7 +154,7 @@ public class InMemFileManagerTest {
                     }
                 }
                 """));
-        manager = new InMemFileManager(ClassPath.fromMemory(manager.getOutput()));
+        manager = new InMemFileManager(sources, ClassPath.fromMemory(manager.getOutput()));
         success = compile(manager, sources);
         assertTrue(success, diagnostics.getDiagnostics().stream()
                 .map(Object::toString)
@@ -160,8 +163,31 @@ public class InMemFileManagerTest {
         assertEquals(1, manager.getOutput().size());
     }
 
+    @Test
+    void compileSingleClassEclipseCompiler() {
+        var sources = List.of(new InMemSource("""
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println("Hello, World!");
+                    }
+                }
+                """));
+        var manager = new InMemFileManager(sources, ClassPath.empty());
+        var success = compile(manager, sources, new EclipseCompiler());
+        assertTrue(success, diagnostics.getDiagnostics().stream()
+                .map(d -> d.getMessage(ROOT))
+                .collect(joining("\n")));
+        assertEquals(0, diagnostics.getDiagnostics().size());
+        assertEquals(1, manager.getOutput().size());
+        assertEquals("HelloWorld", manager.getOutput().get(0).getClassName());
+    }
+
     private boolean compile(InMemFileManager manager, List<InMemSource> sources) {
-        var compiler = getSystemJavaCompiler();
+        return compile(manager, sources, getSystemJavaCompiler());
+    }
+
+    private boolean compile(InMemFileManager manager, List<InMemSource> sources,
+                            JavaCompiler compiler) {
         var task = compiler.getTask(nullWriter(), manager, diagnostics,
                 null, null, sources);
         return task.call();
