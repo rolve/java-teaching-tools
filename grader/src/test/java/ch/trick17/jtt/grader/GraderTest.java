@@ -11,8 +11,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 
-import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
-import static ch.trick17.jtt.grader.Compiler.JAVAC;
+import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
+import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.sandbox.Whitelist.DEFAULT_WHITELIST_DEF;
 import static java.nio.file.Files.list;
 import static java.nio.file.Files.readString;

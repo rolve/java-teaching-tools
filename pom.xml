@@ -17,6 +17,7 @@
         <module>grader</module>
         <module>sandbox</module>
         <module>junit-extensions</module>
+        <module>in-memory-compile</module>
     </modules>
 
     <dependencyManagement>

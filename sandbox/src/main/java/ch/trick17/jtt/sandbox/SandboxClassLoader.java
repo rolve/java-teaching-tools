@@ -28,9 +28,6 @@ import static javassist.Modifier.isStatic;
 import static javassist.bytecode.Opcode.GOTO;
 import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
-/**
- *
- */
 public class SandboxClassLoader extends URLClassLoader {
 
     private final ClassPool pool = new ClassPool(true);

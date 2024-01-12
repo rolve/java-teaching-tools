@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static java.io.File.separatorChar;
 import static java.nio.file.Files.readString;
 import static java.util.Arrays.asList;

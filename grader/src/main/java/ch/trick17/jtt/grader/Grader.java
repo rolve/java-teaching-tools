@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
-import static ch.trick17.jtt.grader.Compiler.ECLIPSE;
+import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static java.io.File.pathSeparator;
 import static java.io.Writer.nullWriter;
 import static java.lang.String.join;

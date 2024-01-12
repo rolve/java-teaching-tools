@@ -1,11 +1,13 @@
 package ch.trick17.jtt.grader.result;
 
+import ch.trick17.jtt.memcompile.Compiler;
+
 public enum Property {
 
     /**
      * The submission was compiled. This either means that there were no compile
      * errors or that the
-     * {@linkplain ch.trick17.jtt.grader.Compiler#ECLIPSE Eclipse compiler} was
+     * {@linkplain Compiler#ECLIPSE Eclipse compiler} was
      * used, which can often compile erroneous code.
      */
     COMPILED,
@@ -13,7 +15,7 @@ public enum Property {
     /**
      * The submission contains compile errors. This does not necessarily mean
      * that it cannot be tested; the
-     * {@linkplain ch.trick17.jtt.grader.Compiler#ECLIPSE Eclipse compiler} can
+     * {@linkplain Compiler#ECLIPSE Eclipse compiler} can
      * often compile erroneous code. Testing such code may lead to exceptions at
      * runtime, but only if the erroneous part of the code is actually reached
      * during execution. This means that some or all tests may be passed

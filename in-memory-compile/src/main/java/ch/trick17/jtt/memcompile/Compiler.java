@@ -1,4 +1,4 @@
-package ch.trick17.jtt.grader;
+package ch.trick17.jtt.memcompile;
 
 import java.util.function.Supplier;
 
