@@ -72,6 +72,20 @@ public class InMemFileManager
     }
 
     @Override
+    public JavaFileObject getJavaFileForInput(Location location, String className,
+                                              Kind kind) throws IOException {
+        if (location == CLASS_PATH && kind == CLASS) {
+            var matching = memClassPath.stream()
+                    .filter(f -> f.getClassName().equals(className))
+                    .findFirst();
+            if (matching.isPresent()) {
+                return matching.get();
+            }
+        }
+        return super.getJavaFileForInput(location, className, kind);
+    }
+
+    @Override
     public JavaFileObject getJavaFileForOutput(Location location, String className,
                                                Kind kind, FileObject sibling) {
         if (location != CLASS_OUTPUT || kind != CLASS) {
