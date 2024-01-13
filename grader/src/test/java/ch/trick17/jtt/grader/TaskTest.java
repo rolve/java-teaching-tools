@@ -19,7 +19,7 @@ public class TaskTest {
         var path = Path.of("AddTest.java");
         var code = readString(Path.of("tests").resolve(path));
 
-        var testClasses = task.testClasses();
+        var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
         assertEquals(code, testClasses.get(0).getContent());
     }
@@ -31,7 +31,7 @@ public class TaskTest {
         var path = Path.of("multiply/MultiplyTest.java");
         var code = readString(Path.of("tests").resolve(path));
 
-        var testClasses = task.testClasses();
+        var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
         assertEquals(code, testClasses.get(0).getContent());
     }
@@ -43,7 +43,7 @@ public class TaskTest {
         var path = Path.of("ch/trick17/jtt/grader/TaskTest.java");
         var code = readString(Path.of("src/test/java").resolve(path));
 
-        var testClasses = task.testClasses();
+        var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
         assertEquals(code, testClasses.get(0).getContent());
     }
@@ -55,7 +55,7 @@ public class TaskTest {
         var path = Path.of("ch/trick17/jtt/grader/TaskTest.java");
         var code = readString(Path.of("src/test/java").resolve(path));
 
-        var testClasses = task.testClasses();
+        var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
         assertEquals(code, testClasses.get(0).getContent());
     }
@@ -63,7 +63,7 @@ public class TaskTest {
     @Test
     public void testFromString() {
         var task = Task.fromString("public class SillyTest {}");
-        var testClasses = task.testClasses();
+        var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
         assertEquals("public class SillyTest {}", testClasses.get(0).getContent());
     }

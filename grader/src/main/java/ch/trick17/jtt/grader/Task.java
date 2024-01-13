@@ -19,13 +19,13 @@ import static java.util.List.copyOf;
 
 public class Task {
 
-    private static final Path DEFAULT_TEST_SRC_DIR = Path.of("src/test/java").toAbsolutePath();
+    private static final Path DEFAULT_SOURCE_DIR = Path.of("src/test/java").toAbsolutePath();
     private static final int DEFAULT_REPETITIONS = 7;
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
 
-    private final List<InMemSource> testClasses;
-    private final List<InMemSource> givenClasses;
+    private final List<InMemSource> testSources;
+    private final List<InMemSource> givenSources;
 
     private Compiler compiler = ECLIPSE;
     private int repetitions = DEFAULT_REPETITIONS;
@@ -39,43 +39,44 @@ public class Task {
     }
 
     public static Task from(Class<?> testClass,
-                            String... givenSrcFiles) throws IOException {
-        return from(testClass, DEFAULT_TEST_SRC_DIR, givenSrcFiles);
+                            String... givenSourceFiles) throws IOException {
+        return from(testClass, DEFAULT_SOURCE_DIR, givenSourceFiles);
     }
 
-    public static Task from(Class<?> testClass, Path testSrcDir,
-                            String... givenSrcFiles) throws IOException {
-        return fromClassName(testClass.getName(), testSrcDir, givenSrcFiles);
+    public static Task from(Class<?> testClass, Path sourceDir,
+                            String... givenSourceFiles) throws IOException {
+        return fromClassName(testClass.getName(), sourceDir, givenSourceFiles);
     }
 
     public static Task fromClassName(String testClassName,
-                                     String... givenSrcFiles) throws IOException {
-        return fromClassName(testClassName, DEFAULT_TEST_SRC_DIR, givenSrcFiles);
+                                     String... givenSourceFiles) throws IOException {
+        return fromClassName(testClassName, DEFAULT_SOURCE_DIR, givenSourceFiles);
     }
 
-    public static Task fromClassName(String testClassName, Path testSrcDir,
-                                     String... givenSrcFiles) throws IOException {
-        return fromClassName(testClassName, testSrcDir, asList(givenSrcFiles), emptyList());
+    public static Task fromClassName(String testClassName, Path sourceDir,
+                                     String... givenSourceFiles) throws IOException {
+        return fromClassName(testClassName, sourceDir, asList(givenSourceFiles), emptyList());
     }
 
-    public static Task fromClassName(String testClassName, Path testSrcDir,
-                                     List<String> givenSrcFiles,
-                                     List<String> moreTestSrcFiles) throws IOException {
-        var givenClasses = readSrcFiles(testSrcDir, givenSrcFiles);
-        var testFile = testSrcDir.resolve(toPath(testClassName));
-        var testClasses = new ArrayList<InMemSource>();
-        testClasses.add(InMemSource.fromFile(testFile, testSrcDir));
-        testClasses.addAll(readSrcFiles(testSrcDir, moreTestSrcFiles));
-        return new Task(testClasses, givenClasses);
+    public static Task fromClassName(String testClassName, Path sourceDir,
+                                     List<String> givenSourceFiles,
+                                     List<String> moreTestSourceFiles) throws IOException {
+        var givenSources = readSourceFiles(sourceDir, givenSourceFiles);
+        var testSourceFile = sourceDir.resolve(toPath(testClassName));
+        var testSources = new ArrayList<InMemSource>();
+        testSources.add(InMemSource.fromFile(testSourceFile, sourceDir));
+        testSources.addAll(readSourceFiles(sourceDir, moreTestSourceFiles));
+        return new Task(testSources, givenSources);
     }
 
-    private static List<InMemSource> readSrcFiles(Path srcDir, List<String> srcFiles) throws IOException {
+    private static List<InMemSource> readSourceFiles(Path sourceDir,
+                                                     List<String> sourceFiles) throws IOException {
         var givenClasses = new ArrayList<InMemSource>();
-        for (var file : srcFiles) {
+        for (var file : sourceFiles) {
             if (!file.endsWith(".java")) {
                 throw new IllegalArgumentException("source file must end with .java");
             }
-            givenClasses.add(InMemSource.fromFile(srcDir.resolve(file), srcDir));
+            givenClasses.add(InMemSource.fromFile(sourceDir.resolve(file), sourceDir));
         }
         return givenClasses;
     }
@@ -84,9 +85,9 @@ public class Task {
         return Path.of(className.replace('.', separatorChar) + ".java");
     }
 
-    private Task(List<InMemSource> testClasses, List<InMemSource> givenClasses) {
-        this.testClasses = testClasses;
-        this.givenClasses = givenClasses;
+    private Task(List<InMemSource> testSources, List<InMemSource> givenSources) {
+        this.testSources = testSources;
+        this.givenSources = givenSources;
     }
 
     /**
@@ -172,7 +173,7 @@ public class Task {
     }
 
     public String testClassName() {
-        return testClasses.get(0).getPath()
+        return testSources.get(0).getPath()
                 .replace('/', '.').replace(".java", "");
     }
 
@@ -181,12 +182,12 @@ public class Task {
         return parts[parts.length - 1];
     }
 
-    public List<InMemSource> testClasses() {
-        return unmodifiableList(testClasses);
+    public List<InMemSource> testSources() {
+        return unmodifiableList(testSources);
     }
 
-    public List<InMemSource> givenClasses() {
-        return unmodifiableList(givenClasses);
+    public List<InMemSource> givenSources() {
+        return unmodifiableList(givenSources);
     }
 
     public Compiler compiler() {

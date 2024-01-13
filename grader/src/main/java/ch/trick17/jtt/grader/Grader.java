@@ -178,6 +178,10 @@ public class Grader implements Closeable {
     private SubmissionResults gradeTask(Submission subm, Task task, PrintStream out)
             throws IOException {
         var sources = collectSources(subm.srcDir());
+        for (var source : task.givenSources()) {
+            sources.removeIf(s -> s.getPath().equals(source.getPath()));
+            sources.add(source);
+        }
 
         // compile submission
         Result compileResult;
@@ -194,7 +198,7 @@ public class Grader implements Closeable {
                 .collect(toCollection(ArrayList::new));
         fileClassPath.addAll(task.dependencies());
         var testCompileResult = InMemCompilation.compile(task.compiler(),
-                task.testClasses(), new ClassPath(compileResult.output(), fileClassPath), out);
+                task.testSources(), new ClassPath(compileResult.output(), fileClassPath), out);
 
         // run tests
         var compiled = !testCompileResult.output().isEmpty();
