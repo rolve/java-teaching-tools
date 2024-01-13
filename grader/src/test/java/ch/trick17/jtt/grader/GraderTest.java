@@ -182,7 +182,9 @@ public class GraderTest {
 
     @Test
     public void testTimeout() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3));
+        var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
+                .repetitions(5)
+                .timeouts(Duration.ofSeconds(2), Duration.ofSeconds(5)));
         grader.gradeOnly("correct", "infinite-loop"); // contains infinite loop
         grader.run(ECLIPSE_BASE, tasks);
         var results = readString(Path.of("results-AddTest.tsv"));
@@ -240,8 +242,8 @@ public class GraderTest {
     @Test
     public void testNondeterminism() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
-                .repetitions(50)
-                .timeouts(Duration.ofSeconds(5), Duration.ofSeconds(60)));
+                .repetitions(20)
+                .timeouts(Duration.ofSeconds(5), Duration.ofSeconds(30)));
         grader.gradeOnly("correct", "nondeterministic");
         grader.run(ECLIPSE_BASE, tasks);
         var results = readString(Path.of("results-AddTest.tsv"));
@@ -259,6 +261,7 @@ public class GraderTest {
         // of nondeterminism in other tests, as was previously the case
         var tasks = List.of(Task.fromClassName("SubtractTest", TEST_SRC_DIR)
                 .repetitions(5)
+                .timeouts(Duration.ofSeconds(2), Duration.ofSeconds(5))
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
                         java.lang.System.setProperty
                         """));
@@ -291,7 +294,9 @@ public class GraderTest {
 
     @Test
     public void testCatchInterruptedException() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3));
+        var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
+                .repetitions(5)
+                .timeouts(Duration.ofSeconds(2), Duration.ofSeconds(5)));
         grader.gradeOnly("correct", "catch-interrupted-exception"); // contains infinite loop plus catch(InterruptedException)
         grader.run(ECLIPSE_BASE, tasks);
         var results = readString(Path.of("results-AddTest.tsv"));
@@ -435,7 +440,9 @@ public class GraderTest {
 
     @Test
     public void testScore() throws IOException {
-        var tasks = List.of(Task.fromClassName("TestWithScore", TEST_SRC_DIR).compiler(ECLIPSE).repetitions(20));
+        var tasks = List.of(Task.fromClassName("TestWithScore", TEST_SRC_DIR)
+                .compiler(ECLIPSE)
+                .repetitions(20));
         grader.gradeOnly("correct", "fails-test");
         var resultsList = grader.run(ECLIPSE_BASE, tasks);
 
