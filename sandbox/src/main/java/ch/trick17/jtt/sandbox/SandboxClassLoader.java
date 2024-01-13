@@ -1,5 +1,7 @@
 package ch.trick17.jtt.sandbox;
 
+import ch.trick17.jtt.memcompile.ClassPath;
+import ch.trick17.jtt.memcompile.InMemClassLoader;
 import javassist.*;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.CodeIterator;
@@ -13,9 +15,6 @@ import javassist.expr.MethodCall;
 import javassist.expr.NewExpr;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -28,35 +27,41 @@ import static javassist.Modifier.isStatic;
 import static javassist.bytecode.Opcode.GOTO;
 import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
-public class SandboxClassLoader extends URLClassLoader {
+public class SandboxClassLoader extends InMemClassLoader {
 
-    private final ClassPool pool = new ClassPool(true);
+    private final ClassPool pool = new ClassPool(false);
     private final Whitelist permittedCalls;
     private final boolean makeInterruptible;
 
     private final Set<String> restrictedClasses;
 
-    public SandboxClassLoader(List<Path> restrictedCode,
-                              List<Path> unrestrictedCode,
+    public SandboxClassLoader(ClassPath restrictedCode,
+                              ClassPath unrestrictedCode,
                               Whitelist permittedCalls,
                               boolean makeInterruptible,
                               ClassLoader parent) throws IOException {
-        super(toUrls(unrestrictedCode), parent);
+        super(unrestrictedCode, parent);
         this.makeInterruptible = makeInterruptible;
         try {
-            for (var path : restrictedCode) {
+            var all = restrictedCode.with(unrestrictedCode);
+            for (var classFile : all.memClassPath()) {
+                pool.appendClassPath(new ByteArrayClassPath(
+                        classFile.getClassName(), classFile.getContent()));
+            }
+            for (var path : all.fileClassPath()) {
                 pool.appendClassPath(path.toString());
             }
-            for (var path : unrestrictedCode) {
-                pool.appendClassPath(path.toString());
-            }
+            pool.appendClassPath(new LoaderClassPath(parent));
         } catch (NotFoundException e) {
             throw new IllegalArgumentException(e);
         }
         this.permittedCalls = permittedCalls;
 
         restrictedClasses = new HashSet<>();
-        for (var path : restrictedCode) {
+        for (var classFile : restrictedCode.memClassPath()) {
+            restrictedClasses.add(classFile.getClassName());
+        }
+        for (var path : restrictedCode.fileClassPath()) {
             try (var walk = Files.walk(path)) {
                 walk.map(Path::toString)
                         .filter(p -> p.endsWith(".class"))
@@ -66,18 +71,6 @@ public class SandboxClassLoader extends URLClassLoader {
                         .forEach(restrictedClasses::add);
             }
         }
-    }
-
-    private static URL[] toUrls(List<Path> paths) {
-        return paths.stream()
-                .map(path -> {
-                    try {
-                        return path.toUri().toURL();
-                    } catch (MalformedURLException e) {
-                        throw new IllegalArgumentException(e);
-                    }
-                })
-                .toArray(URL[]::new);
     }
 
     @Override

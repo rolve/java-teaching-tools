@@ -3,8 +3,11 @@ package ch.trick17.jtt.grader.test;
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
+import ch.trick17.jtt.memcompile.InMemClassFile;
+import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -21,10 +24,7 @@ public class ForkedVmClient implements Closeable {
 
     private static final int CONNECT_TRIES = 3;
 
-    private final ObjectMapper mapper = new ObjectMapper()
-            .findAndRegisterModules()
-            .activateDefaultTyping(LaissezFaireSubTypeValidator.instance);
-
+    private final ObjectMapper mapper;
     private final List<String> vmArgs;
 
     private Process forkedVm;
@@ -36,6 +36,14 @@ public class ForkedVmClient implements Closeable {
 
     public ForkedVmClient(List<String> vmArgs) {
         this.vmArgs = copyOf(vmArgs);
+
+        var module = new SimpleModule("InMemClassFileModule", new Version(1, 0, 0, null, null, null));
+        module.addSerializer(InMemClassFile.class, new InMemClassFileSerializer());
+        module.addDeserializer(InMemClassFile.class, new InMemClassFileDeserializer());
+        mapper = new ObjectMapper()
+                .findAndRegisterModules()
+                .registerModule(module)
+                .activateDefaultTyping(LaissezFaireSubTypeValidator.instance);
     }
 
     public List<String> getVmArgs() {

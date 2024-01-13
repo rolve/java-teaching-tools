@@ -1,7 +1,10 @@
 package ch.trick17.jtt.grader.test;
 
+import ch.trick17.jtt.memcompile.InMemClassFile;
+import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -13,9 +16,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class ForkedVmServer {
 
-    private static final ObjectMapper mapper = new ObjectMapper()
-            .findAndRegisterModules()
-            .activateDefaultTyping(LaissezFaireSubTypeValidator.instance);
+    private static final ObjectMapper mapper;
+
+    static {
+        var module = new SimpleModule("InMemClassFileModule", new Version(1, 0, 0, null, null, null));
+        module.addDeserializer(InMemClassFile.class, new InMemClassFileDeserializer());
+        mapper = new ObjectMapper()
+                .findAndRegisterModules()
+                .registerModule(module)
+                .activateDefaultTyping(LaissezFaireSubTypeValidator.instance);
+    }
 
     public static void main(String[] args) throws Exception {
         var server = new ServerSocket(0);

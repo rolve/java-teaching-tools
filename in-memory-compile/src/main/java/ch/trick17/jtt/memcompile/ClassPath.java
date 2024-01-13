@@ -1,6 +1,7 @@
 package ch.trick17.jtt.memcompile;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import static java.io.File.pathSeparator;
@@ -38,5 +39,25 @@ public record ClassPath(
     public ClassPath {
         memClassPath = copyOf(memClassPath);
         fileClassPath = copyOf(fileClassPath);
+    }
+
+    public ClassPath with(ClassPath other) {
+        var mem = new ArrayList<>(memClassPath);
+        mem.addAll(other.memClassPath);
+        var files = new ArrayList<>(fileClassPath);
+        files.addAll(other.fileClassPath);
+        return new ClassPath(mem, files);
+    }
+
+    public ClassPath withMemory(List<InMemClassFile> classPath) {
+        return with(ClassPath.fromMemory(classPath));
+    }
+
+    public ClassPath withFiles(List<Path> classPath) {
+        return with(ClassPath.fromFiles(classPath));
+    }
+
+    public ClassPath withCurrent() {
+        return with(ClassPath.fromCurrent());
     }
 }

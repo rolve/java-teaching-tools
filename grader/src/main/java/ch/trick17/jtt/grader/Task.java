@@ -1,22 +1,20 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.memcompile.Compiler;
+import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.sandbox.Whitelist;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static java.io.File.separatorChar;
-import static java.nio.file.Files.readString;
 import static java.util.Arrays.asList;
-import static java.util.Collections.*;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.unmodifiableList;
 import static java.util.List.copyOf;
 
 public class Task {
@@ -26,12 +24,8 @@ public class Task {
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
 
-    private static final Pattern PACKAGE_NAME = Pattern.compile("\\bpackage\\s+([^\\s;]+)");
-    private static final Pattern CLASS_NAME = Pattern.compile("\\bclass\\s+([^\\s{]+)");
-
-    private final String testClassName;
-    private final Map<Path, String> testClasses;
-    private final Map<Path, String> givenClasses;
+    private final List<InMemSource> testClasses;
+    private final List<InMemSource> givenClasses;
 
     private Compiler compiler = ECLIPSE;
     private int repetitions = DEFAULT_REPETITIONS;
@@ -41,20 +35,7 @@ public class Task {
     private List<Path> dependencies = emptyList();
 
     public static Task fromString(String testClassCode) {
-        var simpleName = firstMatch(testClassCode, CLASS_NAME)
-                .orElseThrow(() -> new IllegalArgumentException("no class name found"));
-        var testClassName = firstMatch(testClassCode, PACKAGE_NAME)
-                .map(packageName -> packageName + "." + simpleName)
-                .orElse(simpleName);
-        return new Task(testClassName, Map.of(toPath(testClassName), testClassCode), emptyMap());
-    }
-
-    private static Optional<String> firstMatch(String code, Pattern pattern) {
-        return code.lines()
-                .map(pattern::matcher)
-                .filter(Matcher::find)
-                .map(m -> m.group(1))
-                .findFirst();
+        return new Task(List.of(new InMemSource(testClassCode)), emptyList());
     }
 
     public static Task from(Class<?> testClass,
@@ -81,20 +62,19 @@ public class Task {
                                      List<String> givenSrcFiles,
                                      List<String> moreTestSrcFiles) throws IOException {
         var givenClasses = readSrcFiles(testSrcDir, givenSrcFiles);
-        var testClasses = readSrcFiles(testSrcDir, moreTestSrcFiles);
-        var testPath = toPath(testClassName);
-        testClasses.put(testPath, readString(testSrcDir.resolve(testPath)));
-        return new Task(testClassName, testClasses, givenClasses);
+        var testFile = testSrcDir.resolve(toPath(testClassName));
+        var testClasses = new ArrayList<>(List.of(InMemSource.fromFile(testFile)));
+        testClasses.addAll(readSrcFiles(testSrcDir, moreTestSrcFiles));
+        return new Task(testClasses, givenClasses);
     }
 
-    private static Map<Path, String> readSrcFiles(Path dir, List<String> srcFiles) throws IOException {
-        var givenClasses = new HashMap<Path, String>();
+    private static List<InMemSource> readSrcFiles(Path dir, List<String> srcFiles) throws IOException {
+        var givenClasses = new ArrayList<InMemSource>();
         for (var file : srcFiles) {
             if (!file.endsWith(".java")) {
                 throw new IllegalArgumentException("source file must end with .java");
             }
-            var path = Path.of(file);
-            givenClasses.put(path, readString(dir.resolve(path)));
+            givenClasses.add(InMemSource.fromFile(dir.resolve(file)));
         }
         return givenClasses;
     }
@@ -103,10 +83,7 @@ public class Task {
         return Path.of(className.replace('.', separatorChar) + ".java");
     }
 
-    private Task(String testClassName,
-                 Map<Path, String> testClasses,
-                 Map<Path, String> givenClasses) {
-        this.testClassName = testClassName;
+    private Task(List<InMemSource> testClasses, List<InMemSource> givenClasses) {
         this.testClasses = testClasses;
         this.givenClasses = givenClasses;
     }
@@ -194,20 +171,20 @@ public class Task {
     }
 
     public String testClassName() {
-        return testClassName;
+        return testClasses.get(0).getFirstClassName();
     }
 
     public String testClassSimpleName() {
-        var parts = testClassName.split("\\.");
+        var parts = testClassName().split("\\.");
         return parts[parts.length - 1];
     }
 
-    public Map<Path, String> testClasses() {
-        return unmodifiableMap(testClasses);
+    public List<InMemSource> testClasses() {
+        return unmodifiableList(testClasses);
     }
 
-    public Map<Path, String> givenClasses() {
-        return unmodifiableMap(givenClasses);
+    public List<InMemSource> givenClasses() {
+        return unmodifiableList(givenClasses);
     }
 
     public Compiler compiler() {

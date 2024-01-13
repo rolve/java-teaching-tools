@@ -21,9 +21,7 @@ public class TaskTest {
 
         var testClasses = task.testClasses();
         assertEquals(1, testClasses.size());
-        var entry = testClasses.entrySet().iterator().next();
-        assertEquals(path, entry.getKey());
-        assertEquals(code, entry.getValue());
+        assertEquals(code, testClasses.get(0).getContent());
     }
 
     @Test
@@ -35,9 +33,7 @@ public class TaskTest {
 
         var testClasses = task.testClasses();
         assertEquals(1, testClasses.size());
-        var entry = testClasses.entrySet().iterator().next();
-        assertEquals(path, entry.getKey());
-        assertEquals(code, entry.getValue());
+        assertEquals(code, testClasses.get(0).getContent());
     }
 
     @Test
@@ -49,9 +45,7 @@ public class TaskTest {
 
         var testClasses = task.testClasses();
         assertEquals(1, testClasses.size());
-        var entry = testClasses.entrySet().iterator().next();
-        assertEquals(path, entry.getKey());
-        assertEquals(code, entry.getValue());
+        assertEquals(code, testClasses.get(0).getContent());
     }
 
     @Test
@@ -63,9 +57,7 @@ public class TaskTest {
 
         var testClasses = task.testClasses();
         assertEquals(1, testClasses.size());
-        var entry = testClasses.entrySet().iterator().next();
-        assertEquals(path, entry.getKey());
-        assertEquals(code, entry.getValue());
+        assertEquals(code, testClasses.get(0).getContent());
     }
 
     @Test
@@ -73,30 +65,6 @@ public class TaskTest {
         var task = Task.fromString("public class SillyTest {}");
         var testClasses = task.testClasses();
         assertEquals(1, testClasses.size());
-        var entry = testClasses.entrySet().iterator().next();
-        assertEquals(Path.of("SillyTest.java"), entry.getKey());
-        assertEquals("public class SillyTest {}", entry.getValue());
-    }
-
-    @Test
-    public void testFromStringPackage() {
-        String[] codes = {
-                "package silly;\n" +
-                "public class SillyTest {\n" +
-                "}",
-                "package silly;public class SillyTest {}",
-                "package silly;\n" +
-                "class SillyTest {}\n" +
-                "class Other {}"
-        };
-
-        for (var code : codes) {
-            var task = Task.fromString(code);
-            var testClasses = task.testClasses();
-            assertEquals(1, testClasses.size());
-            var entry = testClasses.entrySet().iterator().next();
-            assertEquals(Path.of("silly/SillyTest.java"), entry.getKey());
-            assertEquals(code, entry.getValue());
-        }
+        assertEquals("public class SillyTest {}", testClasses.get(0).getContent());
     }
 }

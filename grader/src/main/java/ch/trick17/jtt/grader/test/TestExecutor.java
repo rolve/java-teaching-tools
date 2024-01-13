@@ -1,6 +1,8 @@
 package ch.trick17.jtt.grader.test;
 
 import ch.trick17.jtt.grader.test.TestResults.MethodResult;
+import ch.trick17.jtt.memcompile.ClassPath;
+import ch.trick17.jtt.memcompile.InMemClassLoader;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.Sandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
@@ -12,9 +14,6 @@ import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -107,16 +106,14 @@ public class TestExecutor {
     }
 
     private static List<MethodSource> findTestMethods(TestRunConfig config) {
-        var urls = new ArrayList<URL>();
-        urls.add(toUrl(config.codeUnderTest()));
-        urls.add(toUrl(config.testCode()));
-        config.dependencies().forEach(p -> urls.add(toUrl(p)));
-        currentClassPath().forEach(p -> urls.add(toUrl(p)));
-
-        // to discover test classes, JUnit needs to *load* them, so we create
-        // a custom class loader with a classpath that includes the test code
-        // and set it as the "context class loader" of the current thread
-        var loader = new URLClassLoader(urls.toArray(URL[]::new),
+        // To discover test classes, JUnit needs to *load* them, so we create
+        // a custom class loader and set it as the "context class loader" of
+        // the current thread. It delegates to the current context class loader
+        // for all classes except those given by the test run config.
+        var classPath = ClassPath.fromMemory(config.classes())
+                .withMemory(config.testClasses())
+                .withFiles(config.dependencies());
+        var loader = new InMemClassLoader(classPath,
                 currentThread().getContextClassLoader());
         return new CustomCxtClassLoaderRunner(loader).run(() -> {
             var launcher = LauncherFactory.create();
@@ -140,13 +137,12 @@ public class TestExecutor {
     }
 
     @SuppressWarnings("unchecked")
-    private static SandboxResult<Map<String, Object>> runSandboxed(MethodSource test, TestRunConfig config) {
-        var restricted = List.of(config.codeUnderTest());
-        var unrestricted = new ArrayList<Path>();
-        unrestricted.add(config.testCode());
-        unrestricted.addAll(config.dependencies());
-        unrestricted.addAll(currentClassPath());
-
+    private static SandboxResult<Map<String, Object>> runSandboxed(MethodSource test,
+                                                                   TestRunConfig config) {
+        var restricted = ClassPath.fromMemory(config.classes());
+        var unrestricted = ClassPath.fromMemory(config.testClasses())
+                .withFiles(config.dependencies())
+                .withCurrent(); // TODO: can we avoid reloading JUnit classes?
         var sandbox = new Sandbox()
                 .permittedCalls(config.permittedCalls() != null
                         ? Whitelist.parse(config.permittedCalls())
@@ -199,14 +195,6 @@ public class TestExecutor {
             result.put("throwable", throwable);
             result.put("score", listener.score);
             return result;
-        }
-    }
-
-    private static URL toUrl(Path p) {
-        try {
-            return p.toUri().toURL();
-        } catch (MalformedURLException e) {
-            throw new AssertionError(e);
         }
     }
 }

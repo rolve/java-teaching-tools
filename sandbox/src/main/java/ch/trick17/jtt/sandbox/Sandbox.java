@@ -1,5 +1,6 @@
 package ch.trick17.jtt.sandbox;
 
+import ch.trick17.jtt.memcompile.ClassPath;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import java.io.ByteArrayOutputStream;
@@ -100,8 +101,8 @@ public class Sandbox {
      * reflection. (This is not the case for classes loaded by the bootstrap
      * class loader, like String).
      */
-    public <T> SandboxResult<T> run(List<Path> restrictedCode,
-                                    List<Path> unrestrictedCode,
+    public <T> SandboxResult<T> run(ClassPath restrictedCode,
+                                    ClassPath unrestrictedCode,
                                     Class<?> cls,
                                     String methodName,
                                     List<Class<?>> paramTypes,
@@ -118,8 +119,8 @@ public class Sandbox {
      * it unusable without reflection. (This is not the case for classes loaded
      * by the bootstrap class loader, like String).
      */
-    public <T> SandboxResult<T> run(List<Path> restrictedCode,
-                                    List<Path> unrestrictedCode,
+    public <T> SandboxResult<T> run(ClassPath restrictedCode,
+                                    ClassPath unrestrictedCode,
                                     String className, String methodName,
                                     List<Class<?>> paramTypes, List<?> args,
                                     Class<T> resultType) {
