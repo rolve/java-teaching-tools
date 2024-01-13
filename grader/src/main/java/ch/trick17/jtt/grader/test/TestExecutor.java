@@ -14,18 +14,15 @@ import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
 
-import java.nio.file.Path;
 import java.util.*;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
 import static ch.trick17.jtt.sandbox.SandboxResult.Kind.*;
-import static java.io.File.pathSeparator;
 import static java.lang.Double.parseDouble;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
-import static java.lang.System.getProperty;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.stream;
 import static java.util.List.copyOf;
@@ -128,12 +125,6 @@ public class TestExecutor {
                     .map(id -> (MethodSource) id.getSource().orElseThrow())
                     .collect(toList());
         });
-    }
-
-    private static List<Path> currentClassPath() {
-        return stream(getProperty("java.class.path").split(pathSeparator))
-                .map(Path::of)
-                .toList();
     }
 
     @SuppressWarnings("unchecked")
