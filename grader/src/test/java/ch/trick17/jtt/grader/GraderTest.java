@@ -1,8 +1,11 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.memcompile.Compiler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -515,30 +518,11 @@ public class GraderTest {
         }
     }
 
-    @Test
-    public void testClassPathJavac() throws IOException {
+    @ParameterizedTest
+    @EnumSource(Compiler.class)
+    public void testClassPath(Compiler compiler) throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
-                .compiler(JAVAC)
-                .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar"))
-                .permittedCalls(DEFAULT_WHITELIST_DEF + """
-                        org.apache.commons.math3.util.FastMath.abs
-                        """));
-        grader.gradeOnly("correct", "fails-test", "external-lib"); // 15 uses external lib
-        grader.run(ECLIPSE_BASE, tasks);
-        var results = readString(Path.of("results-AddTest.tsv"));
-        var expected = withTabs("""
-                Name           compiled  testAdd1  testAdd2
-                correct        1         1         1
-                external-lib   1         1         1
-                fails-test     1         1         0
-                """);
-        assertEquals(expected, results);
-    }
-
-    @Test
-    public void testClassPathEclipse() throws IOException {
-        var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR)
-                .compiler(ECLIPSE)
+                .compiler(compiler)
                 .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar"))
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
                         org.apache.commons.math3.util.FastMath.abs
