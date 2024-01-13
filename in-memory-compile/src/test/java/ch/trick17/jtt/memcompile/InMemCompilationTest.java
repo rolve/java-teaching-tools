@@ -16,7 +16,7 @@ public class InMemCompilationTest {
     @ParameterizedTest
     @EnumSource(Compiler.class)
     void compile(Compiler compiler) throws IOException {
-        var sources = List.of(new InMemSource("""
+        var sources = List.of(InMemSource.fromString("""
                 public class HelloWorld {
                     public static void main(String[] args) {
                         System.out.println("Hello, World!");
@@ -33,7 +33,7 @@ public class InMemCompilationTest {
     @ParameterizedTest
     @EnumSource(Compiler.class)
     void diagnosticsOut(Compiler compiler) throws IOException {
-        var sources = List.of(new InMemSource("""
+        var sources = List.of(InMemSource.fromString("""
                 public class HelloWorld {
                     public static void main(String[] args) {
                         System.out.println("Hello, World!");
@@ -46,7 +46,7 @@ public class InMemCompilationTest {
         assertFalse(result.errors());
         assertEquals("", diagnosticsOut.toString());
 
-        sources = List.of(new InMemSource("""
+        sources = List.of(new InMemSource("HelloWorld.java", """
                 public class HelloWorld {
                     public static void main(String[] args) {
                         System.out.println("Hello, World!") // missing ;

@@ -18,7 +18,7 @@ public class InMemFileManagerTest {
     @ParameterizedTest
     @EnumSource(Compiler.class)
     void compileSingleClass(Compiler compiler) {
-        var sources = List.of(new InMemSource("""
+        var sources = List.of(InMemSource.fromString("""
                 public class HelloWorld {
                     public static void main(String[] args) {
                         System.out.println("Hello, World!");
@@ -38,14 +38,14 @@ public class InMemFileManagerTest {
     @ParameterizedTest
     @EnumSource(Compiler.class)
     void compileMultipleClasses(Compiler compiler) {
-        var sources = List.of(new InMemSource("""
+        var sources = List.of(InMemSource.fromString("""
                 package greeting;
                 public class GreetingApp {
                     public static void main(String[] args) {
                         System.out.println(new Greeter().greet());
                     }
                 }
-                """), new InMemSource("""
+                """), InMemSource.fromString("""
                 package greeting;
                 public class Greeter {
                     public String greet() {
@@ -69,7 +69,7 @@ public class InMemFileManagerTest {
     @ParameterizedTest
     @EnumSource(Compiler.class)
     void compileMultipleClassesInSingleFile(Compiler compiler) {
-        var sources = List.of(new InMemSource("""
+        var sources = List.of(InMemSource.fromString("""
                 package greeting;
                 public class GreetingApp {
                     public static void main(String[] args) {
@@ -98,7 +98,7 @@ public class InMemFileManagerTest {
     @ParameterizedTest
     @EnumSource(Compiler.class)
     void compileWithFileClassPath(Compiler compiler) {
-        var sources = List.of(new InMemSource("""
+        var sources = List.of(InMemSource.fromString("""
                 import static java.util.Collections.emptyList;
                 import ch.trick17.jtt.memcompile.ClassPath;
                 import ch.trick17.jtt.memcompile.InMemFileManager;
@@ -132,7 +132,7 @@ public class InMemFileManagerTest {
     @ParameterizedTest
     @EnumSource(Compiler.class)
     void compileWithMemClassPath(Compiler compiler) {
-        var sources = List.of(new InMemSource("""
+        var sources = List.of(InMemSource.fromString("""
                 package greeting;
                 public class Greeter {
                     public String greet() {
@@ -149,7 +149,7 @@ public class InMemFileManagerTest {
         assertEquals(0, diagnostics.getDiagnostics().size());
         assertEquals(1, manager.getOutput().size());
 
-        sources = List.of(new InMemSource("""
+        sources = List.of(InMemSource.fromString("""
                 package greeting;
                 public class GreetingApp {
                     public static void main(String[] args) {

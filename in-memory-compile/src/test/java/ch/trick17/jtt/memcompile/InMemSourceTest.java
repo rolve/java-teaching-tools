@@ -7,25 +7,48 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class InMemSourceTest {
 
     @Test
-    void getFirstClassName() {
-        var source = new InMemSource("""
+    void getPath() {
+        var source = InMemSource.fromString("""
                 public class HelloWorld {
                     public static void main(String[] args) {
                         System.out.println("Hello, World!");
                     }
                 }
                 """);
-        assertEquals("HelloWorld", source.getFirstClassName());
+        assertEquals("HelloWorld.java", source.getPath());
 
-        source = new InMemSource("""
+        source = InMemSource.fromString("""
                 public class Silly {}
                 """);
-        assertEquals("Silly", source.getFirstClassName());
+        assertEquals("Silly.java", source.getPath());
     }
 
     @Test
-    void getFirstClassNamePackage() {
-        var source = new InMemSource("""
+    void getPathComment() {
+        var source = InMemSource.fromString("""
+                // public class Fake
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println("Hello, World!");
+                    }
+                }
+                """);
+        assertEquals("HelloWorld.java", source.getPath());
+
+        source = InMemSource.fromString("""
+                /* public class Fake */
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println("Hello, World!");
+                    }
+                }
+                """);
+        assertEquals("HelloWorld.java", source.getPath());
+    }
+
+    @Test
+    void getPathPackage() {
+        var source = InMemSource.fromString("""
                 package greeting;
                 public class HelloWorld {
                     public static void main(String[] args) {
@@ -33,30 +56,60 @@ public class InMemSourceTest {
                     }
                 }
                 """);
-        assertEquals("greeting.HelloWorld", source.getFirstClassName());
+        assertEquals("greeting/HelloWorld.java", source.getPath());
 
-        source = new InMemSource("""
+        source = InMemSource.fromString("""
                 package silly;public class SillyTest {}
                 """);
-        assertEquals("silly.SillyTest", source.getFirstClassName());
+        assertEquals("silly/SillyTest.java", source.getPath());
     }
 
     @Test
-    void getFirstClassNameMultipleClasses() {
-        var source = new InMemSource("""
+    void getPathMultipleClasses() {
+        var source = InMemSource.fromString("""
                 public class HelloWorld {
                     public static void main(String[] args) {
                         System.out.println("Hello, World!");
                     }
                 }
-                public class Silly {}
+                class Silly {}
                 """);
-        assertEquals("HelloWorld", source.getFirstClassName());
+        assertEquals("HelloWorld.java", source.getPath());
+
+        source = InMemSource.fromString("""
+                class Silly {}
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println("Hello, World!");
+                    }
+                }
+                """);
+        assertEquals("HelloWorld.java", source.getPath());
+
+        source = InMemSource.fromString("""
+                class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println("Hello, World!");
+                    }
+                }
+                class Silly {}
+                """);
+        assertEquals("HelloWorld.java", source.getPath());
+
+        source = InMemSource.fromString("""
+                class Silly {}
+                class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println("Hello, World!");
+                    }
+                }
+                """);
+        assertEquals("Silly.java", source.getPath());
     }
 
     @Test
     void toUri() {
-        var source = new InMemSource("""
+        var source = InMemSource.fromString("""
                 public class HelloWorld {
                     public static void main(String[] args) {
                         System.out.println("Hello, World!");
@@ -68,7 +121,7 @@ public class InMemSourceTest {
 
     @Test
     void toUriPackage() {
-        var source = new InMemSource("""
+        var source = InMemSource.fromString("""
                 package greeting;
                 public class HelloWorld {
                     public static void main(String[] args) {

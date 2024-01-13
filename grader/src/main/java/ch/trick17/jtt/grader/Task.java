@@ -35,7 +35,7 @@ public class Task {
     private List<Path> dependencies = emptyList();
 
     public static Task fromString(String testClassCode) {
-        return new Task(List.of(new InMemSource(testClassCode)), emptyList());
+        return new Task(List.of(InMemSource.fromString(testClassCode)), emptyList());
     }
 
     public static Task from(Class<?> testClass,
@@ -63,18 +63,19 @@ public class Task {
                                      List<String> moreTestSrcFiles) throws IOException {
         var givenClasses = readSrcFiles(testSrcDir, givenSrcFiles);
         var testFile = testSrcDir.resolve(toPath(testClassName));
-        var testClasses = new ArrayList<>(List.of(InMemSource.fromFile(testFile)));
+        var testClasses = new ArrayList<InMemSource>();
+        testClasses.add(InMemSource.fromFile(testFile, testSrcDir));
         testClasses.addAll(readSrcFiles(testSrcDir, moreTestSrcFiles));
         return new Task(testClasses, givenClasses);
     }
 
-    private static List<InMemSource> readSrcFiles(Path dir, List<String> srcFiles) throws IOException {
+    private static List<InMemSource> readSrcFiles(Path srcDir, List<String> srcFiles) throws IOException {
         var givenClasses = new ArrayList<InMemSource>();
         for (var file : srcFiles) {
             if (!file.endsWith(".java")) {
                 throw new IllegalArgumentException("source file must end with .java");
             }
-            givenClasses.add(InMemSource.fromFile(dir.resolve(file)));
+            givenClasses.add(InMemSource.fromFile(srcDir.resolve(file), srcDir));
         }
         return givenClasses;
     }
@@ -171,7 +172,8 @@ public class Task {
     }
 
     public String testClassName() {
-        return testClasses.get(0).getFirstClassName();
+        return testClasses.get(0).getPath()
+                .replace('/', '.').replace(".java", "");
     }
 
     public String testClassSimpleName() {

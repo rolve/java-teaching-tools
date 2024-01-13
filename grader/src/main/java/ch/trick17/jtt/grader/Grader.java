@@ -207,16 +207,16 @@ public class Grader implements Closeable {
                 testCompileResult.errors(), compiled, testResults);
     }
 
-    private static List<InMemSource> collectSources(Path dir) throws IOException {
-        if (!Files.isDirectory(dir)) {
+    private static List<InMemSource> collectSources(Path srcDir) throws IOException {
+        if (!Files.isDirectory(srcDir)) {
             return emptyList();
         }
         var sources = new ArrayList<InMemSource>();
-        try (var javaFiles = Files.walk(dir)
+        try (var javaFiles = Files.walk(srcDir)
                 .filter(Files::isRegularFile)
                 .filter(p -> p.toString().endsWith(".java"))) {
             for (var file : (Iterable<Path>) javaFiles::iterator) {
-                sources.add(InMemSource.fromFile(file));
+                sources.add(InMemSource.fromFile(file, srcDir));
             }
         }
         return sources;
