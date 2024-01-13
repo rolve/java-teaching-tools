@@ -1,6 +1,7 @@
 package ch.trick17.jtt.memcompile;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -12,8 +13,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class InMemCompilationTest {
 
-    @Test
-    void compile() throws IOException {
+    @ParameterizedTest
+    @EnumSource(Compiler.class)
+    void compile(Compiler compiler) throws IOException {
         var sources = List.of(new InMemSource("""
                 public class HelloWorld {
                     public static void main(String[] args) {
@@ -21,15 +23,16 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        var result = InMemCompilation.compile(JAVAC, sources,
+        var result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), System.out);
         assertFalse(result.errors());
         assertEquals(1, result.output().size());
         assertEquals("HelloWorld", result.output().get(0).getClassName());
     }
 
-    @Test
-    void diagnosticsOut() throws IOException {
+    @ParameterizedTest
+    @EnumSource(Compiler.class)
+    void diagnosticsOut(Compiler compiler) throws IOException {
         var sources = List.of(new InMemSource("""
                 public class HelloWorld {
                     public static void main(String[] args) {
@@ -38,7 +41,7 @@ public class InMemCompilationTest {
                 }
                 """));
         var diagnosticsOut = new ByteArrayOutputStream();
-        var result = InMemCompilation.compile(JAVAC, sources,
+        var result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), new PrintStream(diagnosticsOut));
         assertFalse(result.errors());
         assertEquals("", diagnosticsOut.toString());
@@ -50,10 +53,10 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        result = InMemCompilation.compile(JAVAC, sources,
+        result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), new PrintStream(diagnosticsOut));
         assertTrue(result.errors());
         var diagnostics = diagnosticsOut.toString();
-        assertTrue(diagnostics.contains("';' expected"), diagnostics);
+        assertTrue(diagnostics.contains(";"), diagnostics);
     }
 }
