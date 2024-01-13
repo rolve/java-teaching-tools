@@ -76,7 +76,7 @@ public class InMemFileManager
                                               Kind kind) throws IOException {
         if (location == CLASS_PATH && kind == CLASS) {
             var matching = memClassPath.stream()
-                    .filter(f -> f.getClassName().equals(className))
+                    .filter(f -> f.getClassName().equals(className.replace('/', '.')))
                     .findFirst();
             if (matching.isPresent()) {
                 return matching.get();
@@ -91,7 +91,7 @@ public class InMemFileManager
         if (location != CLASS_OUTPUT || kind != CLASS) {
             return null;
         }
-        var classFile = new InMemClassFile(className);
+        var classFile = new InMemClassFile(className.replace('/', '.'));
         outputClassFiles.add(classFile);
         return classFile;
     }
