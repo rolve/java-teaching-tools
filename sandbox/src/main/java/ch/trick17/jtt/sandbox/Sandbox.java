@@ -19,6 +19,7 @@ import java.util.function.Supplier;
 import static ch.trick17.jtt.sandbox.InputMode.CLOSED;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.*;
+import static ch.trick17.jtt.sandbox.SandboxClassLoader.RE_INIT_METHOD;
 import static java.io.InputStream.nullInputStream;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.ClassLoader.getPlatformClassLoader;
@@ -90,6 +91,18 @@ public class Sandbox {
     public <T> SandboxResult<T> run(String className, String methodName,
                                     List<Class<?>> paramTypes, List<?> args,
                                     Class<T> resultType) {
+        try {
+            // re-initialize sandboxed classes, in the same order they were
+            // originally loaded
+            for (var c : loader.getSandboxedClasses()) {
+                c.getMethod(RE_INIT_METHOD).invoke(null);
+            }
+        } catch (NoSuchMethodException ignored) {
+            // only classes with static state have this method
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new AssertionError(e);
+        }
+
         Callable<T> isolated = () -> {
             var cls = loader.loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
@@ -250,9 +263,9 @@ public class Sandbox {
         }
 
         /**
-         * Sets the list of permitted method/constructor calls for the sandbox. If
-         * not set, the whitelist returned by {@link Whitelist#getDefault()} is
-         * used. If set to <code>null</code>, no restrictions are applied.
+         * Sets the list of permitted method/constructor calls for the sandbox.
+         * If not set, the whitelist returned by {@link Whitelist#getDefault()}
+         * is used. If set to <code>null</code>, no restrictions are applied.
          */
         public Builder permittedCalls(Whitelist permittedCalls) {
             this.permittedCalls = permittedCalls;
@@ -260,10 +273,10 @@ public class Sandbox {
         }
 
         /**
-         * Sets a timeout for the code to be executed. If a timeout is set, the code
-         * is executed in a different thread that is forcefully terminated when the
-         * timeout is over. By default, the timeout is set to <code>null</code>,
-         * meaning it is disabled.
+         * Sets a timeout for the code to be executed. If a timeout is set, the
+         * code is executed in a different thread that is forcefully terminated
+         * when the timeout is over. By default, the timeout is set to
+         * <code>null</code>, meaning it is disabled.
          */
         public Builder timeout(Duration timeout) {
             this.timeout = timeout;
@@ -276,10 +289,11 @@ public class Sandbox {
         }
 
         /**
-         * Determines how to handle output to <code>System.out</code>. The default
-         * mode is {@link OutputMode#NORMAL}. Note that the sandboxed code may
-         * affect the I/O behavior using {@link System#setOut(PrintStream)}, unless
-         * it runs with restricted permissions.
+         * Determines how to handle output to <code>System.out</code>. The
+         * default mode is {@link OutputMode#NORMAL}. Note that the sandboxed
+         * code may affect the I/O behavior using
+         * {@link System#setOut(PrintStream)}, unless it runs with restricted
+         * permissions.
          */
         public Builder stdOutMode(OutputMode stdOutMode) {
             this.stdOutMode = requireNonNull(stdOutMode);
@@ -287,10 +301,11 @@ public class Sandbox {
         }
 
         /**
-         * Determines how to handle output to <code>System.err</code>. The default
-         * mode is {@link OutputMode#NORMAL}. Note that the sandboxed code may
-         * affect the I/O behavior using {@link System#setErr(PrintStream)}, unless
-         * it runs with restricted permissions.
+         * Determines how to handle output to <code>System.err</code>. The
+         * default mode is {@link OutputMode#NORMAL}. Note that the sandboxed
+         * code may affect the I/O behavior using
+         * {@link System#setErr(PrintStream)}, unless it runs with restricted
+         * permissions.
          */
         public Builder stdErrMode(OutputMode stdErrMode) {
             this.stdErrMode = requireNonNull(stdErrMode);

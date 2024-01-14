@@ -4,6 +4,7 @@ import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemClassLoader;
 import javassist.*;
 import javassist.bytecode.BadBytecode;
+import javassist.bytecode.CodeAttribute;
 import javassist.bytecode.CodeIterator;
 import javassist.bytecode.SignatureAttribute.Type;
 import javassist.bytecode.analysis.ControlFlow;
@@ -18,22 +19,29 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static java.lang.String.join;
 import static java.lang.management.ManagementFactory.getRuntimeMXBean;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
-import static javassist.Modifier.isStatic;
+import static javassist.CtClass.booleanType;
+import static javassist.CtClass.voidType;
+import static javassist.Modifier.*;
 import static javassist.bytecode.Opcode.GOTO;
 import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
 public class SandboxClassLoader extends InMemClassLoader {
 
+    public static final String RE_INIT_METHOD = "{reInit}";
+
     private final ClassPool pool = new ClassPool(false);
     private final Whitelist permittedCalls;
     private final boolean makeInterruptible;
 
-    private final Set<String> sandboxedClasses;
+    private final Set<String> sandboxedClassNames;
+    // keep track of sandboxed classes (and loading order) for re-initialization
+    private final Queue<Class<?>> sandboxedClasses = new ConcurrentLinkedQueue<>();
 
     public SandboxClassLoader(ClassPath sandboxedCode,
                               ClassPath supportCode,
@@ -57,9 +65,9 @@ public class SandboxClassLoader extends InMemClassLoader {
         }
         this.permittedCalls = permittedCalls;
 
-        sandboxedClasses = new HashSet<>();
+        sandboxedClassNames = new HashSet<>();
         for (var classFile : sandboxedCode.memClassPath()) {
-            sandboxedClasses.add(classFile.getClassName());
+            sandboxedClassNames.add(classFile.getClassName());
         }
         for (var path : sandboxedCode.fileClassPath()) {
             try (var walk = Files.walk(path)) {
@@ -68,14 +76,18 @@ public class SandboxClassLoader extends InMemClassLoader {
                         .map(name -> name.substring(path.toString().length() + 1))
                         .map(name -> name.substring(0, name.length() - 6))
                         .map(name -> name.replace(path.getFileSystem().getSeparator(), "."))
-                        .forEach(sandboxedClasses::add);
+                        .forEach(sandboxedClassNames::add);
             }
         }
     }
 
+    public Iterable<Class<?>> getSandboxedClasses() {
+        return sandboxedClasses;
+    }
+
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
-        if (!sandboxedClasses.contains(name)) {
+        if (!sandboxedClassNames.contains(name)) {
             return super.findClass(name);
         }
 
@@ -86,14 +98,7 @@ public class SandboxClassLoader extends InMemClassLoader {
             throw new ClassNotFoundException("class not found in pool", e);
         }
         try {
-            for (var behavior : cls.getDeclaredBehaviors()) {
-                if (makeInterruptible) {
-                    makeInterruptible(behavior);
-                }
-                if (permittedCalls != null) {
-                    behavior.instrument(new RestrictionsAdder());
-                }
-            }
+            instrument(cls);
             var bytecode = cls.toBytecode();
 
             if (isDebugged()) {
@@ -105,10 +110,56 @@ public class SandboxClassLoader extends InMemClassLoader {
                 instrClassFile.toFile().deleteOnExit();
             }
 
-            return defineClass(name, bytecode, 0, bytecode.length);
+            var result = defineClass(name, bytecode, 0, bytecode.length);
+            sandboxedClasses.add(result);
+            return result;
         } catch (Exception e) {
             throw new AssertionError(e);
         }
+    }
+
+    private void instrument(CtClass cls) throws Exception {
+        for (var behavior : cls.getDeclaredBehaviors()) {
+            if (makeInterruptible) {
+                makeInterruptible(behavior);
+            }
+            if (permittedCalls != null) {
+                behavior.instrument(new RestrictionsAdder());
+            }
+        }
+
+        // add a method to re-initialize static fields
+        var staticFields = stream(cls.getDeclaredFields())
+                .filter(f -> isStatic(f.getModifiers()))
+                .toList();
+        if (staticFields.isEmpty()) {
+            return;
+        }
+
+        // use method name with special chars to avoid name clashes
+        var reInit = new CtMethod(voidType, RE_INIT_METHOD, new CtClass[0], cls);
+        reInit.setModifiers(PUBLIC | STATIC);
+
+        var initializer = cls.getClassInitializer();
+        if (initializer != null) {
+            var code = initializer.getMethodInfo().getCodeAttribute()
+                    .copy(initializer.getMethodInfo().getConstPool(), null);
+            reInit.getMethodInfo().setCodeAttribute((CodeAttribute) code);
+        }
+
+        var resetCode = new StringBuilder("{");
+        for (var field : staticFields) {
+            resetCode.append(field.getName());
+            resetCode.append(field.getType().isPrimitive()
+                    ? field.getType() == booleanType
+                    ? " = false;"
+                    : " = 0;"
+                    : " = null;");
+        }
+        resetCode.append("}");
+        reInit.insertBefore(resetCode.toString());
+
+        cls.addMethod(reInit);
     }
 
     private class RestrictionsAdder extends ExprEditor {
@@ -121,7 +172,7 @@ public class SandboxClassLoader extends InMemClassLoader {
                 var paramTypes = stream(sig.getParameterTypes())
                         .map(Type::toString)
                         .toList();
-                if (!sandboxedClasses.contains(cls) &&
+                if (!sandboxedClassNames.contains(cls) &&
                     !permittedCalls.methodPermitted(cls, method, paramTypes)) {
                     var params = "(" + join(",", paramTypes) + ")";
                     m.replace(createThrows(
@@ -140,7 +191,7 @@ public class SandboxClassLoader extends InMemClassLoader {
                 var paramTypes = stream(sig.getParameterTypes())
                         .map(Type::toString)
                         .toList();
-                if (!sandboxedClasses.contains(cls) &&
+                if (!sandboxedClassNames.contains(cls) &&
                     !permittedCalls.constructorPermitted(cls, paramTypes)) {
                     var params = "(" + join(",", paramTypes) + ")";
                     e.replace(createThrows(
