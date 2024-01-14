@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class SandboxClassLoaderTest {
 
     @Test
-    void fileClassPathRestricted() throws Exception {
+    void fileClassPathSandboxed() throws Exception {
         var classPath = ClassPath.fromCurrent();
         var loader = new SandboxClassLoader(classPath, empty(),
                 Whitelist.getDefault(), false, getPlatformClassLoader());
@@ -25,7 +25,7 @@ public class SandboxClassLoaderTest {
     }
 
     @Test
-    void fileClassPathUnrestricted() throws Exception {
+    void fileClassPathSupport() throws Exception {
         var classPath = ClassPath.fromCurrent();
         var loader = new SandboxClassLoader(empty(), classPath,
                 Whitelist.getDefault(), false, getPlatformClassLoader());
@@ -36,7 +36,7 @@ public class SandboxClassLoaderTest {
     }
 
     @Test
-    void memClassPathRestricted() throws Exception {
+    void memClassPathSandboxed() throws Exception {
         InMemClassFile classFile;
         try (var in = Greeter.class.getResourceAsStream("Greeter.class")) {
             var bytes = in.readAllBytes();
@@ -57,7 +57,7 @@ public class SandboxClassLoaderTest {
     }
 
     @Test
-    void memClassPathUnrestricted() throws Exception {
+    void memClassPathSupport() throws Exception {
         InMemClassFile classFile;
         try (var in = Greeter.class.getResourceAsStream("Greeter.class")) {
             var bytes = in.readAllBytes();

@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -28,8 +27,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
- * A sandbox for running code in isolation. Isolated code is (re)loaded using a
- * separate class loader, so its changes to static state are not visible to the
+ * A sandbox for running code in isolation. Sandboxed code is (re)loaded using a
+ * separate class loader, so its changes to static state are invisible to the
  * caller. In addition, the code can be run with restricted permissions, with a
  * timeout, and/or with custom standard input/output handling.
  */
@@ -96,19 +95,22 @@ public class Sandbox {
     /**
      * Runs the specified static (!) method with the given parameters in the
      * sandbox. The return value of the method is returned, but be aware that it
-     * could be an object of a class loaded by a different class loader (if
-     * static state isolation is enabled), making it unusable without
-     * reflection. (This is not the case for classes loaded by the bootstrap
-     * class loader, like String).
+     * could be an object of a class loaded by a different class loader, making
+     * it unusable without reflection. (This is not the case for classes loaded
+     * by the bootstrap class loader, like String).
+     * <p>
+     * The sandboxed code is loaded in a new class loader, together with the
+     * support code, but only the sandboxed code is instrumented to restrict
+     * its permissions and to react to timeouts.
      */
-    public <T> SandboxResult<T> run(ClassPath restrictedCode,
-                                    ClassPath unrestrictedCode,
+    public <T> SandboxResult<T> run(ClassPath sandboxedCode,
+                                    ClassPath supportCode,
                                     Class<?> cls,
                                     String methodName,
                                     List<Class<?>> paramTypes,
                                     List<?> args,
                                     Class<T> resultType) {
-        return run(restrictedCode, unrestrictedCode, cls.getName(),
+        return run(sandboxedCode, supportCode, cls.getName(),
                 methodName, paramTypes, args, resultType);
     }
 
@@ -118,14 +120,18 @@ public class Sandbox {
      * could be an object of a class loaded by a different class loader, making
      * it unusable without reflection. (This is not the case for classes loaded
      * by the bootstrap class loader, like String).
+     * <p>
+     * The sandboxed code is loaded in a new class loader, together with the
+     * support code, but only the sandboxed code is instrumented to restrict
+     * its permissions and to react to timeouts.
      */
-    public <T> SandboxResult<T> run(ClassPath restrictedCode,
-                                    ClassPath unrestrictedCode,
+    public <T> SandboxResult<T> run(ClassPath sandboxedCode,
+                                    ClassPath supportCode,
                                     String className, String methodName,
                                     List<Class<?>> paramTypes, List<?> args,
                                     Class<T> resultType) {
         Callable<T> isolated = () -> {
-            var loader = new SandboxClassLoader(restrictedCode, unrestrictedCode,
+            var loader = new SandboxClassLoader(sandboxedCode, supportCode,
                     permittedCalls, timeout != null, getPlatformClassLoader());
             var cls = loader.loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
@@ -231,7 +237,8 @@ public class Sandbox {
                     }
                     throw e;
                 }
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException ignored) {
+            }
         }
     }
 

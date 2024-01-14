@@ -130,8 +130,8 @@ public class TestExecutor {
     @SuppressWarnings("unchecked")
     private static SandboxResult<Map<String, Object>> runSandboxed(MethodSource test,
                                                                    TestRunConfig config) {
-        var restricted = ClassPath.fromMemory(config.classes());
-        var unrestricted = ClassPath.fromMemory(config.testClasses())
+        var sandboxed = ClassPath.fromMemory(config.classes());
+        var support = ClassPath.fromMemory(config.testClasses())
                 .withFiles(config.dependencies())
                 .withCurrent(); // TODO: can we avoid reloading JUnit classes?
         var sandbox = new Sandbox()
@@ -141,7 +141,7 @@ public class TestExecutor {
                 .timeout(config.repTimeout())
                 .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
         var args = List.of(test.getClassName(), test.getMethodName());
-        var result = sandbox.run(restricted, unrestricted, Sandboxed.class,
+        var result = sandbox.run(sandboxed, support, Sandboxed.class,
                 "run", List.of(String.class, String.class), args, Map.class);
         return (SandboxResult<Map<String, Object>>) (Object) result;
     }

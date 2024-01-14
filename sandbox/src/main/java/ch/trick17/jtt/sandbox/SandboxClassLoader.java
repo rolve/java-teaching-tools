@@ -33,17 +33,17 @@ public class SandboxClassLoader extends InMemClassLoader {
     private final Whitelist permittedCalls;
     private final boolean makeInterruptible;
 
-    private final Set<String> restrictedClasses;
+    private final Set<String> sandboxedClasses;
 
-    public SandboxClassLoader(ClassPath restrictedCode,
-                              ClassPath unrestrictedCode,
+    public SandboxClassLoader(ClassPath sandboxedCode,
+                              ClassPath supportCode,
                               Whitelist permittedCalls,
                               boolean makeInterruptible,
                               ClassLoader parent) throws IOException {
-        super(unrestrictedCode, parent);
+        super(supportCode, parent);
         this.makeInterruptible = makeInterruptible;
         try {
-            var all = restrictedCode.with(unrestrictedCode);
+            var all = sandboxedCode.with(supportCode);
             for (var classFile : all.memClassPath()) {
                 pool.appendClassPath(new ByteArrayClassPath(
                         classFile.getClassName(), classFile.getContent()));
@@ -57,25 +57,25 @@ public class SandboxClassLoader extends InMemClassLoader {
         }
         this.permittedCalls = permittedCalls;
 
-        restrictedClasses = new HashSet<>();
-        for (var classFile : restrictedCode.memClassPath()) {
-            restrictedClasses.add(classFile.getClassName());
+        sandboxedClasses = new HashSet<>();
+        for (var classFile : sandboxedCode.memClassPath()) {
+            sandboxedClasses.add(classFile.getClassName());
         }
-        for (var path : restrictedCode.fileClassPath()) {
+        for (var path : sandboxedCode.fileClassPath()) {
             try (var walk = Files.walk(path)) {
                 walk.map(Path::toString)
                         .filter(p -> p.endsWith(".class"))
                         .map(name -> name.substring(path.toString().length() + 1))
                         .map(name -> name.substring(0, name.length() - 6))
                         .map(name -> name.replace(path.getFileSystem().getSeparator(), "."))
-                        .forEach(restrictedClasses::add);
+                        .forEach(sandboxedClasses::add);
             }
         }
     }
 
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
-        if (!restrictedClasses.contains(name)) {
+        if (!sandboxedClasses.contains(name)) {
             return super.findClass(name);
         }
 
@@ -121,7 +121,7 @@ public class SandboxClassLoader extends InMemClassLoader {
                 var paramTypes = stream(sig.getParameterTypes())
                         .map(Type::toString)
                         .toList();
-                if (!restrictedClasses.contains(cls) &&
+                if (!sandboxedClasses.contains(cls) &&
                     !permittedCalls.methodPermitted(cls, method, paramTypes)) {
                     var params = "(" + join(",", paramTypes) + ")";
                     m.replace(createThrows(
@@ -140,7 +140,7 @@ public class SandboxClassLoader extends InMemClassLoader {
                 var paramTypes = stream(sig.getParameterTypes())
                         .map(Type::toString)
                         .toList();
-                if (!restrictedClasses.contains(cls) &&
+                if (!sandboxedClasses.contains(cls) &&
                     !permittedCalls.constructorPermitted(cls, paramTypes)) {
                     var params = "(" + join(",", paramTypes) + ")";
                     e.replace(createThrows(
