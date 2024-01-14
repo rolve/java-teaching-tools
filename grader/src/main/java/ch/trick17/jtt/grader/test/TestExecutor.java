@@ -37,6 +37,20 @@ import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.r
 public class TestExecutor {
 
     public static TestResults execute(TestRunConfig config) throws IOException {
+        var sandboxed = ClassPath.fromMemory(config.classes());
+        var support = ClassPath.fromMemory(config.testClasses())
+                .withFiles(config.dependencies())
+                .withCurrent();
+        var sandbox = new Sandbox.Builder(sandboxed, support)
+                .permittedCalls(config.permittedCalls() != null
+                        ? Whitelist.parse(config.permittedCalls())
+                        : null)
+                .timeout(config.repTimeout())
+                .stdInMode(EMPTY)
+                .stdOutMode(DISCARD)
+                .stdErrMode(DISCARD)
+                .build();
+
         var methodResults = new ArrayList<MethodResult>();
         for (var method : findTestMethods(config)) {
             var startTime = currentTimeMillis();
@@ -50,7 +64,7 @@ public class TestExecutor {
             var illegalOps = new ArrayList<String>();
             var scores = new ArrayList<Double>();
             for (int rep = 1; rep <= config.repetitions(); rep++) {
-                var methodResult = runSandboxed(method, config);
+                var methodResult = runSandboxed(method, sandbox);
 
                 if (methodResult.kind() == TIMEOUT) {
                     timeout = true;
@@ -130,20 +144,7 @@ public class TestExecutor {
 
     @SuppressWarnings("unchecked")
     private static SandboxResult<Map<String, Object>> runSandboxed(
-            MethodSource test, TestRunConfig config) throws IOException {
-        var sandboxed = ClassPath.fromMemory(config.classes());
-        var support = ClassPath.fromMemory(config.testClasses())
-                .withFiles(config.dependencies())
-                .withCurrent(); // TODO: can we avoid reloading JUnit classes?
-        var sandbox = new Sandbox.Builder(sandboxed, support)
-                .permittedCalls(config.permittedCalls() != null
-                        ? Whitelist.parse(config.permittedCalls())
-                        : null)
-                .timeout(config.repTimeout())
-                .stdInMode(EMPTY)
-                .stdOutMode(DISCARD)
-                .stdErrMode(DISCARD)
-                .build();
+            MethodSource test, Sandbox sandbox) {
         var args = List.of(test.getClassName(), test.getMethodName());
         var result = sandbox.run(Sandboxed.class, "run",
                 List.of(String.class, String.class), args, Map.class);

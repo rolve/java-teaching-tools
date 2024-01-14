@@ -16,8 +16,7 @@ public class CustomCxtClassLoaderRunner {
 
     public <T> T call(Callable<T> action) throws Exception {
         var origLoader = currentThread().getContextClassLoader();
-        var closeable = loader instanceof AutoCloseable ? (AutoCloseable) loader : null;
-        try (closeable) {
+        try {
             currentThread().setContextClassLoader(loader);
             return action.call();
         } finally {
