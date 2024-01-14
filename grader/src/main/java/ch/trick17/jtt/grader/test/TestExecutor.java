@@ -14,6 +14,7 @@ import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
 
+import java.io.IOException;
 import java.util.*;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
@@ -35,7 +36,7 @@ import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.r
 
 public class TestExecutor {
 
-    public static TestResults execute(TestRunConfig config) {
+    public static TestResults execute(TestRunConfig config) throws IOException {
         var methodResults = new ArrayList<MethodResult>();
         for (var method : findTestMethods(config)) {
             var startTime = currentTimeMillis();
@@ -128,21 +129,24 @@ public class TestExecutor {
     }
 
     @SuppressWarnings("unchecked")
-    private static SandboxResult<Map<String, Object>> runSandboxed(MethodSource test,
-                                                                   TestRunConfig config) {
+    private static SandboxResult<Map<String, Object>> runSandboxed(
+            MethodSource test, TestRunConfig config) throws IOException {
         var sandboxed = ClassPath.fromMemory(config.classes());
         var support = ClassPath.fromMemory(config.testClasses())
                 .withFiles(config.dependencies())
                 .withCurrent(); // TODO: can we avoid reloading JUnit classes?
-        var sandbox = new Sandbox()
+        var sandbox = new Sandbox.Builder(sandboxed, support)
                 .permittedCalls(config.permittedCalls() != null
                         ? Whitelist.parse(config.permittedCalls())
                         : null)
                 .timeout(config.repTimeout())
-                .stdInMode(EMPTY).stdOutMode(DISCARD).stdErrMode(DISCARD);
+                .stdInMode(EMPTY)
+                .stdOutMode(DISCARD)
+                .stdErrMode(DISCARD)
+                .build();
         var args = List.of(test.getClassName(), test.getMethodName());
-        var result = sandbox.run(sandboxed, support, Sandboxed.class,
-                "run", List.of(String.class, String.class), args, Map.class);
+        var result = sandbox.run(Sandboxed.class, "run",
+                List.of(String.class, String.class), args, Map.class);
         return (SandboxResult<Map<String, Object>>) (Object) result;
     }
 

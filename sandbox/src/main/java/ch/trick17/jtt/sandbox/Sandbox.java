@@ -38,58 +38,33 @@ public class Sandbox {
     private static volatile SandboxPrintStream stdOut;
     private static volatile SandboxPrintStream stdErr;
 
-    private Whitelist permittedCalls = Whitelist.getDefault();
-    private Duration timeout = null;
-    private InputMode stdInMode = InputMode.NORMAL;
-    private OutputMode stdOutMode = NORMAL;
-    private OutputMode stdErrMode = NORMAL;
+    private final SandboxClassLoader loader;
+    private final Duration timeout;
+    private final InputMode stdInMode;
+    private final OutputMode stdOutMode;
+    private final OutputMode stdErrMode;
 
     /**
-     * Sets the list of permitted method/constructor calls for the sandbox. If
-     * not set, the whitelist returned by {@link Whitelist#getDefault()} is
-     * used. If set to <code>null</code>, no restrictions are applied.
+     * Creates a new sandbox with the given class paths for the sandboxed
+     * code and the support code. The sandboxed code is loaded in a new
+     * class loader, together with the support code, but only the sandboxed
+     * code is instrumented to restrict its permissions and to react to
+     * timeouts.
+     * <p>
+     * For more options, use {@link Builder}.
      */
-    public Sandbox permittedCalls(Whitelist permittedCalls) {
-        this.permittedCalls = permittedCalls;
-        return this;
+    public Sandbox(ClassPath sandboxedCode, ClassPath supportCode) throws IOException {
+        this(new Builder(sandboxedCode, supportCode));
     }
 
-    /**
-     * Sets a timeout for the code to be executed. If a timeout is set, the code
-     * is executed in a different thread that is forcefully terminated when the
-     * timeout is over. By default, the timeout is set to <code>null</code>,
-     * meaning it is disabled.
-     */
-    public Sandbox timeout(Duration timeout) {
-        this.timeout = timeout;
-        return this;
-    }
-
-    public Sandbox stdInMode(InputMode stdInMode) {
-        this.stdInMode = stdInMode;
-        return this;
-    }
-
-    /**
-     * Determines how to handle output to <code>System.out</code>. The default
-     * mode is {@link OutputMode#NORMAL}. Note that the sandboxed code may
-     * affect the I/O behavior using {@link System#setOut(PrintStream)}, unless
-     * it runs with restricted permissions.
-     */
-    public Sandbox stdOutMode(OutputMode stdOutMode) {
-        this.stdOutMode = requireNonNull(stdOutMode);
-        return this;
-    }
-
-    /**
-     * Determines how to handle output to <code>System.err</code>. The default
-     * mode is {@link OutputMode#NORMAL}. Note that the sandboxed code may
-     * affect the I/O behavior using {@link System#setErr(PrintStream)}, unless
-     * it runs with restricted permissions.
-     */
-    public Sandbox stdErrMode(OutputMode stdErrMode) {
-        this.stdErrMode = requireNonNull(stdErrMode);
-        return this;
+    private Sandbox(Builder builder) throws IOException {
+        loader = new SandboxClassLoader(builder.sandboxedCode,
+                builder.supportCode, builder.permittedCalls,
+                builder.timeout != null, getPlatformClassLoader());
+        this.timeout = builder.timeout;
+        this.stdInMode = builder.stdInMode;
+        this.stdOutMode = builder.stdOutMode;
+        this.stdErrMode = builder.stdErrMode;
     }
 
     /**
@@ -98,20 +73,11 @@ public class Sandbox {
      * could be an object of a class loaded by a different class loader, making
      * it unusable without reflection. (This is not the case for classes loaded
      * by the bootstrap class loader, like String).
-     * <p>
-     * The sandboxed code is loaded in a new class loader, together with the
-     * support code, but only the sandboxed code is instrumented to restrict
-     * its permissions and to react to timeouts.
      */
-    public <T> SandboxResult<T> run(ClassPath sandboxedCode,
-                                    ClassPath supportCode,
-                                    Class<?> cls,
-                                    String methodName,
-                                    List<Class<?>> paramTypes,
-                                    List<?> args,
+    public <T> SandboxResult<T> run(Class<?> cls, String methodName,
+                                    List<Class<?>> paramTypes, List<?> args,
                                     Class<T> resultType) {
-        return run(sandboxedCode, supportCode, cls.getName(),
-                methodName, paramTypes, args, resultType);
+        return run(cls.getName(), methodName, paramTypes, args, resultType);
     }
 
     /**
@@ -120,19 +86,11 @@ public class Sandbox {
      * could be an object of a class loaded by a different class loader, making
      * it unusable without reflection. (This is not the case for classes loaded
      * by the bootstrap class loader, like String).
-     * <p>
-     * The sandboxed code is loaded in a new class loader, together with the
-     * support code, but only the sandboxed code is instrumented to restrict
-     * its permissions and to react to timeouts.
      */
-    public <T> SandboxResult<T> run(ClassPath sandboxedCode,
-                                    ClassPath supportCode,
-                                    String className, String methodName,
+    public <T> SandboxResult<T> run(String className, String methodName,
                                     List<Class<?>> paramTypes, List<?> args,
                                     Class<T> resultType) {
         Callable<T> isolated = () -> {
-            var loader = new SandboxClassLoader(sandboxedCode, supportCode,
-                    permittedCalls, timeout != null, getPlatformClassLoader());
             var cls = loader.loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
             var runner = new CustomCxtClassLoaderRunner(loader);
@@ -266,6 +224,81 @@ public class Sandbox {
             return (Exception) t;
         } else { // Throwable or weird subclass of it...
             throw new AssertionError(t);
+        }
+    }
+
+    public static class Builder {
+        private final ClassPath sandboxedCode;
+        private final ClassPath supportCode;
+
+        private Whitelist permittedCalls = Whitelist.getDefault();
+        private Duration timeout = null;
+        private InputMode stdInMode = InputMode.NORMAL;
+        private OutputMode stdOutMode = NORMAL;
+        private OutputMode stdErrMode = NORMAL;
+
+        /**
+         * Builds a new sandbox with the given class paths for the sandboxed
+         * code and the support code. The sandboxed code is loaded in a new
+         * class loader, together with the support code, but only the sandboxed
+         * code is instrumented to restrict its permissions and to react to
+         * timeouts.
+         */
+        public Builder(ClassPath sandboxedCode, ClassPath supportCode) {
+            this.sandboxedCode = sandboxedCode;
+            this.supportCode = supportCode;
+        }
+
+        /**
+         * Sets the list of permitted method/constructor calls for the sandbox. If
+         * not set, the whitelist returned by {@link Whitelist#getDefault()} is
+         * used. If set to <code>null</code>, no restrictions are applied.
+         */
+        public Builder permittedCalls(Whitelist permittedCalls) {
+            this.permittedCalls = permittedCalls;
+            return this;
+        }
+
+        /**
+         * Sets a timeout for the code to be executed. If a timeout is set, the code
+         * is executed in a different thread that is forcefully terminated when the
+         * timeout is over. By default, the timeout is set to <code>null</code>,
+         * meaning it is disabled.
+         */
+        public Builder timeout(Duration timeout) {
+            this.timeout = timeout;
+            return this;
+        }
+
+        public Builder stdInMode(InputMode stdInMode) {
+            this.stdInMode = stdInMode;
+            return this;
+        }
+
+        /**
+         * Determines how to handle output to <code>System.out</code>. The default
+         * mode is {@link OutputMode#NORMAL}. Note that the sandboxed code may
+         * affect the I/O behavior using {@link System#setOut(PrintStream)}, unless
+         * it runs with restricted permissions.
+         */
+        public Builder stdOutMode(OutputMode stdOutMode) {
+            this.stdOutMode = requireNonNull(stdOutMode);
+            return this;
+        }
+
+        /**
+         * Determines how to handle output to <code>System.err</code>. The default
+         * mode is {@link OutputMode#NORMAL}. Note that the sandboxed code may
+         * affect the I/O behavior using {@link System#setErr(PrintStream)}, unless
+         * it runs with restricted permissions.
+         */
+        public Builder stdErrMode(OutputMode stdErrMode) {
+            this.stdErrMode = requireNonNull(stdErrMode);
+            return this;
+        }
+
+        public Sandbox build() throws IOException {
+            return new Sandbox(this);
         }
     }
 }

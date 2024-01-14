@@ -51,38 +51,45 @@ public class SandboxTest {
     }
 
     @Test
-    public void testInputModeNormal() {
-        var sandbox = new Sandbox().stdInMode(InputMode.NORMAL);
-        var result = sandbox.run(code(), ClassPath.empty(), Input.class, "run",
+    public void testInputModeNormal() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .stdInMode(InputMode.NORMAL)
+                .build();
+        var result = sandbox.run(Input.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.NORMAL, result.kind());
         assertEquals("Hello", result.value());
     }
 
     @Test
-    public void testInputModeEmpty() {
-        var sandbox = new Sandbox().stdInMode(EMPTY);
-        var result = sandbox.run(code(), ClassPath.empty(), Input.class, "run",
+    public void testInputModeEmpty() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .stdInMode(EMPTY)
+                .build();
+        var result = sandbox.run(Input.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.NORMAL, result.kind());
         assertEquals("", result.value());
     }
 
     @Test
-    public void testInputModeClosed() {
-        var sandbox = new Sandbox().stdInMode(CLOSED);
-        var result = sandbox.run(code(), ClassPath.empty(), Input.class, "run",
+    public void testInputModeClosed() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .stdInMode(CLOSED)
+                .build();
+        var result = sandbox.run(Input.class, "run",
                 emptyList(), emptyList(), String.class);
         assertEquals(Kind.EXCEPTION, result.kind());
         assertEquals(IOException.class, result.exception().getClass());
     }
 
     @Test
-    public void testOutputModeNormal() {
-        var sandbox = new Sandbox()
+    public void testOutputModeNormal() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdOutMode(NORMAL)
-                .stdErrMode(NORMAL);
-        var result = sandbox.run(code(), ClassPath.empty(), Output.class, "run",
+                .stdErrMode(NORMAL)
+                .build();
+        var result = sandbox.run(Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertNull(result.stdOut());
@@ -92,11 +99,12 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeDiscard() {
-        var sandbox = new Sandbox()
+    public void testOutputModeDiscard() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdOutMode(DISCARD)
-                .stdErrMode(DISCARD);
-        var result = sandbox.run(code(), ClassPath.empty(), Output.class, "run",
+                .stdErrMode(DISCARD)
+                .build();
+        var result = sandbox.run(Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertNull(result.stdOut());
@@ -106,11 +114,12 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeRecord() {
-        var sandbox = new Sandbox()
+    public void testOutputModeRecord() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdOutMode(RECORD)
-                .stdErrMode(RECORD);
-        var result = sandbox.run(code(), ClassPath.empty(), Output.class, "run",
+                .stdErrMode(RECORD)
+                .build();
+        var result = sandbox.run(Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
@@ -120,12 +129,13 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeRecordTimeout() {
-        var sandbox = new Sandbox()
+    public void testOutputModeRecordTimeout() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofSeconds(1))
                 .stdOutMode(RECORD)
-                .stdErrMode(RECORD);
-        var result = sandbox.run(code(), ClassPath.empty(), Output.class, "run",
+                .stdErrMode(RECORD)
+                .build();
+        var result = sandbox.run(Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
@@ -135,11 +145,12 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeRecordForward() {
-        var sandbox = new Sandbox()
+    public void testOutputModeRecordForward() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdOutMode(RECORD_FORWARD)
-                .stdErrMode(RECORD_FORWARD);
-        var result = sandbox.run(code(), ClassPath.empty(), Output.class, "run",
+                .stdErrMode(RECORD_FORWARD)
+                .build();
+        var result = sandbox.run(Output.class, "run",
                 emptyList(), emptyList(), Void.class);
 
         assertEquals("This goes out", result.stdOut());
@@ -162,17 +173,17 @@ public class SandboxTest {
     }
 
     @Test
-    public void testRestrictionsPermitted() {
-        var sandbox = new Sandbox();
-        var result = sandbox.run(code(), ClassPath.empty(), Whitelisted.class, "run",
+    public void testRestrictionsPermitted() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(Whitelisted.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.NORMAL, result.kind());
     }
 
     @Test
-    public void testRestrictionsForbidden() {
-        var sandbox = new Sandbox();
-        var result = sandbox.run(code(), ClassPath.empty(), IO.class, "run",
+    public void testRestrictionsForbidden() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(IO.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.ILLEGAL_OPERATION, result.kind());
         assertEquals(SecurityException.class, result.exception().getClass());
@@ -180,9 +191,9 @@ public class SandboxTest {
     }
 
     @Test
-    public void testRestrictionsTryCatchReturn() {
-        var sandbox = new Sandbox();
-        var result = sandbox.run(code(), ClassPath.empty(), TryCatchReturn.class, "run",
+    public void testRestrictionsTryCatchReturn() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(TryCatchReturn.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.ILLEGAL_OPERATION, result.kind(), result.exception().toString());
         assertEquals(SecurityException.class, result.exception().getClass());
@@ -190,11 +201,13 @@ public class SandboxTest {
     }
 
     @Test
-    public void testCustomRestrictions() {
+    public void testCustomRestrictions() throws IOException {
         var permitted = Whitelist.parse(Whitelist.DEFAULT_WHITELIST_DEF
                                         + "java.util.Scanner.<init>(java.nio.file.Path)");
-        var sandbox = new Sandbox().permittedCalls(permitted);
-        var result = sandbox.run(code(), ClassPath.empty(), IO.class, "run",
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .permittedCalls(permitted)
+                .build();
+        var result = sandbox.run(IO.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.EXCEPTION, result.kind());
         assertEquals(NoSuchFileException.class, result.exception().getClass());
@@ -202,9 +215,11 @@ public class SandboxTest {
     }
 
     @Test
-    public void testNoRestrictions() {
-        var sandbox = new Sandbox().permittedCalls(null);
-        var result = sandbox.run(code(), ClassPath.empty(), IO.class, "run",
+    public void testNoRestrictions() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .permittedCalls(null)
+                .build();
+        var result = sandbox.run(IO.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.EXCEPTION, result.kind());
         assertEquals(NoSuchFileException.class, result.exception().getClass());
@@ -246,49 +261,61 @@ public class SandboxTest {
     }
 
     @Test
-    public void testTimeoutNormalLoop() {
-        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
-        var result = sandbox.run(code(), ClassPath.empty(), NormalLoop.class, "run",
+    public void testTimeoutNormalLoop() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .timeout(Duration.ofMillis(500))
+                .build();
+        var result = sandbox.run(NormalLoop.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.TIMEOUT, result.kind());
     }
 
     @Test
-    public void testTimeoutTightLoop() {
-        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
-        var result = sandbox.run(code(), ClassPath.empty(), TightLoop.class, "run",
+    public void testTimeoutTightLoop() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .timeout(Duration.ofMillis(500))
+                .build();
+        var result = sandbox.run(TightLoop.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.TIMEOUT, result.kind());
     }
 
     @Test
-    public void testTimeoutMultipleLoops() {
-        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
-        var result = sandbox.run(code(), ClassPath.empty(), MultipleLoops.class, "run",
+    public void testTimeoutMultipleLoops() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .timeout(Duration.ofMillis(500))
+                .build();
+        var result = sandbox.run(MultipleLoops.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.TIMEOUT, result.kind());
     }
 
     @Test
-    public void testTimeoutNestedLoops() {
-        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
-        var result = sandbox.run(code(), ClassPath.empty(), NestedLoops.class, "run",
+    public void testTimeoutNestedLoops() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .timeout(Duration.ofMillis(500))
+                .build();
+        var result = sandbox.run(NestedLoops.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.TIMEOUT, result.kind());
     }
 
     @Test
-    public void testTimeoutNestedTightLoops() {
-        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
-        var result = sandbox.run(code(), ClassPath.empty(), NestedTightLoops.class, "run",
+    public void testTimeoutNestedTightLoops() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .timeout(Duration.ofMillis(500))
+                .build();
+        var result = sandbox.run(NestedTightLoops.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.TIMEOUT, result.kind());
     }
 
     @Test
-    public void testCatchesInterruptedException() {
-        var sandbox = new Sandbox().timeout(Duration.ofMillis(500));
-        var result = sandbox.run(code(), ClassPath.empty(), CatchesInterruptedException.class, "run",
+    public void testCatchesInterruptedException() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .timeout(Duration.ofMillis(500))
+                .build();
+        var result = sandbox.run(CatchesInterruptedException.class, "run",
                 emptyList(), emptyList(), Void.class);
         assertEquals(Kind.TIMEOUT, result.kind());
     }
