@@ -22,7 +22,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static java.lang.String.join;
-import static java.lang.management.ManagementFactory.getRuntimeMXBean;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static javassist.CtClass.booleanType;
@@ -155,7 +154,11 @@ public class SandboxClassLoader extends InMemClassLoader {
                     : " = null;");
         }
         resetCode.append("}");
-        reInit.insertBefore(resetCode.toString());
+        if (reInit.getMethodInfo().getCodeAttribute() == null) {
+            reInit.setBody(resetCode.toString());
+        } else {
+            reInit.insertBefore(resetCode.toString());
+        }
 
         cls.addMethod(reInit);
     }

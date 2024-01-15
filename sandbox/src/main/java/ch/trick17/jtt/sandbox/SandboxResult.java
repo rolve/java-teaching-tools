@@ -44,29 +44,29 @@ public class SandboxResult<T> {
 
     public T value() {
         if (kind != Kind.NORMAL) {
-            throw new IllegalStateException();
+            throw new IllegalStateException("no value", exception);
         }
         return value;
     }
 
     public Throwable exception() {
-        if (kind != Kind.EXCEPTION && kind != Kind.ILLEGAL_OPERATION) {
+        if (exception == null) {
             throw new IllegalStateException();
         }
         return exception;
     }
 
     /**
-     * The standard output that was recorded. If recording was
-     * not enabled, returns <code>null</code>.
+     * The standard output that was recorded. If recording was not enabled,
+     * returns <code>null</code>.
      */
     public String stdOut() {
         return stdOut;
     }
 
     /**
-     * The standard error output that was recorded. If recording
-     * was not enabled, returns <code>null</code>.
+     * The standard error output that was recorded. If recording was not
+     * enabled, returns <code>null</code>.
      */
     public String stdErr() {
         return stdErr;

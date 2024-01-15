@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
@@ -51,13 +52,82 @@ public class SandboxTest {
     }
 
     @Test
+    void testIsolation() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(WithStaticFields.class, "hellos",
+                emptyList(), emptyList(), List.class);
+        var expected = List.of(
+                """
+                Hello, 1!
+                """,
+                """
+                Hello, 1!
+                Hello, 2!
+                """,
+                """
+                Hello, 1!
+                Hello, 2!
+                Hello, 3!
+                """);
+        assertEquals(expected, result.value());
+
+        // when running again, static fields should be reset:
+        result = sandbox.run(WithStaticFields.class, "hellos",
+                emptyList(), emptyList(), List.class);
+        assertEquals(expected, result.value());
+    }
+
+    @Test
+    void testIsolationSomeFieldsNotInitialized() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(WithUninitializedStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+
+        result = sandbox.run(WithUninitializedStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+
+        result = sandbox.run(WithUninitializedStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+    }
+
+    public static class WithStaticFields {
+        private static int count = 0;
+        private static String s = "";
+
+        public static String hello() {
+            count++;
+            var line = "Hello, " + count + "!\n";
+            s += line;
+            return s;
+        }
+
+        public static List<String> hellos() {
+            var list = new ArrayList<String>();
+            for (int i = 0; i < 3; i++) {
+                list.add(hello());
+            }
+            return list;
+        }
+    }
+
+    public static class WithUninitializedStaticField {
+        private static int count;
+
+        public static int increment() {
+            return count++;
+        }
+    }
+
+    @Test
     public void testInputModeNormal() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdInMode(InputMode.NORMAL)
                 .build();
         var result = sandbox.run(Input.class, "run",
                 emptyList(), emptyList(), String.class);
-        assertEquals(Kind.NORMAL, result.kind());
         assertEquals("Hello", result.value());
     }
 
@@ -68,7 +138,6 @@ public class SandboxTest {
                 .build();
         var result = sandbox.run(Input.class, "run",
                 emptyList(), emptyList(), String.class);
-        assertEquals(Kind.NORMAL, result.kind());
         assertEquals("", result.value());
     }
 
@@ -388,16 +457,16 @@ public class SandboxTest {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofSeconds(1))
                 .build();
-        var result = sandbox.run(Interface.class, "run",
-                emptyList(), emptyList(), Void.class);
-        assertEquals(Kind.NORMAL, result.kind(), () -> result.exception().toString());
+        var result = sandbox.run(Interface.class, "hello",
+                emptyList(), emptyList(), String.class);
+        assertEquals("Hello, World!", result.value());
     }
 
     public interface Interface {
         void foo(); // <- no code!
 
-        static void run() {
-            System.out.println("Hello, World!");
+        static String hello() {
+            return "Hello, World!";
         }
     }
 
