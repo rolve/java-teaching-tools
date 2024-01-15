@@ -101,13 +101,9 @@ public class SandboxClassLoader extends InMemClassLoader {
             instrument(cls);
             var bytecode = cls.toBytecode();
 
-            if (isDebugged()) {
-                var classFile = Path.of(cls.getURL().toURI());
-                var instrName = classFile.getFileName().toString()
-                        .replace(".class", "-instrumented.class");
-                var instrClassFile = classFile.resolveSibling(instrName);
-                Files.write(instrClassFile, bytecode);
-                instrClassFile.toFile().deleteOnExit();
+            if (System.getProperties().containsKey("sandbox.dumpInstrumented")) {
+                var file = Path.of("sandbox-dump/" + name.replace('.', '/') + ".class");
+                Files.write(file, bytecode);
             }
 
             var result = defineClass(name, bytecode, 0, bytecode.length);
@@ -318,10 +314,5 @@ public class SandboxClassLoader extends InMemClassLoader {
                         """);
             }
         }
-    }
-
-    private static boolean isDebugged() {
-        var args = getRuntimeMXBean().getInputArguments();
-        return args.toString().contains("jdwp");
     }
 }

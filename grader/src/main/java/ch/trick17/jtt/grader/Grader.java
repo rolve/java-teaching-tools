@@ -230,19 +230,23 @@ public class Grader implements Closeable {
                                  List<InMemClassFile> classes,
                                  List<InMemClassFile> testClasses,
                                  PrintStream out) throws IOException {
-        if (testRunner == null || !testRunner.getVmArgs().equals(testVmArgs)) {
-            if (testRunner != null) {
-                testRunner.close();
-            }
-            testRunner = new ForkedVmClient(testVmArgs);
-        }
-
         var config = new TestRunConfig(task.testClassName(), classes, testClasses,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permittedCalls(), task.dependencies());
 
-        var results = testRunner.runInForkedVm(TestExecutor.class, "execute",
-                List.of(config), TestResults.class);
+        TestResults results;
+        if (System.getProperties().containsKey("grader.noFork")) {
+            results = TestExecutor.execute(config);
+        } else {
+            if (testRunner == null || !testRunner.getVmArgs().equals(testVmArgs)) {
+                if (testRunner != null) {
+                    testRunner.close();
+                }
+                testRunner = new ForkedVmClient(testVmArgs);
+            }
+            results = testRunner.runInForkedVm(TestExecutor.class, "execute",
+                    List.of(config), TestResults.class);
+        }
 
         results.methodResults().forEach(res -> {
             res.failMsgs().stream()
