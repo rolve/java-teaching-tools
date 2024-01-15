@@ -383,6 +383,24 @@ public class SandboxTest {
         }
     }
 
+    @Test
+    void testInstrumentationInterface() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .timeout(Duration.ofSeconds(1))
+                .build();
+        var result = sandbox.run(Interface.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.NORMAL, result.kind(), () -> result.exception().toString());
+    }
+
+    public interface Interface {
+        void foo(); // <- no code!
+
+        static void run() {
+            System.out.println("Hello, World!");
+        }
+    }
+
     private ClassPath code() {
         var url = SandboxTest.class.getProtectionDomain().getCodeSource().getLocation();
         try {
