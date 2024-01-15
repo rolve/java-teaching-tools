@@ -18,6 +18,7 @@
         <module>sandbox</module>
         <module>junit-extensions</module>
         <module>in-memory-compile</module>
+        <module>test-suite-grader</module>
     </modules>
 
     <dependencyManagement>
