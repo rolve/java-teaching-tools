@@ -22,6 +22,7 @@ public interface Whitelist {
                 java.lang.Iterable.*
                 java.lang.Comparable.*
                 java.lang.Runnable.*
+                java.lang.Enum.*
                 
                 java.lang.Throwable.*
                 java.lang.Error.*
@@ -30,7 +31,10 @@ public interface Whitelist {
                 java.lang.IllegalArgumentException.*
                 java.lang.IllegalStateException.*
                 
+                java.lang.System.arraycopy
                 java.lang.System.currentTimeMillis
+                java.lang.System.identityHashCode
+                java.lang.System.lineSeparator
                 java.lang.System.nanoTime
                 
                 java.util.Objects.*
