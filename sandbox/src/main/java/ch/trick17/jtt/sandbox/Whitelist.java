@@ -22,16 +22,27 @@ public interface Whitelist {
                 java.lang.Iterable.*
                 java.lang.Comparable.*
                 java.lang.Runnable.*
+                java.lang.Enum.*
                 
                 java.lang.Throwable.*
                 java.lang.Error.*
                 java.lang.Exception.*
                 java.lang.RuntimeException.*
+                java.lang.ArithmeticException.*
+                java.lang.ArrayIndexOutOfBoundsException.*
                 java.lang.IllegalArgumentException.*
                 java.lang.IllegalStateException.*
+                java.lang.IndexOutOfBoundsException.*
                 java.lang.InterruptedException.*
+                java.lang.NullPointerException.*
+                java.lang.NumberFormatException.*
+                java.lang.StringIndexOutOfBoundsException.*
+                java.lang.UnsupportedOperationException.*
                 
+                java.lang.System.arraycopy
                 java.lang.System.currentTimeMillis
+                java.lang.System.identityHashCode
+                java.lang.System.lineSeparator
                 java.lang.System.nanoTime
                 
                 java.lang.Thread.interrupted
