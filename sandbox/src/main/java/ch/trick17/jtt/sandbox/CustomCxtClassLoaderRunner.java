@@ -1,12 +1,14 @@
 package ch.trick17.jtt.sandbox;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 import static java.lang.Thread.currentThread;
 
-public class CustomCxtClassLoaderRunner {
+public class CustomCxtClassLoaderRunner implements Closeable {
 
     private final ClassLoader loader;
 
@@ -39,5 +41,12 @@ public class CustomCxtClassLoaderRunner {
             action.run();
             return null;
         });
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (loader instanceof Closeable c) {
+            c.close();
+        }
     }
 }

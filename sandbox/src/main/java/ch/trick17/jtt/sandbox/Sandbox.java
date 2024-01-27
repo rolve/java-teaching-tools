@@ -3,10 +3,7 @@ package ch.trick17.jtt.sandbox;
 import ch.trick17.jtt.memcompile.ClassPath;
 import org.apache.commons.io.output.TeeOutputStream;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
 import java.util.List;
@@ -33,7 +30,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * caller. In addition, the code can be run with restricted permissions, with a
  * timeout, and/or with custom standard input/output handling.
  */
-public class Sandbox {
+public class Sandbox implements Closeable {
 
     private static volatile SandboxInputStream stdIn;
     private static volatile SandboxPrintStream stdOut;
@@ -238,6 +235,11 @@ public class Sandbox {
         } else { // Throwable or weird subclass of it...
             throw new AssertionError(t);
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        loader.close();
     }
 
     public static class Builder {

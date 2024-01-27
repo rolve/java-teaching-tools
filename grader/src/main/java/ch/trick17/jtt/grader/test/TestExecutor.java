@@ -41,7 +41,7 @@ public class TestExecutor {
         var support = ClassPath.fromMemory(config.testClasses())
                 .withFiles(config.dependencies())
                 .withCurrent();
-        var sandbox = new Sandbox.Builder(sandboxed, support)
+        try (var sandbox = new Sandbox.Builder(sandboxed, support)
                 .permittedCalls(config.permittedCalls() != null
                         ? Whitelist.parse(config.permittedCalls())
                         : null)
@@ -49,75 +49,75 @@ public class TestExecutor {
                 .stdInMode(EMPTY)
                 .stdOutMode(DISCARD)
                 .stdErrMode(DISCARD)
-                .build();
+                .build()) {
 
-        var methodResults = new ArrayList<MethodResult>();
-        for (var method : findTestMethods(config)) {
-            var startTime = currentTimeMillis();
+            var methodResults = new ArrayList<MethodResult>();
+            for (var method : findTestMethods(config)) {
+                var startTime = currentTimeMillis();
 
-            var passed = false;
-            var failed = false;
-            var failMsgs = new LinkedHashSet<String>();
-            var repsMade = config.repetitions();
-            var timeout = false;
-            var outOfMemory = false;
-            var illegalOps = new ArrayList<String>();
-            var scores = new ArrayList<Double>();
-            for (int rep = 1; rep <= config.repetitions(); rep++) {
-                var methodResult = runSandboxed(method, sandbox);
+                var passed = false;
+                var failed = false;
+                var failMsgs = new LinkedHashSet<String>();
+                var repsMade = config.repetitions();
+                var timeout = false;
+                var outOfMemory = false;
+                var illegalOps = new ArrayList<String>();
+                var scores = new ArrayList<Double>();
+                for (int rep = 1; rep <= config.repetitions(); rep++) {
+                    var methodResult = runSandboxed(method, sandbox);
 
-                if (methodResult.kind() == TIMEOUT) {
-                    timeout = true;
-                } else if (methodResult.kind() == OUT_OF_MEMORY) {
-                    outOfMemory = true;
-                } else if (methodResult.kind() == ILLEGAL_OPERATION) {
-                    illegalOps.add(methodResult.exception().getMessage());
-                } else if (methodResult.kind() == EXCEPTION) {
-                    // should not happen, JUnit catches exceptions
-                    throw new AssertionError(methodResult.exception());
-                } else {
-                    var junitResult = methodResult.value();
-                    if (junitResult.get("throwable") == null) {
-                        passed = true;
+                    if (methodResult.kind() == TIMEOUT) {
+                        timeout = true;
+                    } else if (methodResult.kind() == OUT_OF_MEMORY) {
+                        outOfMemory = true;
+                    } else if (methodResult.kind() == ILLEGAL_OPERATION) {
+                        illegalOps.add(methodResult.exception().getMessage());
+                    } else if (methodResult.kind() == EXCEPTION) {
+                        // should not happen, JUnit catches exceptions
+                        throw new AssertionError(methodResult.exception());
                     } else {
-                        failed = true;
-                        var throwable = (Throwable) junitResult.get("throwable");
-                        var msg = valueOf(throwable.getMessage()).replaceAll("\\s+", " ")
-                                + " (" + throwable.getClass().getName() + ")";
-                        // TODO: Collect exception stats
-                        failMsgs.add(msg);
+                        var junitResult = methodResult.value();
+                        if (junitResult.get("throwable") == null) {
+                            passed = true;
+                        } else {
+                            failed = true;
+                            var throwable = (Throwable) junitResult.get("throwable");
+                            var msg = valueOf(throwable.getMessage()).replaceAll("\\s+", " ")
+                                      + " (" + throwable.getClass().getName() + ")";
+                            // TODO: Collect exception stats
+                            failMsgs.add(msg);
+                        }
+                        if (junitResult.get("score") != null) {
+                            scores.add((Double) junitResult.get("score"));
+                        }
                     }
-                    if (junitResult.get("score") != null) {
-                        scores.add((Double) junitResult.get("score"));
-                    }
-                }
 
-                if (rep < config.repetitions() &&
+                    if (rep < config.repetitions() &&
                         currentTimeMillis() - startTime > config.testTimeout().toMillis()) {
-                    repsMade = rep;
-                    break;
+                        repsMade = rep;
+                        break;
+                    }
                 }
-            }
 
-            var nonDeterm = passed && failed;
-            passed &= !nonDeterm;
+                var nonDeterm = passed && failed;
+                passed &= !nonDeterm;
 
-            var name = method.getMethodName();
-            if (method.getClassName().contains("$")) { // nested test
-                var prefix = stream(method.getClassName().split("\\$"))
-                        .skip(1) // skip outermost class
-                        .collect(joining("."));
-                name = prefix + "." + name;
+                var name = method.getMethodName();
+                if (method.getClassName().contains("$")) { // nested test
+                    var prefix = stream(method.getClassName().split("\\$"))
+                            .skip(1) // skip outermost class
+                            .collect(joining("."));
+                    name = prefix + "." + name;
+                }
+                var incompleteReps = repsMade < config.repetitions();
+                methodResults.add(new MethodResult(name, passed, copyOf(failMsgs), nonDeterm,
+                        repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
             }
-            var incompleteReps = repsMade < config.repetitions();
-            methodResults.add(new MethodResult(name, passed, copyOf(failMsgs), nonDeterm,
-                    repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
+            return new TestResults(methodResults);
         }
-
-        return new TestResults(methodResults);
     }
 
-    private static List<MethodSource> findTestMethods(TestRunConfig config) {
+    private static List<MethodSource> findTestMethods(TestRunConfig config) throws IOException {
         // To discover test classes, JUnit needs to *load* them, so we create
         // a custom class loader and set it as the "context class loader" of
         // the current thread. It delegates to the current context class loader
@@ -127,19 +127,21 @@ public class TestExecutor {
                 .withFiles(config.dependencies());
         var loader = new InMemClassLoader(classPath,
                 currentThread().getContextClassLoader());
-        return new CustomCxtClassLoaderRunner(loader).run(() -> {
-            var launcher = LauncherFactory.create();
-            var classReq = request()
-                    .configurationParameter("junit.jupiter.testmethod.order.default",
-                            "org.junit.jupiter.api.MethodOrderer$DisplayName")
-                    .selectors(selectClass(config.testClassName()));
-            var testPlan = launcher.discover(classReq.build());
-            return testPlan.getRoots().stream()
-                    .flatMap(id -> testPlan.getDescendants(id).stream())
-                    .filter(id -> id.getType() == TEST)
-                    .map(id -> (MethodSource) id.getSource().orElseThrow())
-                    .collect(toList());
-        });
+        try (var runner = new CustomCxtClassLoaderRunner(loader)) {
+            return runner.run(() -> {
+                var launcher = LauncherFactory.create();
+                var classReq = request()
+                        .configurationParameter("junit.jupiter.testmethod.order.default",
+                                "org.junit.jupiter.api.MethodOrderer$DisplayName")
+                        .selectors(selectClass(config.testClassName()));
+                var testPlan = launcher.discover(classReq.build());
+                return testPlan.getRoots().stream()
+                        .flatMap(id -> testPlan.getDescendants(id).stream())
+                        .filter(id -> id.getType() == TEST)
+                        .map(id -> (MethodSource) id.getSource().orElseThrow())
+                        .collect(toList());
+            });
+        }
     }
 
     @SuppressWarnings("unchecked")
