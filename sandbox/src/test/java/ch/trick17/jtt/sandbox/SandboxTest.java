@@ -93,6 +93,22 @@ public class SandboxTest {
         assertEquals(0, result.value());
     }
 
+    @Test
+    void testIsolationFinalStaticField() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(WithFinalStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+
+        result = sandbox.run(WithUninitializedStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+
+        result = sandbox.run(WithUninitializedStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+    }
+
     public static class WithStaticFields {
         private static int count = 0;
         private static String s = "";
@@ -118,6 +134,14 @@ public class SandboxTest {
 
         public static int increment() {
             return count++;
+        }
+    }
+
+    public static class WithFinalStaticField {
+        private static final int[] count = {0};
+
+        public static int increment() {
+            return count[0]++;
         }
     }
 

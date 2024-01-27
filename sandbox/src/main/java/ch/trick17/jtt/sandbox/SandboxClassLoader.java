@@ -125,42 +125,7 @@ public class SandboxClassLoader extends InMemClassLoader {
             }
         }
 
-        // add a method to re-initialize static fields
-        var staticFields = stream(cls.getDeclaredFields())
-                .filter(f -> isStatic(f.getModifiers()))
-                .toList();
-        if (staticFields.isEmpty()) {
-            return;
-        }
-
-        // use method name with special chars to avoid name clashes
-        var reInit = new CtMethod(voidType, RE_INIT_METHOD, new CtClass[0], cls);
-        reInit.setModifiers(PUBLIC | STATIC);
-
-        var initializer = cls.getClassInitializer();
-        if (initializer != null) {
-            var code = initializer.getMethodInfo().getCodeAttribute()
-                    .copy(initializer.getMethodInfo().getConstPool(), null);
-            reInit.getMethodInfo().setCodeAttribute((CodeAttribute) code);
-        }
-
-        var resetCode = new StringBuilder("{");
-        for (var field : staticFields) {
-            resetCode.append(field.getName());
-            resetCode.append(field.getType().isPrimitive()
-                    ? field.getType() == booleanType
-                    ? " = false;"
-                    : " = 0;"
-                    : " = null;");
-        }
-        resetCode.append("}");
-        if (reInit.getMethodInfo().getCodeAttribute() == null) {
-            reInit.setBody(resetCode.toString());
-        } else {
-            reInit.insertBefore(resetCode.toString());
-        }
-
-        cls.addMethod(reInit);
+        makeReinitializable(cls);
     }
 
     private class RestrictionsAdder extends ExprEditor {
@@ -319,5 +284,48 @@ public class SandboxClassLoader extends InMemClassLoader {
                         """);
             }
         }
+    }
+
+    private static void makeReinitializable(CtClass cls) throws NotFoundException, CannotCompileException {
+        var staticFields = stream(cls.getDeclaredFields())
+                .filter(f -> isStatic(f.getModifiers()))
+                .toList();
+        if (staticFields.isEmpty()) {
+            return;
+        }
+
+        // make static fields non-final
+        for (var field : staticFields) {
+            field.setModifiers(field.getModifiers() & ~FINAL);
+        }
+
+        // use method name with special chars to avoid name clashes
+        var reInit = new CtMethod(voidType, RE_INIT_METHOD, new CtClass[0], cls);
+        reInit.setModifiers(PUBLIC | STATIC);
+
+        var initializer = cls.getClassInitializer();
+        if (initializer != null) {
+            var code = initializer.getMethodInfo().getCodeAttribute()
+                    .copy(initializer.getMethodInfo().getConstPool(), null);
+            reInit.getMethodInfo().setCodeAttribute((CodeAttribute) code);
+        }
+
+        var resetCode = new StringBuilder("{");
+        for (var field : staticFields) {
+            resetCode.append(field.getName());
+            resetCode.append(field.getType().isPrimitive()
+                    ? field.getType() == booleanType
+                    ? " = false;"
+                    : " = 0;"
+                    : " = null;");
+        }
+        resetCode.append("}");
+        if (reInit.getMethodInfo().getCodeAttribute() == null) {
+            reInit.setBody(resetCode.toString());
+        } else {
+            reInit.insertBefore(resetCode.toString());
+        }
+
+        cls.addMethod(reInit);
     }
 }
