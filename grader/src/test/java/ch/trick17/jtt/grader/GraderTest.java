@@ -123,6 +123,16 @@ public class GraderTest {
                 fails-test     1         0               1              0
                 """);
         assertEquals(expected, results);
+
+        tasks = List.of(Task.fromClassName("com.example.foo.FooTest", TEST_SRC_DIR).compiler(ECLIPSE));
+        grader.gradeOnly("correct");
+        grader.run(ECLIPSE_BASE, tasks);
+        results = readString(Path.of("results-FooTest.tsv"));
+        expected = withTabs("""
+                Name     compiled  greeting
+                correct  1         1
+                """);
+        assertEquals(expected, results);
     }
 
     @Test
@@ -136,6 +146,16 @@ public class GraderTest {
                 compile-error  0         1               1                    0              0
                 correct        1         0               0                    1              1
                 fails-test     1         0               0                    1              0
+                """);
+        assertEquals(expected, results);
+
+        tasks = List.of(Task.fromClassName("com.example.foo.FooTest", TEST_SRC_DIR).compiler(JAVAC));
+        grader.gradeOnly("correct");
+        grader.run(ECLIPSE_BASE, tasks);
+        results = readString(Path.of("results-FooTest.tsv"));
+        expected = withTabs("""
+                Name     compiled  greeting
+                correct  1         1
                 """);
         assertEquals(expected, results);
     }

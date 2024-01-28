@@ -62,6 +62,12 @@ public class InMemSourceTest {
                 package silly;public class SillyTest {}
                 """);
         assertEquals("silly/SillyTest.java", source.getPath());
+
+        source = InMemSource.fromString("""
+                package foo.bar.baz;
+                public class Foo {}
+                """);
+        assertEquals("foo/bar/baz/Foo.java", source.getPath());
     }
 
     @Test
@@ -130,5 +136,11 @@ public class InMemSourceTest {
                 }
                 """);
         assertEquals("mem:///greeting/HelloWorld.java", source.toUri().toString());
+
+        source = InMemSource.fromString("""
+                package foo.bar.baz;
+                public class Foo {}
+                """);
+        assertEquals("mem:///foo/bar/baz/Foo.java", source.toUri().toString());
     }
 }

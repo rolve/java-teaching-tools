@@ -32,6 +32,24 @@ public class InMemCompilationTest {
 
     @ParameterizedTest
     @EnumSource(Compiler.class)
+    void compilePackage(Compiler compiler) throws IOException {
+        var sources = List.of(InMemSource.fromString("""
+                package foo.bar;
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println("Hello, World!");
+                    }
+                }
+                """));
+        var result = InMemCompilation.compile(compiler, sources,
+                ClassPath.empty(), System.out);
+        assertFalse(result.errors());
+        assertEquals(1, result.output().size());
+        assertEquals("foo.bar.HelloWorld", result.output().get(0).getClassName());
+    }
+
+    @ParameterizedTest
+    @EnumSource(Compiler.class)
     void diagnosticsOut(Compiler compiler) throws IOException {
         var sources = List.of(InMemSource.fromString("""
                 public class HelloWorld {
