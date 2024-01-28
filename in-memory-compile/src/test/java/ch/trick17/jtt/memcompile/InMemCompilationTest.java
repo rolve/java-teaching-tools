@@ -50,6 +50,68 @@ public class InMemCompilationTest {
 
     @ParameterizedTest
     @EnumSource(Compiler.class)
+    void compileImportDifferentPackage(Compiler compiler) throws IOException {
+        var sources = List.of(InMemSource.fromString("""
+                package foo.bar;
+                
+                import foo.bar.baz.Greeter;
+                
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println(Greeter.greeting());
+                    }
+                }
+                """), InMemSource.fromString("""
+                package foo.bar.baz;
+                
+                public class Greeter {
+                    public static String greeting() {
+                        return "Hello, World!";
+                    }
+                }
+                """));
+        var result = InMemCompilation.compile(compiler, sources,
+                ClassPath.empty(), System.out);
+        assertFalse(result.errors());
+        assertEquals(2, result.output().size());
+    }
+
+    @ParameterizedTest
+    @EnumSource(Compiler.class)
+    void compileImportDifferentPackageClassPath(Compiler compiler) throws IOException {
+        var sources = List.of(InMemSource.fromString("""
+                package foo.bar.baz;
+                
+                public class Greeter {
+                    public static String greeting() {
+                        return "Hello, World!";
+                    }
+                }
+                """));
+        var result = InMemCompilation.compile(compiler, sources,
+                ClassPath.empty(), System.out);
+        assertFalse(result.errors());
+        assertEquals(1, result.output().size());
+
+        sources = List.of(InMemSource.fromString("""
+                package foo.bar;
+                
+                import foo.bar.baz.Greeter;
+                
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println(Greeter.greeting());
+                    }
+                }
+                """));
+        result = InMemCompilation.compile(compiler, sources,
+                ClassPath.fromMemory(result.output()), System.out);
+        assertFalse(result.errors());
+        assertEquals(1, result.output().size());
+    }
+
+    @ParameterizedTest
+    @EnumSource(Compiler.class)
     void diagnosticsOut(Compiler compiler) throws IOException {
         var sources = List.of(InMemSource.fromString("""
                 public class HelloWorld {

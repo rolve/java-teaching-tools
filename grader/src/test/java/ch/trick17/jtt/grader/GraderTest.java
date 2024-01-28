@@ -129,8 +129,8 @@ public class GraderTest {
         grader.run(ECLIPSE_BASE, tasks);
         results = readString(Path.of("results-FooTest.tsv"));
         expected = withTabs("""
-                Name     compiled  greeting
-                correct  1         1
+                Name     compiled  greeting  greetingImpl
+                correct  1         1         1
                 """);
         assertEquals(expected, results);
     }
@@ -154,8 +154,8 @@ public class GraderTest {
         grader.run(ECLIPSE_BASE, tasks);
         results = readString(Path.of("results-FooTest.tsv"));
         expected = withTabs("""
-                Name     compiled  greeting
-                correct  1         1
+                Name     compiled  greeting  greetingImpl
+                correct  1         1         1
                 """);
         assertEquals(expected, results);
     }

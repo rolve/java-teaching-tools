@@ -16,7 +16,6 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.List.copyOf;
 import static java.util.Locale.ROOT;
 import static javax.tools.JavaFileObject.Kind.CLASS;
-import static javax.tools.JavaFileObject.Kind.SOURCE;
 import static javax.tools.StandardLocation.*;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
@@ -46,8 +45,8 @@ public class InMemFileManager
                 throw new UnsupportedOperationException();
             }
             var matching = memClassPath.stream()
-                    .filter(f -> f.getPackageName().equals(packageName)
-                                 || recurse && f.getPackageName().startsWith(packageName + "."))
+                    .filter(f -> f.getPackageName().equals(normalize(packageName))
+                                 || recurse && f.getPackageName().startsWith(normalize(packageName) + "."))
                     .collect(Collectors.<JavaFileObject>toList());
             if (!matching.isEmpty()) {
                 return matching;
@@ -76,7 +75,7 @@ public class InMemFileManager
                                               Kind kind) throws IOException {
         if (location == CLASS_PATH && kind == CLASS) {
             var matching = memClassPath.stream()
-                    .filter(f -> f.getClassName().equals(className.replace('/', '.')))
+                    .filter(f -> f.getClassName().equals(normalize(className)))
                     .findFirst();
             if (matching.isPresent()) {
                 return matching.get();
@@ -91,7 +90,7 @@ public class InMemFileManager
         if (location != CLASS_OUTPUT || kind != CLASS) {
             return null;
         }
-        var classFile = new InMemClassFile(className.replace('/', '.'));
+        var classFile = new InMemClassFile(normalize(className));
         outputClassFiles.add(classFile);
         return classFile;
     }
@@ -107,5 +106,9 @@ public class InMemFileManager
 
     public List<InMemClassFile> getOutput() {
         return unmodifiableList(outputClassFiles);
+    }
+
+    private static String normalize(String name) {
+        return name.replace('/', '.'); // Eclipse compiler uses '/' instead of '.'
     }
 }
