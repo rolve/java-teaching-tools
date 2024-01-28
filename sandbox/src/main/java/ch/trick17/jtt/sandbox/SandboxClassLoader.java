@@ -256,9 +256,8 @@ public class SandboxClassLoader extends InMemClassLoader {
                 """);
         var bytecode = compiler.getBytecode();
         codeAttribute.setMaxLocals(bytecode.getMaxLocals());
-        if (bytecode.getMaxStack() > codeAttribute.getMaxStack()) {
-            codeAttribute.setMaxStack(bytecode.getMaxStack());
-        }
+        // conservative estimate:
+        codeAttribute.setMaxStack(codeAttribute.getMaxStack() + bytecode.getMaxStack());
         var insertedIndex = iterator.insert(bytecode.get());
         iterator.insert(bytecode.getExceptionTable(), insertedIndex);
 

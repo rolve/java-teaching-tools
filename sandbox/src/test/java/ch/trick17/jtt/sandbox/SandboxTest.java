@@ -1,6 +1,7 @@
 package ch.trick17.jtt.sandbox;
 
 import ch.trick17.jtt.memcompile.ClassPath;
+import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.sandbox.SandboxResult.Kind;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
+import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
+import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static ch.trick17.jtt.sandbox.InputMode.CLOSED;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.*;
@@ -492,6 +495,32 @@ public class SandboxTest {
         static String hello() {
             return "Hello, World!";
         }
+    }
+
+    @Test
+    public void testInstrumentationStackHeight() throws IOException {
+        // this code used to cause a BadBytecode error because the stack height
+        // was not properly increased (only with the Eclipse compiler)
+        var compiled = compile(ECLIPSE, List.of(InMemSource.fromString("""
+                import java.util.List;
+                public class StackHeight {
+                    public static void run() {
+                        var numbers = List.of();
+                        for (var n : numbers) {
+                            if (numbers.contains(n)) {
+                                System.out.println(n);
+                            }
+                        }
+                    }
+                }
+                """)), ClassPath.empty(), System.out).output();
+
+        var sandbox = new Sandbox.Builder(ClassPath.fromMemory(compiled),
+                ClassPath.empty()) .timeout(Duration.ofMillis(500))
+                .build();
+        var result = sandbox.run("StackHeight", "run",
+                emptyList(), emptyList(), List.class);
+        assertEquals(Kind.NORMAL, result.kind(), () -> result.exception().toString());
     }
 
     private ClassPath code() {
