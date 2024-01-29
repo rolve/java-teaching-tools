@@ -112,6 +112,18 @@ public class SandboxTest {
         assertEquals(0, result.value());
     }
 
+    @Test
+    void testIsolationEnum() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(Status.class, "test",
+                emptyList(), emptyList(), Boolean.class);
+        assertEquals(true, result.value());
+
+        result = sandbox.run(Status.class, "test",
+                emptyList(), emptyList(), Boolean.class);
+        assertEquals(true, result.value());
+    }
+
     public static class WithStaticFields {
         private static int count = 0;
         private static String s = "";
@@ -145,6 +157,18 @@ public class SandboxTest {
 
         public static int increment() {
             return count[0]++;
+        }
+    }
+
+    public enum Status {
+        OK, ERROR, UNKNOWN;
+
+        public boolean isKnown() {
+            return this == OK || this == ERROR;
+        }
+
+        public static boolean test() {
+            return valueOf("OK").isKnown();
         }
     }
 
