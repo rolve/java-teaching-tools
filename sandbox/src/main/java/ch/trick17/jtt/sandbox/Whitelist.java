@@ -56,6 +56,7 @@ public interface Whitelist {
                 java.util.Collection.*
                 java.util.Iterator.*
                 java.util.List.*
+                java.util.ListIterator.*
                 java.util.ArrayList.*
                 java.util.LinkedList.*
                 java.util.Set.*
@@ -63,6 +64,7 @@ public interface Whitelist {
                 java.util.LinkedHashSet.*
                 java.util.TreeSet.*
                 java.util.Map.*
+                java.util.Map$Entry.*
                 java.util.HashMap.*
                 java.util.LinkedHashMap.*
                 java.util.TreeMap.*
@@ -112,6 +114,10 @@ public interface Whitelist {
                 java.util.Scanner.reset
                 java.util.Scanner.tokens
                 java.util.Scanner.findAll
+                
+                java.util.concurrent.Callable.*
+                java.util.concurrent.ConcurrentMap.*
+                java.util.concurrent.ConcurrentHashMap.*
                 
                 java.util.function.BiConsumer.*
                 java.util.function.BiFunction.*
@@ -163,8 +169,10 @@ public interface Whitelist {
                 java.util.stream.DoubleStream.*
                 java.util.stream.Collectors.*
                 
-                java.util.regex.Pattern.*
                 java.util.regex.Matcher.*
+                java.util.regex.MatchResult.*
+                java.util.regex.Pattern.*
+                java.util.regex.PatternSyntaxException.*
                 
                 java.io.IOException.*
                 java.io.UncheckedIOException.*
