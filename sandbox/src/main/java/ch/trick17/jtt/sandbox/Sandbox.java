@@ -93,20 +93,10 @@ public class Sandbox implements Closeable {
             // originally loaded
             for (var c : loader.getSandboxedClasses()) {
                 c.getMethod(RE_INIT_METHOD).invoke(null);
-                // requires "--add-opens=java.base/java.lang=ALL-UNNAMED"
-                if (c.isEnum()) {
-                    var constants = Class.class.getDeclaredField("enumConstants");
-                    constants.setAccessible(true);
-                    constants.set(c, null);
-                    var constantDirectory = Class.class.getDeclaredField("enumConstantDirectory");
-                    constantDirectory.setAccessible(true);
-                    constantDirectory.set(c, null);
-                }
             }
         } catch (NoSuchMethodException ignored) {
             // only classes with static state have this method
-        } catch (IllegalAccessException | InvocationTargetException |
-                 NoSuchFieldException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new AssertionError(e);
         }
 

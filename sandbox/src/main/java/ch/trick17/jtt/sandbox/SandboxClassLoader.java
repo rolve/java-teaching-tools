@@ -325,7 +325,27 @@ public class SandboxClassLoader extends InMemClassLoader {
         } else {
             reInit.insertBefore(resetCode.toString());
         }
-
         cls.addMethod(reInit);
+
+        if (cls.isEnum()) {
+            // valueOf uses cached enum constants in 'Class', so replace the method
+            var valueOf = cls.getDeclaredMethod("valueOf");
+            valueOf.setBody("""
+                    {
+                        Enum[] values = values();
+                        for (int i = 0; i < values.length; i++) {
+                            if (values[i].name().equals($1)) {
+                                return values[i];
+                            }
+                        }
+                        if ($1 == null) {
+                            throw new NullPointerException("Name is null");
+                        } else {
+                            throw new IllegalArgumentException("No enum constant "
+                                    + Enum.class.getCanonicalName() + "." + $1);
+                        }
+                    }
+                    """.replace("Enum", cls.getName()));
+        }
     }
 }
