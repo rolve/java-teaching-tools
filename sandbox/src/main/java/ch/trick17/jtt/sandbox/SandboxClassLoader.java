@@ -138,7 +138,8 @@ public class SandboxClassLoader extends InMemClassLoader {
                 var paramTypes = stream(sig.getParameterTypes())
                         .map(Type::toString)
                         .toList();
-                if (!sandboxedClassNames.contains(cls) &&
+                if (!cls.endsWith("[]") && // array.clone()
+                    !sandboxedClassNames.contains(cls) &&
                     !permittedCalls.methodPermitted(cls, method, paramTypes)) {
                     var params = "(" + join(",", paramTypes) + ")";
                     m.replace(createThrows(
