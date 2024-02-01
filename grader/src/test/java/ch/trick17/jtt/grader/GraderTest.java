@@ -590,17 +590,20 @@ public class GraderTest {
                 """);
         assertEquals(expected, results);
 
-        try (var other = new Grader()) {
-            other.setTestVmArgs("-Dfile.encoding=ASCII");
-            other.run(submissions, tasks);
-            results = readString(resultsFile);
-            expected = withTabs("""
-                    Name        compiled  testEncoding
-                    correct     1         1
-                    fails-test  1         0
-                    """);
-            assertEquals(expected, results);
-        }
+        tasks = List.of(Task.fromClassName("EncodingTest", TEST_SRC_DIR)
+                .compiler(ECLIPSE)
+                .permittedCalls(DEFAULT_WHITELIST_DEF + """
+                        java.io.InputStreamReader.<init>
+                        """)
+                .testVmArgs("-Dfile.encoding=ASCII"));
+        grader.run(submissions, tasks);
+        results = readString(resultsFile);
+        expected = withTabs("""
+                Name        compiled  testEncoding
+                correct     1         1
+                fails-test  1         0
+                """);
+        assertEquals(expected, results);
     }
 
     @ParameterizedTest

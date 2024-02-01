@@ -45,7 +45,6 @@ public class Grader implements Closeable {
     private int parallelism = getCommonPoolParallelism();
     private Path logDir = Path.of(".");
     private Path resultsDir = Path.of(".");
-    private List<String> testVmArgs = List.of("-Dfile.encoding=UTF8");
 
     private final TestRunner testRunner = new TestRunner();
 
@@ -83,22 +82,6 @@ public class Grader implements Closeable {
      */
     public void setResultsDir(Path resultsDir) {
         this.resultsDir = resultsDir;
-    }
-
-    public List<String> getTestVmArgs() {
-        return testVmArgs;
-    }
-
-    /**
-     * Sets the VM arguments that are used to start the JVM(s) in which the
-     * tests are executed (in addition to predefined arguments such as the
-     * classpath, which is equal to the one of this VM). The default is
-     * "-Dfile.encoding=UTF8", so to enforce a different (or again the same)
-     * encoding, a respective argument should be included when using this
-     * method.
-     */
-    public void setTestVmArgs(String... testVmArgs) {
-        this.testVmArgs = List.of(testVmArgs);
     }
 
     public List<TaskResults> run(List<Submission> submissions, List<Task> tasks) throws IOException {
@@ -222,7 +205,7 @@ public class Grader implements Closeable {
                                  PrintStream out) throws IOException {
         var config = new TestRunConfig(task.testClassName(), classes, testClasses,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
-                task.permittedCalls(), task.dependencies(), testVmArgs);
+                task.permittedCalls(), task.dependencies(), task.testVmArgs());
 
         var results = testRunner.run(config);
 

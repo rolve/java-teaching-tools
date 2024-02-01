@@ -23,6 +23,7 @@ public class Task {
     private static final int DEFAULT_REPETITIONS = 7;
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
+    private static final List<String> DEFAULT_TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
 
     private final List<InMemSource> testSources;
     private final List<InMemSource> givenSources;
@@ -33,6 +34,7 @@ public class Task {
     private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
     private String permittedCalls = Whitelist.DEFAULT_WHITELIST_DEF;
     private List<Path> dependencies = emptyList();
+    private List<String> testVmArgs = DEFAULT_TEST_VM_ARGS;
 
     public static Task fromString(String testClassCode) {
         return new Task(List.of(InMemSource.fromString(testClassCode)), emptyList());
@@ -131,25 +133,6 @@ public class Task {
     }
 
     /**
-     * Sets the given list of paths (to JAR files or directories) as the
-     * dependencies that will be added to the class path for compilation and
-     * test execution, in addition to the class path of the current JVM.
-     */
-    public Task dependencies(Path... dependencies) {
-        return dependencies(asList(dependencies));
-    }
-
-    /**
-     * Sets the given list of paths (to JAR files or directories) as the
-     * dependencies that will be added to the class path for compilation and
-     * test execution, in addition to the class path of the current JVM.
-     */
-    public Task dependencies(List<Path> dependencies) {
-        this.dependencies = copyOf(dependencies);
-        return this;
-    }
-
-    /**
      * Sets the whitelist of permitted method/constructor calls, in the
      * following format:
      * <pre>
@@ -169,6 +152,50 @@ public class Task {
      */
     public Task permittedCalls(String permittedCalls) {
         this.permittedCalls = permittedCalls;
+        return this;
+    }
+
+    /**
+     * Sets the given list of paths (to JAR files or directories) as the
+     * dependencies that will be added to the class path for compilation and
+     * test execution, in addition to the class path of the current JVM.
+     */
+    public Task dependencies(Path... dependencies) {
+        return dependencies(asList(dependencies));
+    }
+
+    /**
+     * Sets the given list of paths (to JAR files or directories) as the
+     * dependencies that will be added to the class path for compilation and
+     * test execution, in addition to the class path of the current JVM.
+     */
+    public Task dependencies(List<Path> dependencies) {
+        this.dependencies = copyOf(dependencies);
+        return this;
+    }
+
+    /**
+     * Sets the VM arguments that are used to start the JVM(s) in which the
+     * tests are executed (in addition to predefined arguments such as the
+     * classpath, which is equal to the one of this VM). The default is
+     * "-Dfile.encoding=UTF8", so to enforce a different (or again the same)
+     * encoding, a respective argument should be included when using this
+     * method.
+     */
+    public Task testVmArgs(String... testVmArgs) {
+        return testVmArgs(asList(testVmArgs));
+    }
+
+    /**
+     * Sets the VM arguments that are used to start the JVM(s) in which the
+     * tests are executed (in addition to predefined arguments such as the
+     * classpath, which is equal to the one of this VM). The default is
+     * "-Dfile.encoding=UTF8", so to enforce a different (or again the same)
+     * encoding, a respective argument should be included when using this
+     * method.
+     */
+    public Task testVmArgs(List<String> testVmArgs) {
+        this.testVmArgs = copyOf(testVmArgs);
         return this;
     }
 
@@ -212,5 +239,9 @@ public class Task {
 
     public List<Path> dependencies() {
         return dependencies;
+    }
+
+    public List<String> testVmArgs() {
+        return testVmArgs;
     }
 }
