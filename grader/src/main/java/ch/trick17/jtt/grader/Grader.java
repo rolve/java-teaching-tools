@@ -9,7 +9,6 @@ import ch.trick17.jtt.memcompile.InMemClassFile;
 import ch.trick17.jtt.memcompile.InMemCompilation;
 import ch.trick17.jtt.memcompile.InMemCompilation.Result;
 import ch.trick17.jtt.memcompile.InMemSource;
-import ch.trick17.jtt.testrunner.ForkedVmClient;
 import ch.trick17.jtt.testrunner.TestRunner;
 import ch.trick17.jtt.testrunner.TestResults;
 import ch.trick17.jtt.testrunner.TestRunConfig;
@@ -48,7 +47,7 @@ public class Grader implements Closeable {
     private Path resultsDir = Path.of(".");
     private List<String> testVmArgs = List.of("-Dfile.encoding=UTF8");
 
-    private ForkedVmClient testRunner;
+    private final TestRunner testRunner = new TestRunner();
 
     public void gradeOnly(String... submNames) {
         var set = new HashSet<>(List.of(submNames));
@@ -232,21 +231,9 @@ public class Grader implements Closeable {
                                  PrintStream out) throws IOException {
         var config = new TestRunConfig(task.testClassName(), classes, testClasses,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
-                task.permittedCalls(), task.dependencies());
+                task.permittedCalls(), task.dependencies(), testVmArgs);
 
-        TestResults results;
-        if (System.getProperties().containsKey("grader.noFork")) {
-            results = TestRunner.execute(config);
-        } else {
-            if (testRunner == null || !testRunner.getVmArgs().equals(testVmArgs)) {
-                if (testRunner != null) {
-                    testRunner.close();
-                }
-                testRunner = new ForkedVmClient(testVmArgs);
-            }
-            results = testRunner.runInForkedVm(TestRunner.class, "execute",
-                    List.of(config), TestResults.class);
-        }
+        var results = testRunner.run(config);
 
         results.methodResults().forEach(res -> {
             res.failMsgs().stream()
@@ -302,8 +289,6 @@ public class Grader implements Closeable {
 
     @Override
     public void close() {
-        if (testRunner != null) {
-            testRunner.close();
-        }
+        testRunner.close();
     }
 }

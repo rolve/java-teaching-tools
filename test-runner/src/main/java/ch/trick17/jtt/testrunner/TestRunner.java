@@ -14,6 +14,7 @@ import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.*;
 
@@ -34,9 +35,33 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
-public class TestRunner {
+public class TestRunner implements Closeable {
 
-    public static TestResults execute(TestRunConfig config) throws IOException {
+    private ForkedVmClient forkedVm;
+
+    public TestResults run(TestRunConfig config) throws IOException {
+        if (System.getProperties().containsKey("test-runner.noFork")) {
+            return doRun(config);
+        } else {
+            if (forkedVm == null || !forkedVm.getVmArgs().equals(config.vmArgs())) {
+                if (forkedVm != null) {
+                    forkedVm.close();
+                }
+                forkedVm = new ForkedVmClient(config.vmArgs());
+            }
+            return forkedVm.runInForkedVm(TestRunner.class, "doRun",
+                    List.of(config), TestResults.class);
+        }
+    }
+
+    @Override
+    public void close() {
+        if (forkedVm != null) {
+            forkedVm.close();
+        }
+    }
+
+    public static TestResults doRun(TestRunConfig config) throws IOException {
         var sandboxed = ClassPath.fromMemory(config.classes());
         var support = ClassPath.fromMemory(config.testClasses())
                 .withFiles(config.dependencies())

@@ -14,5 +14,6 @@ public record TestRunConfig(
         Duration repTimeout,
         Duration testTimeout,
         String permittedCalls,
-        List<Path> dependencies) {
+        List<Path> dependencies,
+        List<String> vmArgs) {
 }
