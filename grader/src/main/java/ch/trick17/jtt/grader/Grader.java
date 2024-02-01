@@ -1,6 +1,5 @@
 package ch.trick17.jtt.grader;
 
-import ch.trick17.jtt.grader.Codebase.Submission;
 import ch.trick17.jtt.grader.result.SubmissionResults;
 import ch.trick17.jtt.grader.result.TaskResults;
 import ch.trick17.jtt.grader.result.TsvWriter;
@@ -9,20 +8,22 @@ import ch.trick17.jtt.memcompile.InMemClassFile;
 import ch.trick17.jtt.memcompile.InMemCompilation;
 import ch.trick17.jtt.memcompile.InMemCompilation.Result;
 import ch.trick17.jtt.memcompile.InMemSource;
-import ch.trick17.jtt.testrunner.TestRunner;
 import ch.trick17.jtt.testrunner.TestResults;
 import ch.trick17.jtt.testrunner.TestRunConfig;
+import ch.trick17.jtt.testrunner.TestRunner;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.function.Predicate;
 
 import static java.io.File.pathSeparator;
 import static java.lang.String.join;
@@ -41,18 +42,12 @@ public class Grader implements Closeable {
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
-    private Predicate<Submission> filter = p -> true;
     private int parallelism = getCommonPoolParallelism();
     private Path logDir = Path.of(".");
     private Path resultsDir = Path.of(".");
     private List<String> testVmArgs = List.of("-Dfile.encoding=UTF8");
 
     private final TestRunner testRunner = new TestRunner();
-
-    public void gradeOnly(String... submNames) {
-        var set = new HashSet<>(List.of(submNames));
-        filter = s -> set.contains(s.name());
-    }
 
     public int getParallelism() {
         return parallelism;
@@ -106,7 +101,7 @@ public class Grader implements Closeable {
         this.testVmArgs = List.of(testVmArgs);
     }
 
-    public List<TaskResults> run(Codebase codebase, List<Task> tasks) throws IOException {
+    public List<TaskResults> run(List<Submission> submissions, List<Task> tasks) throws IOException {
         OutputStream log;
         PrintStream out;
         if (logDir != null) {
@@ -117,10 +112,6 @@ public class Grader implements Closeable {
             log = null;
             out = System.out;
         }
-
-        var submissions = codebase.submissions().stream()
-                .filter(filter)
-                .toList();
 
         var results = new LinkedHashMap<Task, TaskResults>();
         tasks.forEach(t -> results.put(t, new TaskResults(t)));
