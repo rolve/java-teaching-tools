@@ -1,4 +1,4 @@
-package ch.trick17.jtt.testrunner;
+package ch.trick17.jtt.testrunner.forkedvm;
 
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;

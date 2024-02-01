@@ -1,4 +1,4 @@
-package ch.trick17.jtt.testrunner;
+package ch.trick17.jtt.testrunner.forkedvm;
 
 import org.junit.jupiter.api.Test;
 
