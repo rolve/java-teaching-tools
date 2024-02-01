@@ -10,7 +10,7 @@ import ch.trick17.jtt.memcompile.InMemCompilation;
 import ch.trick17.jtt.memcompile.InMemCompilation.Result;
 import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.testrunner.ForkedVmClient;
-import ch.trick17.jtt.testrunner.TestExecutor;
+import ch.trick17.jtt.testrunner.TestRunner;
 import ch.trick17.jtt.testrunner.TestResults;
 import ch.trick17.jtt.testrunner.TestRunConfig;
 import org.apache.commons.io.output.TeeOutputStream;
@@ -236,7 +236,7 @@ public class Grader implements Closeable {
 
         TestResults results;
         if (System.getProperties().containsKey("grader.noFork")) {
-            results = TestExecutor.execute(config);
+            results = TestRunner.execute(config);
         } else {
             if (testRunner == null || !testRunner.getVmArgs().equals(testVmArgs)) {
                 if (testRunner != null) {
@@ -244,7 +244,7 @@ public class Grader implements Closeable {
                 }
                 testRunner = new ForkedVmClient(testVmArgs);
             }
-            results = testRunner.runInForkedVm(TestExecutor.class, "execute",
+            results = testRunner.runInForkedVm(TestRunner.class, "execute",
                     List.of(config), TestResults.class);
         }
 

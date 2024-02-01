@@ -34,7 +34,7 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
-public class TestExecutor {
+public class TestRunner {
 
     public static TestResults execute(TestRunConfig config) throws IOException {
         var sandboxed = ClassPath.fromMemory(config.classes());
