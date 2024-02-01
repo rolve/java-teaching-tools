@@ -1,12 +1,12 @@
-package ch.trick17.jtt.grader.test;
+package ch.trick17.jtt.testrunner;
 
-import ch.trick17.jtt.grader.test.TestResults.MethodResult;
 import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemClassLoader;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.Sandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
 import ch.trick17.jtt.sandbox.Whitelist;
+import ch.trick17.jtt.testrunner.TestResults.MethodResult;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.reporting.ReportEntry;
 import org.junit.platform.engine.support.descriptor.MethodSource;

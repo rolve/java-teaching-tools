@@ -1,8 +1,8 @@
 package ch.trick17.jtt.grader.result;
 
 import ch.trick17.jtt.grader.Task;
-import ch.trick17.jtt.grader.test.TestResults;
-import ch.trick17.jtt.grader.test.TestResults.MethodResult;
+import ch.trick17.jtt.testrunner.TestResults;
+import ch.trick17.jtt.testrunner.TestResults.MethodResult;
 
 import java.util.List;
 import java.util.Objects;
@@ -12,7 +12,6 @@ import java.util.stream.Stream;
 
 import static ch.trick17.jtt.grader.result.Property.*;
 import static java.util.Collections.emptySet;
-import static java.util.Objects.requireNonNull;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
 

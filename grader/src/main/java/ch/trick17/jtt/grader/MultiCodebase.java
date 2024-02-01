@@ -1,13 +1,13 @@
 package ch.trick17.jtt.grader;
 
-import static java.nio.file.Files.list;
-import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+
+import static java.nio.file.Files.list;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 public class MultiCodebase extends Codebase {
 

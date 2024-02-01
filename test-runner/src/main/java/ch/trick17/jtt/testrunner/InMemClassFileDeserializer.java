@@ -1,4 +1,4 @@
-package ch.trick17.jtt.grader.test;
+package ch.trick17.jtt.testrunner;
 
 import ch.trick17.jtt.memcompile.InMemClassFile;
 import com.fasterxml.jackson.core.JsonParser;
