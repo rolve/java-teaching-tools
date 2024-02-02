@@ -203,9 +203,13 @@ public class Grader implements Closeable {
                                  List<InMemClassFile> classes,
                                  List<InMemClassFile> testClasses,
                                  PrintStream out) throws IOException {
-        var config = new TestRunConfig(task.testClassName(), classes, testClasses,
+        var supportCode = ClassPath.fromMemory(testClasses)
+                .withFiles(task.dependencies())
+                .withCurrent();
+        var config = new TestRunConfig(task.testClassName(),
+                ClassPath.fromMemory(classes), supportCode,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
-                task.permittedCalls(), task.dependencies(), task.testVmArgs());
+                task.permittedCalls(), task.testVmArgs());
 
         var results = testRunner.run(config);
 

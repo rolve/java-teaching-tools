@@ -1,6 +1,5 @@
 package ch.trick17.jtt.testrunner;
 
-import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemClassLoader;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.Sandbox;
@@ -63,11 +62,7 @@ public class TestRunner implements Closeable {
     }
 
     public static TestResults doRun(TestRunConfig config) throws IOException {
-        var sandboxed = ClassPath.fromMemory(config.classes());
-        var support = ClassPath.fromMemory(config.testClasses())
-                .withFiles(config.dependencies())
-                .withCurrent();
-        try (var sandbox = new Sandbox.Builder(sandboxed, support)
+        try (var sandbox = new Sandbox.Builder(config.sandboxedCode(), config.supportCode())
                 .permittedCalls(config.permittedCalls() != null
                         ? Whitelist.parse(config.permittedCalls())
                         : null)
@@ -148,10 +143,7 @@ public class TestRunner implements Closeable {
         // a custom class loader and set it as the "context class loader" of
         // the current thread. It delegates to the current context class loader
         // for all classes except those given by the test run config.
-        var classPath = ClassPath.fromMemory(config.classes())
-                .withMemory(config.testClasses())
-                .withFiles(config.dependencies());
-        var loader = new InMemClassLoader(classPath,
+        var loader = new InMemClassLoader(config.sandboxedCode().with(config.supportCode()),
                 currentThread().getContextClassLoader());
         try (var runner = new CustomCxtClassLoaderRunner(loader)) {
             return runner.run(() -> {
