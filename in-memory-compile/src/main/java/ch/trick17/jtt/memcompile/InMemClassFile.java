@@ -25,6 +25,10 @@ public class InMemClassFile extends SimpleJavaFileObject {
         return className;
     }
 
+    public String getBinaryName() {
+        return className.replace('.', '/');
+    }
+
     public String getPackageName() {
         var lastDot = className.lastIndexOf('.');
         return lastDot == -1 ? "" : className.substring(0, lastDot);

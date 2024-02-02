@@ -201,7 +201,7 @@ public class Task {
 
     public String testClassName() {
         return testSources.get(0).getPath()
-                .replace('/', '.').replace(".java", "");
+                .replace('/', '.').replaceAll("\\.java$", "");
     }
 
     public String testClassSimpleName() {
