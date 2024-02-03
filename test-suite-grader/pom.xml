@@ -18,8 +18,8 @@
         </dependency>
         <dependency>
             <groupId>org.pitest</groupId>
-            <artifactId>pitest</artifactId>
-            <version>1.15.3</version>
+            <artifactId>pitest-entry</artifactId>
+            <version>1.15.6</version>
         </dependency>
 
         <dependency>
