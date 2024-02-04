@@ -27,6 +27,7 @@ import java.util.function.BiConsumer;
 
 import static java.io.File.pathSeparator;
 import static java.lang.String.join;
+import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.getProperty;
 import static java.time.LocalDateTime.now;
@@ -213,11 +214,12 @@ public class Grader implements Closeable {
 
         var results = testRunner.run(config);
 
-        results.methodResults().forEach(res -> {
-            res.failMsgs().stream()
-                    .flatMap(s -> stream(s.split("\n")))
-                    .map("    "::concat)
-                    .forEach(out::println);
+        for (var res : results.methodResults()) {
+            for (var e : res.exceptions()) {
+                out.printf("    %s (%s)\n",
+                        valueOf(e.getMessage()).replaceAll("\\s+", " "),
+                        e.getClass().getName());
+            }
             if (res.nonDeterm()) {
                 out.println("Non-determinism in " + res.method());
             }
@@ -234,7 +236,7 @@ public class Grader implements Closeable {
                 out.println("Illegal operation(s) in " + res.method() + ": " +
                             join(", ", res.illegalOps()));
             }
-        });
+        }
         return results;
     }
 

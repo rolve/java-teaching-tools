@@ -64,7 +64,7 @@ public class TestSuiteGrader {
                 for (var result : refResults.methodResults()) {
                     if (!result.passed()) {
                         throw new IllegalArgumentException("Reference implementation " + (i + 1)
-                                + " failed test " + result.method() + ": " + result.failMsgs().get(0));
+                                + " failed test " + result.method(), result.exceptions().get(0));
                     }
                 }
 

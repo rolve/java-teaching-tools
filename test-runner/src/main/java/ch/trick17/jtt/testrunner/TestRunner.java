@@ -78,35 +78,34 @@ public class TestRunner implements Closeable {
 
                 var passed = false;
                 var failed = false;
-                var failMsgs = new LinkedHashSet<String>();
+                var exceptions = new ArrayList<Throwable>();
                 var repsMade = config.repetitions();
                 var timeout = false;
                 var outOfMemory = false;
                 var illegalOps = new ArrayList<String>();
                 var scores = new ArrayList<Double>();
                 for (int rep = 1; rep <= config.repetitions(); rep++) {
-                    var methodResult = runSandboxed(method, sandbox);
+                    var result = runSandboxed(method, sandbox);
 
-                    if (methodResult.kind() == TIMEOUT) {
+                    if (result.kind() == TIMEOUT) {
                         timeout = true;
-                    } else if (methodResult.kind() == OUT_OF_MEMORY) {
+                        failed = true;
+                    } else if (result.kind() == OUT_OF_MEMORY) {
                         outOfMemory = true;
-                    } else if (methodResult.kind() == ILLEGAL_OPERATION) {
-                        illegalOps.add(methodResult.exception().getMessage());
-                    } else if (methodResult.kind() == EXCEPTION) {
+                        failed = true;
+                    } else if (result.kind() == ILLEGAL_OPERATION) {
+                        illegalOps.add(result.exception().getMessage());
+                        failed = true;
+                    } else if (result.kind() == EXCEPTION) {
                         // should not happen, JUnit catches exceptions
-                        throw new AssertionError(methodResult.exception());
+                        throw new AssertionError(result.exception());
                     } else {
-                        var junitResult = methodResult.value();
-                        if (junitResult.get("throwable") == null) {
+                        var junitResult = result.value();
+                        if (junitResult.get("exception") == null) {
                             passed = true;
                         } else {
                             failed = true;
-                            var throwable = (Throwable) junitResult.get("throwable");
-                            var msg = valueOf(throwable.getMessage()).replaceAll("\\s+", " ")
-                                      + " (" + throwable.getClass().getName() + ")";
-                            // TODO: Collect exception stats
-                            failMsgs.add(msg);
+                            exceptions.add((Throwable) junitResult.get("exception"));
                         }
                         if (junitResult.get("score") != null) {
                             scores.add((Double) junitResult.get("score"));
@@ -131,7 +130,7 @@ public class TestRunner implements Closeable {
                     name = prefix + "." + name;
                 }
                 var incompleteReps = repsMade < config.repetitions();
-                methodResults.add(new MethodResult(name, passed, copyOf(failMsgs), nonDeterm,
+                methodResults.add(new MethodResult(name, passed, exceptions, nonDeterm,
                         repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
             }
             return new TestResults(methodResults);
@@ -195,20 +194,20 @@ public class TestRunner implements Closeable {
             };
             LauncherFactory.create().execute(req, listener);
 
-            var throwable = listener.result == null
+            var exception = listener.result == null
                     ? null // test was skipped
                     : listener.result.getThrowable().orElse(null);
 
             // since JUnit catches the SecurityException, need to rethrow it
             // for the sandbox to record the illegal operation...
-            if (throwable instanceof SecurityException) {
-                throw (SecurityException) throwable;
+            if (exception instanceof SecurityException) {
+                throw (SecurityException) exception;
             }
 
             // can only transfer classes loaded by the bootstrap class loader
             // across sandbox boundary...
             var result = new HashMap<String, Object>();
-            result.put("throwable", throwable);
+            result.put("exception", exception);
             result.put("score", listener.score);
             return result;
         }

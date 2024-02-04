@@ -39,9 +39,9 @@ public class ForkedVmClient implements Closeable {
     public ForkedVmClient(List<String> vmArgs) {
         this.vmArgs = copyOf(vmArgs);
 
-        var module = new SimpleModule("InMemClassFileModule", new Version(1, 0, 0, null, null, null));
+        var module = new SimpleModule("ForkedVmModule", new Version(1, 0, 0, null, null, null));
         module.addSerializer(InMemClassFile.class, new InMemClassFileSerializer());
-        module.addDeserializer(InMemClassFile.class, new InMemClassFileDeserializer());
+        module.addDeserializer(Throwable.class, new ThrowableDeserializer());
         mapper = new ObjectMapper()
                 .findAndRegisterModules()
                 .registerModule(module)

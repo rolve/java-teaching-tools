@@ -15,7 +15,7 @@ public record TestResults(
     public record MethodResult(
         String method,
         boolean passed,
-        List<String> failMsgs,
+        List<Throwable> exceptions,
         boolean nonDeterm,
         int repsMade,
         boolean incompleteReps,

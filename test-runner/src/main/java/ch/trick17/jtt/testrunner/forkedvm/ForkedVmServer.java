@@ -21,8 +21,9 @@ public class ForkedVmServer {
     private static final ObjectMapper mapper;
 
     static {
-        var module = new SimpleModule("InMemClassFileModule", new Version(1, 0, 0, null, null, null));
+        var module = new SimpleModule("ForkedVmModule", new Version(1, 0, 0, null, null, null));
         module.addDeserializer(InMemClassFile.class, new InMemClassFileDeserializer());
+        module.addSerializer(Throwable.class, new ThrowableSerializer());
         mapper = new ObjectMapper()
                 .findAndRegisterModules()
                 .registerModule(module)
