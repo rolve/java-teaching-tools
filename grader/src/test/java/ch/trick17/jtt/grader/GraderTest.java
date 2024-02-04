@@ -1,6 +1,7 @@
 package ch.trick17.jtt.grader;
 
 import ch.trick17.jtt.memcompile.Compiler;
+import ch.trick17.jtt.testrunner.TestMethod;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -450,7 +451,9 @@ public class GraderTest {
         var results = resultsList.get(0);
         assertEquals(2, results.submissionResults().size());
 
-        var allTests = List.of("MultiplyTest.testMultiply1", "MultiplyTest.testMultiply2"); // note alphabetical order
+        var allTests = List.of(
+                new TestMethod("NestedTestClass.MultiplyTest", "testMultiply1"),
+                new TestMethod("NestedTestClass.MultiplyTest", "testMultiply2")); // note alphabetical order
         assertEquals(allTests, results.get("correct").passedTests());
         assertEquals(emptyList(), results.get("correct").failedTests());
         assertEquals(emptyList(), results.get("compile-error").passedTests());

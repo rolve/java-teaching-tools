@@ -27,7 +27,6 @@ import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.stream;
-import static java.util.List.copyOf;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
@@ -121,16 +120,11 @@ public class TestRunner implements Closeable {
 
                 var nonDeterm = passed && failed;
                 passed &= !nonDeterm;
-
-                var name = method.getMethodName();
-                if (method.getClassName().contains("$")) { // nested test
-                    var prefix = stream(method.getClassName().split("\\$"))
-                            .skip(1) // skip outermost class
-                            .collect(joining("."));
-                    name = prefix + "." + name;
-                }
                 var incompleteReps = repsMade < config.repetitions();
-                methodResults.add(new MethodResult(name, passed, exceptions, nonDeterm,
+
+                var testMethod = new TestMethod(method.getClassName().replace('$', '.'),
+                        method.getMethodName());
+                methodResults.add(new MethodResult(testMethod, passed, exceptions, nonDeterm,
                         repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
             }
             return new TestResults(methodResults);

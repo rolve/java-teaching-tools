@@ -2,6 +2,7 @@ package ch.trick17.jtt.testsuitegrader;
 
 import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemClassFile;
+import ch.trick17.jtt.testrunner.TestMethod;
 import ch.trick17.jtt.testrunner.TestResults.MethodResult;
 import ch.trick17.jtt.testrunner.TestRunConfig;
 import ch.trick17.jtt.testrunner.TestRunner;
@@ -167,7 +168,7 @@ public class TestSuiteGrader {
         } else {
             var e = result.exceptions().get(0);
             var line = stream(e.getStackTrace())
-                    .filter(s -> s.getMethodName().equals(result.method()))
+                    .filter(s -> s.getMethodName().equals(result.method().name()))
                     .findFirst().orElseThrow()
                     .getLineNumber();
             return new Exception(result.method(), line, e.getClass());
@@ -175,31 +176,31 @@ public class TestSuiteGrader {
     }
 
     sealed interface CauseOfDeath {
-        String method();
+        TestMethod method();
     }
 
-    public record Timeout(String method) implements CauseOfDeath {
+    public record Timeout(TestMethod method) implements CauseOfDeath {
         public String toString() {
-            return method + " (timeout)";
+            return method.name() + " (timeout)";
         }
     }
 
-    public record OutOfMemory(String method) implements CauseOfDeath {
+    public record OutOfMemory(TestMethod method) implements CauseOfDeath {
         public String toString() {
-            return method + " (out of memory)";
+            return method.name() + " (out of memory)";
         }
     }
 
-    public record IllegalOp(String method, String op) implements CauseOfDeath {
+    public record IllegalOp(TestMethod method, String op) implements CauseOfDeath {
         public String toString() {
-            return method + " (illegal op: " + op + ")";
+            return method.name() + " (illegal op: " + op + ")";
         }
     }
 
-    public record Exception(String method, int line,
+    public record Exception(TestMethod method, int line,
                             Class<?> exceptionClass) implements CauseOfDeath {
         public String toString() {
-            return method + ":" + line + " (" + exceptionClass.getSimpleName() + ")";
+            return method.name() + ":" + line + " (" + exceptionClass.getSimpleName() + ")";
         }
     }
 }

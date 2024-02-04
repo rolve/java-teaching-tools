@@ -1,6 +1,7 @@
 package ch.trick17.jtt.grader.result;
 
 import ch.trick17.jtt.grader.Task;
+import ch.trick17.jtt.testrunner.TestMethod;
 import ch.trick17.jtt.testrunner.TestResults;
 import ch.trick17.jtt.testrunner.TestResults.MethodResult;
 
@@ -13,7 +14,6 @@ import java.util.stream.Stream;
 import static ch.trick17.jtt.grader.result.Property.*;
 import static java.util.Collections.emptySet;
 import static java.util.function.Predicate.not;
-import static java.util.stream.Collectors.toList;
 
 /**
  * A container for the grading results of a {@link Task} for a single
@@ -38,7 +38,7 @@ public record SubmissionResults(
                 anyMatch(m -> !m.illegalOps().isEmpty()) ? ILLEGAL_OPERATION : null);
         return withNull
                 .filter(Objects::nonNull)
-                .collect(toList());
+                .toList();
     }
 
     private boolean anyMatch(Predicate<MethodResult> predicate) {
@@ -53,31 +53,30 @@ public record SubmissionResults(
     }
 
     /**
-     * Returns the names of all tests that were executed for the submission, in
-     * the order of execution. If no tests could be executed, the list is
-     * empty.
+     * Returns all tests that were executed for the submission, in the order of
+     * execution. If no tests could be executed, the list is empty.
      */
-    public List<String> allTests() {
+    public List<TestMethod> allTests() {
         return Stream.ofNullable(testResults)
                 .flatMap(r -> r.methodResults().stream())
                 .map(MethodResult::method)
-                .collect(toList());
+                .toList();
 
     }
 
-    public List<String> passedTests() {
+    public List<TestMethod> passedTests() {
         return Stream.ofNullable(testResults)
                 .flatMap(r -> r.methodResults().stream())
                 .filter(MethodResult::passed)
                 .map(MethodResult::method)
-                .collect(toList());
+                .toList();
     }
 
-    public List<String> failedTests() {
+    public List<TestMethod> failedTests() {
         return Stream.ofNullable(testResults)
                 .flatMap(r -> r.methodResults().stream())
                 .filter(not(MethodResult::passed))
                 .map(MethodResult::method)
-                .collect(toList());
+                .toList();
     }
 }

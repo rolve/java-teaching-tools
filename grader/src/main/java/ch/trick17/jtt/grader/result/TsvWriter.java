@@ -75,20 +75,20 @@ public class TsvWriter {
         var tests = results.stream()
                 .filter(res -> !res.allTests().isEmpty())
                 .findFirst().stream()
-                .flatMap(res -> res.allTests().stream()); // test execution order
+                .flatMap(res -> res.allTests().stream().map(m -> m.name())); // test execution order
         return Stream.of(properties, tags, tests)
                 .flatMap(identity())
-                .collect(toList());
+                .toList();
     }
 
     /**
      * Returns the columns the given submission fulfills.
      */
-    private static Set<String> fulfilledColumns(SubmissionResults submRes) {
+    private static Set<String> fulfilledColumns(SubmissionResults results) {
         var streams = Stream.of(
-                submRes.properties().stream().map(Property::prettyName),
-                submRes.tags().stream(),
-                submRes.passedTests().stream());
+                results.properties().stream().map(Property::prettyName),
+                results.tags().stream(),
+                results.passedTests().stream().map(m -> m.name()));
         return streams.flatMap(identity()).collect(toSet());
     }
 }
