@@ -15,6 +15,8 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Scanner;
 
+import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY;
+import static com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.JAVA_LANG_OBJECT;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.List.copyOf;
@@ -43,7 +45,8 @@ public class ForkedVmClient implements Closeable {
         mapper = new ObjectMapper()
                 .findAndRegisterModules()
                 .registerModule(module)
-                .activateDefaultTyping(LaissezFaireSubTypeValidator.instance);
+                .activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
+                        JAVA_LANG_OBJECT, PROPERTY);
     }
 
     public List<String> getVmArgs() {

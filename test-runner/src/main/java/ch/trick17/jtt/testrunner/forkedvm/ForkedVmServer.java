@@ -12,6 +12,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
 
+import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY;
+import static com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.JAVA_LANG_OBJECT;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class ForkedVmServer {
@@ -24,7 +26,8 @@ public class ForkedVmServer {
         mapper = new ObjectMapper()
                 .findAndRegisterModules()
                 .registerModule(module)
-                .activateDefaultTyping(LaissezFaireSubTypeValidator.instance);
+                .activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
+                        JAVA_LANG_OBJECT, PROPERTY);
     }
 
     public static void main(String[] args) throws Exception {
