@@ -16,12 +16,14 @@ import org.junit.platform.launcher.core.LauncherFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.*;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
 import static ch.trick17.jtt.sandbox.SandboxResult.Kind.*;
+import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Double.parseDouble;
 import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
@@ -126,6 +128,14 @@ public class TestRunner implements Closeable {
                         method.getMethodName());
                 methodResults.add(new MethodResult(testMethod, passed, exceptions, nonDeterm,
                         repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
+
+                // workaround for NoClassDefFoundError when serializing some
+                // exceptions after the sandbox and the associated class loaders
+                // have been closed:
+                if (!exceptions.isEmpty()) {
+                    var out = new ObjectOutputStream(nullOutputStream());
+                    out.writeObject(exceptions);
+                }
             }
             return new TestResults(methodResults);
         }

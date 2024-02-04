@@ -11,7 +11,7 @@ import static ch.trick17.jtt.testsuitegrader.RefCodeProvider.refTestSuite;
 public class TestSuiteGraderTest {
 
     @ParameterizedTest
-    @ValueSource(strings = {"jahreszeit", "phone-number", "random-sort"})
+    @ValueSource(strings = {"adresse", "jahreszeit", "phone-number", "random-sort"})
     void grade(String name) throws IOException {
         var task = new Task(refImplementations(name), refTestSuite(name));
         var grader = new TestSuiteGrader();
