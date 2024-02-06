@@ -4,6 +4,9 @@ import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
 import ch.trick17.jtt.memcompile.InMemClassFile;
+import ch.trick17.jtt.testrunner.forkedvm.Result.ReturnedValue;
+import ch.trick17.jtt.testrunner.forkedvm.Result.ThrownException;
+import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -15,9 +18,7 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Scanner;
 
-import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY;
 import static com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.JAVA_LANG_OBJECT;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.List.copyOf;
 import static java.util.stream.Collectors.toList;
@@ -45,8 +46,7 @@ public class ForkedVmClient implements Closeable {
         mapper = new ObjectMapper()
                 .findAndRegisterModules()
                 .registerModule(module)
-                .activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
-                        JAVA_LANG_OBJECT, PROPERTY);
+                .activateDefaultTyping(LaissezFaireSubTypeValidator.instance, JAVA_LANG_OBJECT);
     }
 
     public List<String> getVmArgs() {
@@ -122,12 +122,18 @@ public class ForkedVmClient implements Closeable {
         for (int tries = 1; ; tries++) {
             ensureForkedVmRunning();
             try (var socket = new Socket("localhost", port)) {
-                var request = mapper.writeValueAsString(call) + "\n";
-                socket.getOutputStream().write(request.getBytes(UTF_8));
-                var response = new String(socket.getInputStream().readAllBytes(), UTF_8);
-                return mapper.readValue(response, returnType);
+                var request = mapper.writeValueAsBytes(call);
+                socket.getOutputStream().write(request);
+                socket.getOutputStream().write('\n');
+
+                var result = mapper.readValue(socket.getInputStream(), Result.class);
+                if (result instanceof ReturnedValue v) {
+                    return returnType.cast(v.value());
+                } else if (result instanceof ThrownException e) {
+                    e.throwAsUnchecked();
+                }
             } catch (IOException e) {
-                if (tries == CONNECT_TRIES) {
+                if (e instanceof JacksonException || tries == CONNECT_TRIES) {
                     throw e;
                 } // else try again
             }
