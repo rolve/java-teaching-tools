@@ -7,6 +7,7 @@ import ch.trick17.jtt.sandbox.SandboxResult;
 import ch.trick17.jtt.sandbox.Whitelist;
 import ch.trick17.jtt.testrunner.TestResults.MethodResult;
 import ch.trick17.jtt.testrunner.forkedvm.ForkedVmClient;
+import org.junit.platform.commons.JUnitException;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.reporting.ReportEntry;
 import org.junit.platform.engine.support.descriptor.MethodSource;
@@ -98,8 +99,12 @@ public class TestRunner implements Closeable {
                         illegalOps.add(result.exception().getMessage());
                         failed = true;
                     } else if (result.kind() == EXCEPTION) {
-                        // should not happen, JUnit catches exceptions
-                        throw new AssertionError(result.exception());
+                        if (result.exception().getClass().getName().equals(JUnitException.class.getName())) {
+                            throw (RuntimeException) result.exception();
+                        } else {
+                            // should not happen, JUnit catches exceptions
+                            throw new AssertionError(result.exception());
+                        }
                     } else {
                         var junitResult = result.value();
                         if (junitResult.get("exception") == null) {
