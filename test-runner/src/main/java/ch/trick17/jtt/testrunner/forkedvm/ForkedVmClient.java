@@ -15,10 +15,13 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 import static com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.JAVA_LANG_OBJECT;
+import static java.util.Arrays.asList;
+import static java.util.Arrays.stream;
 import static java.util.Collections.emptyList;
 import static java.util.List.copyOf;
 import static java.util.stream.Collectors.toList;
@@ -130,15 +133,45 @@ public class ForkedVmClient implements Closeable {
                 if (result instanceof ReturnedValue v) {
                     return returnType.cast(v.value());
                 } else if (result instanceof ThrownException e) {
-                    e.throwAsUnchecked();
+                    rethrow(e.exception(), call);
                 }
-            } catch (IOException e) {
+            } catch (IOException e) { // includes IOExceptions from the server
                 if (e instanceof JacksonException || tries == CONNECT_TRIES) {
                     throw e;
                 } // else try again
             }
             killForkedVm();
         }
+    }
+
+    private void rethrow(Throwable exception, MethodCall call) throws IOException {
+        adaptStackTrace(exception, call);
+        if(exception instanceof RuntimeException e) {
+            throw e;
+        } else if (exception instanceof Error e) {
+            throw e;
+        } else if (exception instanceof IOException e) {
+            throw e;
+        } else {
+            throw new RuntimeException(exception);
+        }
+    }
+
+    private static void adaptStackTrace(Throwable exception, MethodCall call) {
+        var trace = new ArrayList<>(asList(exception.getStackTrace()));
+        for (var i = trace.listIterator(trace.size()); i.hasPrevious(); ) {
+            var prev = i.previous();
+            if (prev.getMethodName().equals(call.methodName()) &&
+                prev.getClassName().equals(call.className())) {
+                break;
+            } else {
+                i.remove();
+            }
+        }
+        stream(new Error().getStackTrace())
+                .dropWhile(s -> s.getClassName().equals(ForkedVmClient.class.getName()))
+                .forEach(trace::add);
+        exception.setStackTrace(trace.toArray(StackTraceElement[]::new));
     }
 
     private void killForkedVm() {

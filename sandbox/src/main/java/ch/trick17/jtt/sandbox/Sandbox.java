@@ -136,8 +136,7 @@ public class Sandbox implements Closeable {
                 if (stdInMode == InputMode.CLOSED) {
                     try {
                         stdIn.close();
-                    } catch (IOException ignored) {
-                    }
+                    } catch (IOException ignored) {}
                 }
             }
             var outRecorder = activatePrintStream(stdOut, stdOutMode);
