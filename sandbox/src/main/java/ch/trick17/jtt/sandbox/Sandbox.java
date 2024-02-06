@@ -100,22 +100,23 @@ public class Sandbox implements Closeable {
             throw new AssertionError(e);
         }
 
-        Callable<T> isolated = () -> {
+        Action<T> isolated = () -> {
             var cls = loader.loadClass(className);
             var method = cls.getMethod(methodName, paramTypes.toArray(Class<?>[]::new));
             var runner = new CustomCxtClassLoaderRunner(loader);
             try {
-                return runner.call(() -> resultType.cast(method.invoke(null, args.toArray())));
+                return runner.run(() -> resultType.cast(method.invoke(null, args.toArray())));
             } catch (InvocationTargetException e) {
-                throw asException(e.getTargetException());
+                throw e.getCause();
             }
         };
 
-        Callable<T> timed = timeout != null ? () -> runWithTimeout(isolated) : isolated;
+        Action<T> timed = timeout != null ? () -> runWithTimeout(isolated) : isolated;
 
         Supplier<SandboxResult<T>> asResult = () -> {
             try {
-                return SandboxResult.normal(timed.call());
+                var value = timed.run();
+                return SandboxResult.normal(value);
             } catch (TimeoutException e) {
                 return SandboxResult.timeout();
             } catch (OutOfMemoryError e) {
@@ -184,8 +185,8 @@ public class Sandbox implements Closeable {
      * instrumentation performed by the SandboxClassLoader ensures that the
      * sandboxed code actually reacts to the interruption.
      */
-    private <V> V runWithTimeout(Callable<V> action) throws Exception {
-        var task = new FutureTask<>(action);
+    private <T> T runWithTimeout(Action<T> action) throws Throwable {
+        var task = new FutureTask<>(action.asCallable());
         var thread = new Thread(task);
         // we should be able to kill the thread, but just in case, the thread is
         // set to "daemon", so that it does not prevent the JVM from exiting.
@@ -197,7 +198,7 @@ public class Sandbox implements Closeable {
                 try {
                     return task.get(MILLISECONDS.convert(timeout), MILLISECONDS);
                 } catch (ExecutionException e) {
-                    throw asException(e.getCause());
+                    throw e.getCause().getCause(); // asCallable wraps again...
                 } catch (TimeoutException e) {
                     while (thread.isAlive()) {
                         thread.interrupt();
@@ -205,8 +206,7 @@ public class Sandbox implements Closeable {
                     }
                     throw e;
                 }
-            } catch (InterruptedException ignored) {
-            }
+            } catch (InterruptedException ignored) {}
         }
     }
 
@@ -224,16 +224,6 @@ public class Sandbox implements Closeable {
                     stdIn = in; // signal for other threads that everything is ready
                 }
             }
-        }
-    }
-
-    private static Exception asException(Throwable t) {
-        if (t instanceof Error) {
-            throw (Error) t;
-        } else if (t instanceof Exception) {
-            return (Exception) t;
-        } else { // Throwable or weird subclass of it...
-            throw new AssertionError(t);
         }
     }
 
@@ -316,6 +306,24 @@ public class Sandbox implements Closeable {
 
         public Sandbox build() throws IOException {
             return new Sandbox(this);
+        }
+    }
+
+    /**
+     * Like Callable, but allows {@link Throwable} to be thrown, not just
+     * {@link Exception}.
+     */
+    interface Action<T> {
+        T run() throws Throwable;
+
+        default Callable<T> asCallable() { // needed for FutureTask
+            return () -> {
+                try {
+                    return run();
+                } catch (Throwable e) {
+                    throw new Exception(e);
+                }
+            };
         }
     }
 }

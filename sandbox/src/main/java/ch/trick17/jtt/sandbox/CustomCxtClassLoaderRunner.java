@@ -3,8 +3,6 @@ package ch.trick17.jtt.sandbox;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Objects;
-import java.util.concurrent.Callable;
-import java.util.function.Supplier;
 
 import static java.lang.Thread.currentThread;
 
@@ -16,31 +14,18 @@ public class CustomCxtClassLoaderRunner implements Closeable {
         this.loader = Objects.requireNonNull(loader);
     }
 
-    public <T> T call(Callable<T> action) throws Exception {
+    public <T, E extends Throwable> T run(Action<T, E> action) throws E {
         var origLoader = currentThread().getContextClassLoader();
         try {
             currentThread().setContextClassLoader(loader);
-            return action.call();
+            return action.run();
         } finally {
             currentThread().setContextClassLoader(origLoader);
         }
     }
 
-    public <T> T run(Supplier<T> action) {
-        try {
-            return call(action::get);
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    public void run(Runnable action) {
-        run(() -> {
-            action.run();
-            return null;
-        });
+    public interface Action<T, E extends Throwable> {
+        T run() throws E;
     }
 
     @Override

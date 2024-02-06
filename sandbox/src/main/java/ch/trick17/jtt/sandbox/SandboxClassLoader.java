@@ -109,7 +109,7 @@ public class SandboxClassLoader extends InMemClassLoader {
             sandboxedClasses.add(result);
             return result;
         } catch (Exception e) {
-            throw new AssertionError(e);
+            throw new ClassNotFoundException("could not instrument class", e);
         }
     }
 

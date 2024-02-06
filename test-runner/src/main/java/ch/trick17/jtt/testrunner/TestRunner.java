@@ -165,7 +165,7 @@ public class TestRunner implements Closeable {
                         .flatMap(id -> testPlan.getDescendants(id).stream())
                         .filter(id -> id.getType() == TEST)
                         .map(id -> (MethodSource) id.getSource().orElseThrow())
-                        .collect(toList());
+                        .toList();
             });
         }
     }
