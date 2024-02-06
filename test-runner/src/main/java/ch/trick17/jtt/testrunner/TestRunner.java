@@ -7,7 +7,6 @@ import ch.trick17.jtt.sandbox.SandboxResult;
 import ch.trick17.jtt.sandbox.Whitelist;
 import ch.trick17.jtt.testrunner.TestResults.MethodResult;
 import ch.trick17.jtt.testrunner.forkedvm.ForkedVmClient;
-import org.junit.platform.commons.JUnitException;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.reporting.ReportEntry;
 import org.junit.platform.engine.support.descriptor.MethodSource;
@@ -18,7 +17,10 @@ import org.junit.platform.launcher.core.LauncherFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
@@ -26,12 +28,8 @@ import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
 import static ch.trick17.jtt.sandbox.SandboxResult.Kind.*;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Double.parseDouble;
-import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
-import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
@@ -99,12 +97,11 @@ public class TestRunner implements Closeable {
                         illegalOps.add(result.exception().getMessage());
                         failed = true;
                     } else if (result.kind() == EXCEPTION) {
-                        if (result.exception().getClass().getName().equals(JUnitException.class.getName())) {
-                            throw (RuntimeException) result.exception();
-                        } else {
-                            // should not happen, JUnit catches exceptions
-                            throw new AssertionError(result.exception());
-                        }
+                        // does not happen for normal test exceptions, only
+                        // for issues with JUnit or the sandbox itself
+                        var m = method.getClassName() + "." + method.getMethodName();
+                        throw new TestRunException("failed to run " + m,
+                                result.exception());
                     } else {
                         var junitResult = result.value();
                         if (junitResult.get("exception") == null) {
