@@ -1,19 +1,40 @@
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@TestMethodOrder(OrderAnnotation.class)
 public class RandomSortTest {
 
+    @Order(1)
     @Test
-    public void testIsSorted() {
+    public void testIsSortedSpecial() {
+        assertTrue(RandomSort.isSorted(new int[]{}));
+        assertTrue(RandomSort.isSorted(new int[]{1}));
+        assertTrue(RandomSort.isSorted(new int[]{-13}));
+    }
+
+    @Order(2)
+    @Test
+    public void testIsSortedLength2() {
         assertTrue(RandomSort.isSorted(new int[]{1, 2}));
+        assertFalse(RandomSort.isSorted(new int[]{2, 1}));
+
+        assertTrue(RandomSort.isSorted(new int[]{-1, 1}));
+        assertFalse(RandomSort.isSorted(new int[]{1, -1}));
+    }
+
+    @Order(3)
+    @Test
+    public void testIsSortedLonger() {
         assertTrue(RandomSort.isSorted(new int[]{1, 2, 3}));
         assertTrue(RandomSort.isSorted(new int[]{-1, 1, 3, 13}));
         assertTrue(RandomSort.isSorted(new int[]{0, 3, 13, 101, 102, 1000}));
 
-        assertFalse(RandomSort.isSorted(new int[]{2, 1}));
         assertFalse(RandomSort.isSorted(new int[]{3, 1, 2}));
         assertFalse(RandomSort.isSorted(new int[]{1, 3, 2}));
         assertFalse(RandomSort.isSorted(new int[]{-1, 1, 13, 3}));
@@ -23,13 +44,7 @@ public class RandomSortTest {
         assertFalse(RandomSort.isSorted(new int[]{10000, 0, 3, 13, 101, 102, 1000}));
     }
 
-    @Test
-    public void testIsSortedSpecial() {
-        assertTrue(RandomSort.isSorted(new int[]{}));
-        assertTrue(RandomSort.isSorted(new int[]{1}));
-        assertTrue(RandomSort.isSorted(new int[]{-13}));
-    }
-
+    @Order(4)
     @Test
     public void testIsSortedDuplicates() {
         assertTrue(RandomSort.isSorted(new int[]{1, 1}));
@@ -41,6 +56,34 @@ public class RandomSortTest {
         assertFalse(RandomSort.isSorted(new int[]{0, 1, 1, 1, 2, 2, 1}));
     }
 
+    @Order(5)
+    @Test
+    public void testRandomSortNoSwaps() {
+        // schon sortiert, also 0 swaps nötig
+        int[] array = {-1, 0, 1, 2, 7, 13, 14};
+        int[] copy = Arrays.copyOf(array, array.length);
+        int swaps = RandomSort.randomSort(array);
+        assertArrayEquals(copy, array);
+        assertEquals(0, swaps);
+    }
+
+    @Order(6)
+    @Test
+    public void testRandomSortLength2() {
+        int[] array = {1, 2};
+        int[] sorted = {1, 2};
+        int swaps = RandomSort.randomSort(array);
+        assertArrayEquals(sorted, array);
+        assertEquals(0, swaps);
+
+        array = new int[]{2, 1};
+        sorted = new int[]{1, 2};
+        swaps = RandomSort.randomSort(array);
+        assertArrayEquals(sorted, array);
+        assertEquals(1, swaps);
+    }
+
+    @Order(7)
     @Test
     public void testRandomSortSingleSwap() {
         int[] array = {1, 2, 3, 4, 6, 5};
@@ -50,6 +93,17 @@ public class RandomSortTest {
         assertEquals(1, swaps);
     }
 
+    @Order(8)
+    @Test
+    public void testRandomSortSingleSwapDuplicates() {
+        int[] array = {2, 2, 2, 4, 5, 4};
+        int[] sorted = {2, 2, 2, 4, 4, 5};
+        int swaps = RandomSort.randomSort(array);
+        assertArrayEquals(sorted, array);
+        assertEquals(1, swaps);
+    }
+
+    @Order(9)
     @Test
     public void testRandomSortOneOrThreeSwaps() {
         // teste mehrmals, da zufällig
@@ -78,6 +132,7 @@ public class RandomSortTest {
         }
     }
 
+    @Order(10)
     @Test
     public void testRandomSortTwoOrFourSwaps() {
         // teste mehrmals, da zufällig
@@ -106,6 +161,7 @@ public class RandomSortTest {
         }
     }
 
+    @Order(11)
     @Test
     public void testRandomSortManySwaps() {
         // teste mehrmals, da zufällig
@@ -119,24 +175,5 @@ public class RandomSortTest {
             assertTrue(swaps >= 4 && swaps % 2 == 0,
                     "Gerade Anzahl Swaps >= 4 erwartet, waren " + swaps);
         }
-    }
-
-    @Test
-    public void testRandomSortNoSwaps() {
-        // schon sortiert, also 0 swaps nötig
-        int[] array = {-1, 0, 1, 2, 7, 13, 14};
-        int[] copy = Arrays.copyOf(array, array.length);
-        int swaps = RandomSort.randomSort(array);
-        assertArrayEquals(copy, array);
-        assertEquals(0, swaps);
-    }
-
-    @Test
-    public void testRandomSortSingleSwapDuplicates() {
-        int[] array = {2, 2, 2, 4, 5, 4};
-        int[] sorted = {2, 2, 2, 4, 4, 5};
-        int swaps = RandomSort.randomSort(array);
-        assertArrayEquals(sorted, array);
-        assertEquals(1, swaps);
     }
 }

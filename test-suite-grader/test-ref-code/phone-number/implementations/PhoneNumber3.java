@@ -1,5 +1,3 @@
-import java.util.Scanner;
-
 public class PhoneNumber {
     public static String formatPhoneNumber(String raw) {
         String digits = "";

@@ -52,6 +52,7 @@ public class TestSuiteGrader {
         }
         var refTestSuite = refTestSuiteResult.output();
 
+        var tests = new ArrayList<TestMethod>();
         var mutants = new HashMap<Set<CauseOfDeath>, List<Mutant>>();
         try (var testRunner = new TestRunner()) {
             for (int i = 0; i < refImpls.size(); i++) {
@@ -60,6 +61,9 @@ public class TestSuiteGrader {
                         new TestRunConfig(task.testClassName(),
                                 ClassPath.fromMemory(refImpl),
                                 ClassPath.fromMemory(refTestSuite).withCurrent()));
+                if (i == 0) {
+                    refResults.methodResults().forEach(r -> tests.add(r.method()));
+                }
                 for (var result : refResults.methodResults()) {
                     if (!result.passed()) {
                         throw new IllegalArgumentException("Reference implementation " + (i + 1)
@@ -99,35 +103,19 @@ public class TestSuiteGrader {
         }
 
         var totalMutants = mutants.values().stream().mapToInt(List::size).sum();
-        System.out.println(totalMutants + " mutants killed by reference test suite\n");
-
-        System.out.println(mutants.size() + " combinations of causes killed at least one mutant:");
-        mutants.entrySet().stream()
-                .sorted(comparingByKey(comparingInt(Set::size)))
-                .forEach(e -> {
-                    var count = e.getValue().size();
-                    var causes = e.getKey().stream()
-                            .map(Object::toString)
-                            .sorted()
-                            .collect(joining(", "));
-                    System.out.println("  " + count + " mutants killed by: " + causes);
-                });
-        System.out.println();
+        System.out.println(totalMutants + " mutants killed by reference test suite, " +
+                           mutants.size() + " combinations of causes\n");
 
         boolean first = true;
-        while (!mutants.isEmpty()) {
-            var killsPerCause = mutants.entrySet().stream()
-                    .flatMap(e -> e.getKey().stream().map(t -> entry(t, e.getValue())))
-                    .collect(groupingBy(Entry::getKey, summingInt(e -> e.getValue().size())));
-            var causeWithMinKills = killsPerCause.entrySet().stream()
-                    .filter(e -> e.getValue() > 0)
-                    .min(comparingByValue()).orElseThrow()
-                    .getKey();
-            var kills = killsPerCause.get(causeWithMinKills);
+        for (var test : tests) {
+            var kills = mutants.entrySet().stream()
+                    .filter(e -> e.getKey().stream().anyMatch(c -> c.method().equals(test)))
+                    .mapToInt(e -> e.getValue().size())
+                    .sum();
             System.out.println(kills + " (" + (100 * kills / totalMutants) + "%)"
                                + (!first ? " more" : "")
-                               + " mutants killed by " + causeWithMinKills);
-            mutants.entrySet().removeIf(e -> e.getKey().contains(causeWithMinKills));
+                               + " mutants killed by " + test);
+            mutants.entrySet().removeIf(e -> e.getKey().stream().anyMatch(c -> c.method().equals(test)));
             first = false;
         }
     }
@@ -200,7 +188,8 @@ public class TestSuiteGrader {
         }
     }
 
-    public record IllegalOp(TestMethod method, String op) implements CauseOfDeath {
+    public record IllegalOp(TestMethod method,
+                            String op) implements CauseOfDeath {
         public String toString() {
             return method.name() + " (illegal op: " + op + ")";
         }

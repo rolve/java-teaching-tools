@@ -1,8 +1,14 @@
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@TestMethodOrder(OrderAnnotation.class)
 public class PhoneNumberTest {
+
+    @Order(1)
     @Test
     public void onlyDigits() {
         assertEquals("099 123 45 67", PhoneNumber.formatPhoneNumber("0991234567"));
@@ -10,6 +16,7 @@ public class PhoneNumberTest {
         assertEquals("061 061 61 61", PhoneNumber.formatPhoneNumber("0610616161"));
     }
 
+    @Order(2)
     @Test
     public void spaces() {
         assertEquals("099 123 45 67", PhoneNumber.formatPhoneNumber("0 99123 456 7"));
@@ -20,6 +27,7 @@ public class PhoneNumberTest {
         assertEquals("061 061 61 61", PhoneNumber.formatPhoneNumber("0 6 1 0 6 1 6 1 6 1"));
     }
 
+    @Order(3)
     @Test
     public void otherChars() {
         assertEquals("099 123 45 67", PhoneNumber.formatPhoneNumber("0/99123/456/7"));
@@ -30,6 +38,7 @@ public class PhoneNumberTest {
         assertEquals("061 061 61 61", PhoneNumber.formatPhoneNumber("0-6 1|0|6|1|6(161)"));
     }
 
+    @Order(4)
     @Test
     public void yetOtherChars() {
         assertEquals("099 123 45 67", PhoneNumber.formatPhoneNumber("0:99123:456:7"));
@@ -40,6 +49,7 @@ public class PhoneNumberTest {
         assertEquals("061 061 61 61", PhoneNumber.formatPhoneNumber("0\\61*0*6*1*6[161]"));
     }
 
+    @Order(5)
     @Test
     public void leadingTrailingSpaces() {
         assertEquals("099 123 45 67", PhoneNumber.formatPhoneNumber(" 0991234567"));
@@ -50,6 +60,7 @@ public class PhoneNumberTest {
         assertEquals("061 061 61 61", PhoneNumber.formatPhoneNumber(" 0 6 1 0 6 1 6 1 6 1 "));
     }
 
+    @Order(6)
     @Test
     public void multipleChars() {
         assertEquals("099 123 45 67", PhoneNumber.formatPhoneNumber("0  99123 456  7"));
@@ -60,6 +71,7 @@ public class PhoneNumberTest {
         assertEquals("061 061 61 61", PhoneNumber.formatPhoneNumber("0_6_1 0  6_1_6      1/6    (1)"));
     }
 
+    @Order(7)
     @Test
     public void multipleLeadingTrailingSpaces() {
         assertEquals("099 123 45 67", PhoneNumber.formatPhoneNumber("   0  99123 456  7"));
@@ -70,6 +82,7 @@ public class PhoneNumberTest {
         assertEquals("061 061 61 61", PhoneNumber.formatPhoneNumber("    0  6  1 0  6 1 6      1  6    1  "));
     }
 
+    @Order(8)
     @Test
     public void invalidLength() {
         assertEquals("ungültig", PhoneNumber.formatPhoneNumber("0"));
@@ -81,6 +94,7 @@ public class PhoneNumberTest {
         assertEquals("ungültig", PhoneNumber.formatPhoneNumber("110101001010101010111000100110101010001"));
     }
 
+    @Order(9)
     @Test
     public void noDigits() {
         assertEquals("ungültig", PhoneNumber.formatPhoneNumber(""));

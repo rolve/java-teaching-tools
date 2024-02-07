@@ -12,7 +12,7 @@ public record Mutant(
 
     public String getDescription() {
         return mutation.getDescription()
-               + " at " + classes.get(mutatedClassIndex).getSimpleName()
+               + " at " + mutation.getFilename()
                + ":" + mutation.getLineNumber();
     }
 }
