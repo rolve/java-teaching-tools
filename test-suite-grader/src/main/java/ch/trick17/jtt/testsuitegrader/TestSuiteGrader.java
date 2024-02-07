@@ -5,6 +5,7 @@ import ch.trick17.jtt.memcompile.InMemClassFile;
 import ch.trick17.jtt.testrunner.TestMethod;
 import ch.trick17.jtt.testrunner.TestResults.MethodResult;
 import ch.trick17.jtt.testrunner.TestRunConfig;
+import ch.trick17.jtt.testrunner.TestRunException;
 import ch.trick17.jtt.testrunner.TestRunner;
 import org.pitest.bytecode.analysis.ClassTree;
 import org.pitest.classinfo.ClassByteArraySource;
@@ -70,20 +71,27 @@ public class TestSuiteGrader {
                 System.out.println("Generated " + allMutants.size() + " mutants for reference implementation " + (i + 1));
                 for (int j = 0; j < allMutants.size(); j++) {
                     var mutant = allMutants.get(j);
-                    var mutantResults = testRunner.run(new TestRunConfig(
-                            task.testClassName(),
-                            ClassPath.fromMemory(mutant.classes()),
-                            ClassPath.fromMemory(refTestSuite).withCurrent()));
-                    var causes = mutantResults.methodResults().stream()
-                            .filter(r -> !r.passed())
-                            .map(r -> causeOfDeath(r))
-                            .collect(toSet());
-                    if (causes.isEmpty()) {
-                        System.out.println("  Warning: Mutant " + (j + 1) +
-                                           " survived reference test suite" +
+                    try {
+                        var mutantResults = testRunner.run(new TestRunConfig(
+                                task.testClassName(),
+                                ClassPath.fromMemory(mutant.classes()),
+                                ClassPath.fromMemory(refTestSuite).withCurrent()));
+                        var causes = mutantResults.methodResults().stream()
+                                .filter(r -> !r.passed())
+                                .map(r -> causeOfDeath(r))
+                                .collect(toSet());
+                        if (causes.isEmpty()) {
+                            System.err.println("  Warning: Mutant " + (j + 1) +
+                                               " survived reference test suite" +
+                                               " (" + mutant.getDescription() + ")");
+                        } else {
+                            mutants.computeIfAbsent(causes, k -> new ArrayList<>()).add(mutant);
+                        }
+                    } catch (TestRunException e) {
+                        System.err.println("  Warning: Mutant " + (j + 1) +
+                                           " could not be tested against reference test suite" +
                                            " (" + mutant.getDescription() + ")");
-                    } else {
-                        mutants.computeIfAbsent(causes, k -> new ArrayList<>()).add(mutant);
+                        e.printStackTrace();
                     }
                 }
             }
@@ -150,7 +158,8 @@ public class TestSuiteGrader {
     private ClassByteArraySource asSource(List<InMemClassFile> impl) {
         return className -> {
             for (var file : impl) {
-                if (file.getBinaryName().equals(className)) {
+                // Pitest is inconsistent with slashes and dots, so check both
+                if (file.getBinaryName().equals(className.replace('.', '/'))) {
                     return Optional.of(file.getContent());
                 }
             }
