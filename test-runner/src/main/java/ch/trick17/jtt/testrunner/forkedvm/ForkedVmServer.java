@@ -53,8 +53,9 @@ public class ForkedVmServer {
                 for (var typeName : call.paramTypeNames()) {
                     paramTypes.add(findClass(typeName));
                 }
-                var method = cls.getMethod(call.methodName(),
+                var method = cls.getDeclaredMethod(call.methodName(),
                         paramTypes.toArray(Class<?>[]::new));
+                method.setAccessible(true);
                 var args = call.args().toArray();
 
                 result = new ReturnedValue(method.invoke(null, args));

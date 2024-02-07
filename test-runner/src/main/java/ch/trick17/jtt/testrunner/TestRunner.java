@@ -5,7 +5,6 @@ import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.Sandbox;
 import ch.trick17.jtt.sandbox.SandboxResult;
 import ch.trick17.jtt.sandbox.Whitelist;
-import ch.trick17.jtt.testrunner.TestResults.MethodResult;
 import ch.trick17.jtt.testrunner.forkedvm.ForkedVmClient;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.reporting.ReportEntry;
@@ -39,9 +38,9 @@ public class TestRunner implements Closeable {
 
     private ForkedVmClient forkedVm;
 
-    public TestResults run(TestRunConfig config) throws IOException {
+    public List<TestResult> run(TestRunConfig config) throws IOException {
         if (System.getProperties().containsKey("test-runner.noFork")) {
-            return doRun(config);
+            return doRun(config).results;
         } else {
             if (forkedVm == null || !forkedVm.getVmArgs().equals(config.vmArgs())) {
                 if (forkedVm != null) {
@@ -50,7 +49,7 @@ public class TestRunner implements Closeable {
                 forkedVm = new ForkedVmClient(config.vmArgs());
             }
             return forkedVm.runInForkedVm(TestRunner.class, "doRun",
-                    List.of(config), TestResults.class);
+                    List.of(config), TestResults.class).results;
         }
     }
 
@@ -61,7 +60,7 @@ public class TestRunner implements Closeable {
         }
     }
 
-    public static TestResults doRun(TestRunConfig config) throws IOException {
+    private static TestResults doRun(TestRunConfig config) throws IOException {
         try (var sandbox = new Sandbox.Builder(config.sandboxedCode(), config.supportCode())
                 .permittedCalls(config.permittedCalls() != null
                         ? Whitelist.parse(config.permittedCalls())
@@ -72,7 +71,7 @@ public class TestRunner implements Closeable {
                 .stdErrMode(DISCARD)
                 .build()) {
 
-            var methodResults = new ArrayList<MethodResult>();
+            var methodResults = new ArrayList<TestResult>();
             for (var method : findTestMethods(config)) {
                 var startTime = currentTimeMillis();
 
@@ -128,7 +127,7 @@ public class TestRunner implements Closeable {
 
                 var testMethod = new TestMethod(method.getClassName().replace('$', '.'),
                         method.getMethodName());
-                methodResults.add(new MethodResult(testMethod, passed, exceptions, nonDeterm,
+                methodResults.add(new TestResult(testMethod, passed, exceptions, nonDeterm,
                         repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
 
                 // workaround for NoClassDefFoundError when serializing some
@@ -218,4 +217,6 @@ public class TestRunner implements Closeable {
             return result;
         }
     }
+
+    private record TestResults(List<TestResult> results) {}
 }

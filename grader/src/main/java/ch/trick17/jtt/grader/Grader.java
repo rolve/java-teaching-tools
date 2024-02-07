@@ -8,7 +8,7 @@ import ch.trick17.jtt.memcompile.InMemClassFile;
 import ch.trick17.jtt.memcompile.InMemCompilation;
 import ch.trick17.jtt.memcompile.InMemCompilation.Result;
 import ch.trick17.jtt.memcompile.InMemSource;
-import ch.trick17.jtt.testrunner.TestResults;
+import ch.trick17.jtt.testrunner.TestResult;
 import ch.trick17.jtt.testrunner.TestRunConfig;
 import ch.trick17.jtt.testrunner.TestRunner;
 import org.apache.commons.io.output.TeeOutputStream;
@@ -176,7 +176,7 @@ public class Grader implements Closeable {
 
         // run tests
         var compiled = !testCompileResult.output().isEmpty();
-        TestResults testResults = null;
+        List<TestResult> testResults = null;
         if (compiled) {
             testResults = runTests(task, compileResult.output(),
                     testCompileResult.output(), out);
@@ -200,7 +200,7 @@ public class Grader implements Closeable {
         return sources;
     }
 
-    private TestResults runTests(Task task,
+    private List<TestResult> runTests(Task task,
                                  List<InMemClassFile> classes,
                                  List<InMemClassFile> testClasses,
                                  PrintStream out) throws IOException {
@@ -214,7 +214,7 @@ public class Grader implements Closeable {
 
         var results = testRunner.run(config);
 
-        for (var res : results.methodResults()) {
+        for (var res : results) {
             for (var e : res.exceptions()) {
                 out.printf("    %s (%s)\n",
                         valueOf(e.getMessage()).replaceAll("\\s+", " "),

@@ -76,11 +76,11 @@ public class GraderTest {
         var results = resultsList.get(0);
         assertEquals(3, results.submissionResults().size());
 
-        assertTrue(results.get("correct").testResults().methodResults().get(0).passed());
-        assertTrue(results.get("correct").testResults().methodResults().get(1).passed());
+        assertTrue(results.get("correct").testResults().get(0).passed());
+        assertTrue(results.get("correct").testResults().get(1).passed());
 
-        assertTrue(results.get("fails-test").testResults().methodResults().get(0).passed());
-        assertFalse(results.get("fails-test").testResults().methodResults().get(1).passed());
+        assertTrue(results.get("fails-test").testResults().get(0).passed());
+        assertFalse(results.get("fails-test").testResults().get(1).passed());
 
         assertTrue(results.get("compile-error").compileErrors());
         assertFalse(results.get("compile-error").compiled());
@@ -472,9 +472,9 @@ public class GraderTest {
         var results = resultsList.get(0);
         assertEquals(1, results.submissionResults().size());
 
-        var testResults = results.get("correct").testResults();
-        assertTrue(testResults.methodResultFor("testNormal").get().passed());
-        assertFalse(testResults.methodResultFor("testFailedAssumption").get().passed());
+        var submissionResults = results.get("correct");
+        assertTrue(submissionResults.testResultFor("testNormal").passed());
+        assertFalse(submissionResults.testResultFor("testFailedAssumption").passed());
     }
 
     @Test
@@ -489,9 +489,9 @@ public class GraderTest {
         var results = resultsList.get(0);
         assertEquals(1, results.submissionResults().size());
 
-        var testResults = results.get("correct").testResults();
-        assertTrue(testResults.methodResultFor("testNormal").get().passed());
-        assertTrue(testResults.methodResultFor("testDisabled").get().passed());
+        var submissionResults = results.get("correct");
+        assertTrue(submissionResults.testResultFor("testNormal").passed());
+        assertTrue(submissionResults.testResultFor("testDisabled").passed());
 
         // TODO: better support for disabled tests
     }
@@ -537,40 +537,40 @@ public class GraderTest {
         var resultsList = grader.grade(tasks, submissions);
 
         // submission 0 passes all tests
-        var results0 = resultsList.get(0).get("correct").testResults();
-        assertTrue(results0.methodResultFor("testWithScore").get().passed());
-        var scores = results0.methodResultFor("testWithScore").get().scores();
+        var results0 = resultsList.get(0).get("correct");
+        assertTrue(results0.testResultFor("testWithScore").passed());
+        var scores = results0.testResultFor("testWithScore").scores();
         assertEquals(20, scores.size());
         assertEquals(Set.of(50.0, 100.0), Set.copyOf(scores));
 
-        assertTrue(results0.methodResultFor("testWithScoreFirst").get().passed());
-        scores = results0.methodResultFor("testWithScoreFirst").get().scores();
+        assertTrue(results0.testResultFor("testWithScoreFirst").passed());
+        scores = results0.testResultFor("testWithScoreFirst").scores();
         assertEquals(20, scores.size());
         assertEquals(Set.of(100.0), Set.copyOf(scores));
 
-        assertTrue(results0.methodResultFor("testWithoutScore").get().passed());
-        assertTrue(results0.methodResultFor("testWithoutScore").get().scores().isEmpty());
+        assertTrue(results0.testResultFor("testWithoutScore").passed());
+        assertTrue(results0.testResultFor("testWithoutScore").scores().isEmpty());
 
-        assertTrue(results0.methodResultFor("testWithOrWithoutScore").get().passed());
-        scores = results0.methodResultFor("testWithOrWithoutScore").get().scores();
+        assertTrue(results0.testResultFor("testWithOrWithoutScore").passed());
+        scores = results0.testResultFor("testWithOrWithoutScore").scores();
         assertTrue(!scores.isEmpty() && scores.size() < 20);
         assertEquals(Set.of(100.0), Set.copyOf(scores));
 
         // submission 1 fails all tests
-        var results1 = resultsList.get(0).get("fails-test").testResults();
-        assertFalse(results1.methodResultFor("testWithScore").get().passed());
-        assertTrue(results1.methodResultFor("testWithScore").get().scores().isEmpty());
+        var results1 = resultsList.get(0).get("fails-test");
+        assertFalse(results1.testResultFor("testWithScore").passed());
+        assertTrue(results1.testResultFor("testWithScore").scores().isEmpty());
 
-        assertFalse(results1.methodResultFor("testWithScoreFirst").get().passed());
-        scores = results1.methodResultFor("testWithScoreFirst").get().scores();
+        assertFalse(results1.testResultFor("testWithScoreFirst").passed());
+        scores = results1.testResultFor("testWithScoreFirst").scores();
         assertEquals(20, scores.size());
         assertEquals(Set.of(100.0), Set.copyOf(scores));
 
-        assertFalse(results1.methodResultFor("testWithoutScore").get().passed());
-        assertEquals(0, results1.methodResultFor("testWithoutScore").get().scores().size());
+        assertFalse(results1.testResultFor("testWithoutScore").passed());
+        assertEquals(0, results1.testResultFor("testWithoutScore").scores().size());
 
-        assertFalse(results1.methodResultFor("testWithOrWithoutScore").get().passed());
-        assertTrue(results1.methodResultFor("testWithOrWithoutScore").get().scores().isEmpty());
+        assertFalse(results1.testResultFor("testWithOrWithoutScore").passed());
+        assertTrue(results1.testResultFor("testWithOrWithoutScore").scores().isEmpty());
     }
 
     @Test

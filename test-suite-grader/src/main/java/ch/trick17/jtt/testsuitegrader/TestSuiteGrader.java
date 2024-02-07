@@ -62,9 +62,9 @@ public class TestSuiteGrader {
                                 ClassPath.fromMemory(refImpl),
                                 ClassPath.fromMemory(refTestSuite).withCurrent()));
                 if (i == 0) {
-                    refResults.methodResults().forEach(r -> tests.add(r.method()));
+                    refResults.forEach(r -> tests.add(r.method()));
                 }
-                for (var result : refResults.methodResults()) {
+                for (var result : refResults) {
                     if (!result.passed()) {
                         throw new IllegalArgumentException("Reference implementation " + (i + 1)
                                                            + " failed test " + result.method(), result.exceptions().get(0));
@@ -80,7 +80,7 @@ public class TestSuiteGrader {
                                 task.testClassName(),
                                 ClassPath.fromMemory(mutant.classes()),
                                 ClassPath.fromMemory(refTestSuite).withCurrent()));
-                        var causes = mutantResults.methodResults().stream()
+                        var failedTests = mutantResults.stream()
                                 .filter(r -> !r.passed())
                                 .map(r -> causeOfDeath(r))
                                 .collect(toSet());

@@ -2,8 +2,7 @@ package ch.trick17.jtt.grader.result;
 
 import ch.trick17.jtt.grader.Task;
 import ch.trick17.jtt.testrunner.TestMethod;
-import ch.trick17.jtt.testrunner.TestResults;
-import ch.trick17.jtt.testrunner.TestResults.MethodResult;
+import ch.trick17.jtt.testrunner.TestResult;
 
 import java.util.List;
 import java.util.Objects;
@@ -24,25 +23,25 @@ public record SubmissionResults(
         boolean compileErrors,
         boolean testCompileErrors,
         boolean compiled,
-        TestResults testResults) {
+        List<TestResult> testResults) {
 
     public List<Property> properties() {
         var withNull = Stream.of(
                 compileErrors ? COMPILE_ERRORS : null,
                 testCompileErrors ? TEST_COMPILE_ERRORS : null,
                 compiled ? COMPILED : null,
-                anyMatch(MethodResult::nonDeterm) ? NONDETERMINISTIC : null,
-                anyMatch(MethodResult::timeout) ? TIMEOUT : null,
-                anyMatch(MethodResult::outOfMemory) ? OUT_OF_MEMORY : null,
-                anyMatch(MethodResult::incompleteReps) ? INCOMPLETE_REPETITIONS : null,
+                anyMatch(TestResult::nonDeterm) ? NONDETERMINISTIC : null,
+                anyMatch(TestResult::timeout) ? TIMEOUT : null,
+                anyMatch(TestResult::outOfMemory) ? OUT_OF_MEMORY : null,
+                anyMatch(TestResult::incompleteReps) ? INCOMPLETE_REPETITIONS : null,
                 anyMatch(m -> !m.illegalOps().isEmpty()) ? ILLEGAL_OPERATION : null);
         return withNull
                 .filter(Objects::nonNull)
                 .toList();
     }
 
-    private boolean anyMatch(Predicate<MethodResult> predicate) {
-        return compiled && testResults.methodResults().stream().anyMatch(predicate);
+    private boolean anyMatch(Predicate<TestResult> predicate) {
+        return compiled && testResults.stream().anyMatch(predicate);
     }
 
     /**
@@ -58,25 +57,32 @@ public record SubmissionResults(
      */
     public List<TestMethod> allTests() {
         return Stream.ofNullable(testResults)
-                .flatMap(r -> r.methodResults().stream())
-                .map(MethodResult::method)
+                .flatMap(List::stream)
+                .map(TestResult::method)
                 .toList();
 
     }
 
     public List<TestMethod> passedTests() {
         return Stream.ofNullable(testResults)
-                .flatMap(r -> r.methodResults().stream())
-                .filter(MethodResult::passed)
-                .map(MethodResult::method)
+                .flatMap(List::stream)
+                .filter(TestResult::passed)
+                .map(TestResult::method)
                 .toList();
     }
 
     public List<TestMethod> failedTests() {
         return Stream.ofNullable(testResults)
-                .flatMap(r -> r.methodResults().stream())
-                .filter(not(MethodResult::passed))
-                .map(MethodResult::method)
+                .flatMap(List::stream)
+                .filter(not(TestResult::passed))
+                .map(TestResult::method)
                 .toList();
+    }
+
+    public TestResult testResultFor(String testName) {
+        return testResults.stream()
+                .filter(r -> r.method().name().equals(testName))
+                .findFirst()
+                .orElseThrow();
     }
 }
