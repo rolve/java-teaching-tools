@@ -85,7 +85,7 @@ public class Grader implements Closeable {
         this.resultsDir = resultsDir;
     }
 
-    public List<TaskResults> run(List<Submission> submissions, List<Task> tasks) throws IOException {
+    public List<TaskResults> grade(List<Task> tasks, List<Submission> submissions) throws IOException {
         OutputStream log;
         PrintStream out;
         if (logDir != null) {
@@ -111,7 +111,7 @@ public class Grader implements Closeable {
                         if (tasks.size() > 1) {
                             submOut.println(task.testClassName());
                         }
-                        var res = gradeTask(subm, task, submOut);
+                        var res = grade(task, subm, submOut);
                         results.get(task).put(res);
                     }
                 } catch (IOException e) {
@@ -149,7 +149,7 @@ public class Grader implements Closeable {
         });
     }
 
-    private SubmissionResults gradeTask(Submission subm, Task task, PrintStream out)
+    private SubmissionResults grade(Task task, Submission subm, PrintStream out)
             throws IOException {
         var sources = collectSources(subm.srcDir());
         for (var source : task.givenSources()) {

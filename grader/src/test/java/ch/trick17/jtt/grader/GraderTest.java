@@ -70,7 +70,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
-        var resultsList = grader.run(submissions, tasks);
+        var resultsList = grader.grade(tasks, submissions);
 
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
@@ -93,7 +93,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE_EC, results);
     }
@@ -104,7 +104,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE_JC, results);
     }
@@ -112,7 +112,7 @@ public class GraderTest {
     @Test
     public void testMavenStructureEclipseCompiler() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE));
-        grader.run(WITH_MVN_STRUCTURE, tasks);
+        grader.grade(tasks, WITH_MVN_STRUCTURE);
         var results = readString(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE_EC, results);
     }
@@ -120,7 +120,7 @@ public class GraderTest {
     @Test
     public void testMavenStructureJavac() throws IOException {
         var tasks = List.of(Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC));
-        grader.run(WITH_MVN_STRUCTURE, tasks);
+        grader.grade(tasks, WITH_MVN_STRUCTURE);
         var results = readString(Path.of("results-AddTest.tsv"));
         assertEquals(EXPECTED_ADD_SIMPLE_JC, results);
     }
@@ -131,7 +131,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-MultiplyTest.tsv"));
         var expected = withTabs("""
                 Name           compiled  compile errors  testMultiply1  testMultiply2
@@ -145,7 +145,7 @@ public class GraderTest {
         submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         results = readString(Path.of("results-FooTest.tsv"));
         expected = withTabs("""
                 Name     compiled  greeting  greetingImpl
@@ -160,7 +160,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-MultiplyTest.tsv"));
         var expected = withTabs("""
                 Name           compiled  compile errors  test compile errors  testMultiply1  testMultiply2
@@ -174,7 +174,7 @@ public class GraderTest {
         submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         results = readString(Path.of("results-FooTest.tsv"));
         expected = withTabs("""
                 Name     compiled  greeting  greetingImpl
@@ -189,7 +189,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "unrelated-compile-error").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name                     compiled  compile errors  testAdd1  testAdd2
@@ -205,7 +205,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "unrelated-compile-error").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name                     compiled  compile errors  test compile errors  testAdd1  testAdd2
@@ -221,7 +221,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name           compiled  compile errors  testAdd
@@ -240,7 +240,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "infinite-loop").contains(s.name()))
                 .toList(); // contains infinite loop
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name           compiled  timeout  incomplete repetitions  testAdd1  testAdd2
@@ -256,7 +256,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "missing-class").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         // TODO: would be nice to have an entry for this
         var expected = withTabs("""
@@ -273,7 +273,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "missing-class").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name           compiled  test compile errors  testAdd1  testAdd2
@@ -289,7 +289,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "missing-src").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name         compiled  test compile errors  testAdd1  testAdd2
@@ -307,7 +307,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "nondeterministic").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name              compiled  nondeterministic  testAdd1  testAdd2
@@ -330,7 +330,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "nondeterministic-infinite-loop").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-SubtractTest.tsv"));
         var expected = withTabs("""
                 Name                            compiled  nondeterministic  timeout  incomplete repetitions  testSubtract1  testSubtract2  testSubtract3  testSubtract4  testSubtract5  testSubtract6
@@ -348,7 +348,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "static-state").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-SubtractTest.tsv"));
         var expected = withTabs("""
                 Name          compiled  testSubtract1  testSubtract2  testSubtract3  testSubtract4  testSubtract5  testSubtract6
@@ -366,7 +366,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "catch-interrupted-exception").contains(s.name()))
                 .toList(); // contains infinite loop plus catch(InterruptedException)
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name                         compiled  timeout  incomplete repetitions  testAdd1  testAdd2
@@ -382,7 +382,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "reads-system-in").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name             compiled  testAdd1  testAdd2
@@ -398,7 +398,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "illegal-io").contains(s.name()))
                 .toList(); // tries to read from the file system
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name         compiled  illegal operation  testAdd1  testAdd2
@@ -414,7 +414,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "illegal-reflect").contains(s.name()))
                 .toList(); // uses getDeclaredMethods()
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name             compiled  illegal operation  testAdd1  testAdd2
@@ -430,7 +430,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
-        var resultsList = grader.run(submissions, tasks);
+        var resultsList = grader.grade(tasks, submissions);
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
         assertEquals(1, results.submissionResults().size());
@@ -445,7 +445,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "compile-error").contains(s.name()))
                 .toList();
-        var resultsList = grader.run(submissions, tasks);
+        var resultsList = grader.grade(tasks, submissions);
 
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
@@ -466,7 +466,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
-        var resultsList = grader.run(submissions, tasks);
+        var resultsList = grader.grade(tasks, submissions);
 
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
@@ -483,7 +483,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
-        var resultsList = grader.run(submissions, tasks);
+        var resultsList = grader.grade(tasks, submissions);
 
         assertEquals(1, resultsList.size());
         var results = resultsList.get(0);
@@ -502,7 +502,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-TestWithDisplayNames.tsv"));
         var expected = withTabs("""
                 Name     compiled  test3  test2  test4  test1
@@ -517,7 +517,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-TestWithMethodOrder.tsv"));
         var expected = withTabs("""
                 Name     compiled  test4  test3  test2  test1
@@ -534,7 +534,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test").contains(s.name()))
                 .toList();
-        var resultsList = grader.run(submissions, tasks);
+        var resultsList = grader.grade(tasks, submissions);
 
         // submission 0 passes all tests
         var results0 = resultsList.get(0).get("correct").testResults();
@@ -584,7 +584,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(resultsFile);
         var expected = withTabs("""
                 Name        compiled  testEncoding
@@ -599,7 +599,7 @@ public class GraderTest {
                         java.io.InputStreamReader.<init>
                         """)
                 .testVmArgs("-Dfile.encoding=ASCII"));
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         results = readString(resultsFile);
         expected = withTabs("""
                 Name        compiled  testEncoding
@@ -621,7 +621,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "external-lib").contains(s.name()))
                 .toList(); // 15 uses external lib
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-AddTest.tsv"));
         var expected = withTabs("""
                 Name           compiled  testAdd1  testAdd2
@@ -639,7 +639,7 @@ public class GraderTest {
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "modifies-given-class").contains(s.name()))
                 .toList();
-        grader.run(submissions, tasks);
+        grader.grade(tasks, submissions);
         var results = readString(Path.of("results-StudentClientTest.tsv"));
         var expected = withTabs("""
                 Name                  compiled  compile errors  testFullName
