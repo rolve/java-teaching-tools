@@ -3,14 +3,11 @@ package ch.trick17.jtt.testrunner.forkedvm;
 import ch.trick17.javaprocesses.JavaProcessBuilder;
 import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
-import ch.trick17.jtt.memcompile.InMemClassFile;
 import ch.trick17.jtt.testrunner.forkedvm.Result.ReturnedValue;
 import ch.trick17.jtt.testrunner.forkedvm.Result.ThrownException;
 import com.fasterxml.jackson.core.JacksonException;
-import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -42,13 +39,9 @@ public class ForkedVmClient implements Closeable {
 
     public ForkedVmClient(List<String> vmArgs) {
         this.vmArgs = copyOf(vmArgs);
-
-        var module = new SimpleModule("ForkedVmModule", new Version(1, 0, 0, null, null, null));
-        module.addSerializer(InMemClassFile.class, new InMemClassFileSerializer());
-        module.addDeserializer(Throwable.class, new ThrowableDeserializer());
         mapper = new ObjectMapper()
                 .findAndRegisterModules()
-                .registerModule(module)
+                .registerModule(new ForkedVmModule())
                 .activateDefaultTyping(LaissezFaireSubTypeValidator.instance, JAVA_LANG_OBJECT);
     }
 

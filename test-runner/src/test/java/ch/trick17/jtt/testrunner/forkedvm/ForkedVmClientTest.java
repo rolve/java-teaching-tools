@@ -1,12 +1,14 @@
 package ch.trick17.jtt.testrunner.forkedvm;
 
 import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 
 import java.io.IOException;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ForkedVmClientTest {
 
@@ -39,6 +41,30 @@ public class ForkedVmClientTest {
         }
     }
 
+    @Test
+    void builtInException() {
+        try (var client = new ForkedVmClient()) {
+            var e = assertThrows(IllegalArgumentException.class, () -> {
+                client.runInForkedVm(TestCode.class, "greeting4",
+                        List.of("not a number"), String.class);
+            });
+            assertEquals("'number' is not an int", e.getMessage());
+            assertEquals("greeting4", e.getStackTrace()[0].getMethodName());
+            assertEquals(TestCode.class.getName(), e.getStackTrace()[0].getClassName());
+            assertEquals(NumberFormatException.class, e.getCause().getClass());
+        }
+    }
+
+    @Test
+    void assertionFailedError() {
+        try (var client = new ForkedVmClient()) {
+            var e = assertThrows(AssertionFailedError.class, () -> {
+                client.runInForkedVm(TestCode.class, "greeting5", emptyList(), Void.class);
+            });
+            assertEquals("expected: <3> but was: <2>", e.getMessage());
+        }
+    }
+
     public static class TestCode {
         public static String greeting1() {
             return "Hello, World!";
@@ -50,6 +76,18 @@ public class ForkedVmClientTest {
 
         public static String greeting3(Person person) {
             return "Hello, " + person.name + "!";
+        }
+
+        public static String greeting4(String number) {
+            try {
+                return "Hello".repeat(Integer.parseInt(number));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("'number' is not an int", e);
+            }
+        }
+
+        public static void greeting5() {
+            assertEquals(3, 1 + 1);
         }
     }
 
