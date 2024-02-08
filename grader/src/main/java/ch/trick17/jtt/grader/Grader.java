@@ -207,7 +207,7 @@ public class Grader implements Closeable {
         var supportCode = ClassPath.fromMemory(testClasses)
                 .withFiles(task.dependencies())
                 .withCurrent();
-        var config = new TestRunConfig(task.testClassName(),
+        var config = new TestRunConfig(List.of(task.testClassName()),
                 ClassPath.fromMemory(classes), supportCode,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permittedCalls(), task.testVmArgs());

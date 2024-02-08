@@ -8,7 +8,7 @@ import java.util.List;
 import static java.util.Collections.emptyList;
 
 public record TestRunConfig(
-        String testClassName,
+        List<String> testClassNames,
         ClassPath sandboxedCode,
         ClassPath supportCode,
         int repetitions,
@@ -20,7 +20,13 @@ public record TestRunConfig(
     public TestRunConfig(String testClassName,
                          ClassPath sandboxedCode,
                          ClassPath supportCode) {
-        this(testClassName, sandboxedCode, supportCode,
+        this(List.of(testClassName), sandboxedCode, supportCode);
+    }
+
+    public TestRunConfig(List<String> testClassNames,
+                         ClassPath sandboxedCode,
+                         ClassPath supportCode) {
+        this(testClassNames, sandboxedCode, supportCode,
                 1, Duration.ofSeconds(1), Duration.ofSeconds(1),
                 null, emptyList());
     }

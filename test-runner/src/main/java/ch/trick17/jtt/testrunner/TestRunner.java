@@ -152,11 +152,15 @@ public class TestRunner implements Closeable {
         try (var runner = new CustomCxtClassLoaderRunner(loader)) {
             return runner.run(() -> {
                 var launcher = LauncherFactory.create();
-                var classReq = request()
-                        .configurationParameter("junit.jupiter.testmethod.order.default",
+                var selectors = config.testClassNames().stream()
+                        .map(c -> selectClass(c))
+                        .toList();
+                var classesReq = request()
+                        .configurationParameter(
+                                "junit.jupiter.testmethod.order.default",
                                 "org.junit.jupiter.api.MethodOrderer$DisplayName")
-                        .selectors(selectClass(config.testClassName()));
-                var testPlan = launcher.discover(classReq.build());
+                        .selectors(selectors);
+                var testPlan = launcher.discover(classesReq.build());
                 return testPlan.getRoots().stream()
                         .flatMap(id -> testPlan.getDescendants(id).stream())
                         .filter(id -> id.getType() == TEST)
