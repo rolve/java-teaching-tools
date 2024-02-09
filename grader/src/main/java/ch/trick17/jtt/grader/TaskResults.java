@@ -1,6 +1,4 @@
-package ch.trick17.jtt.grader.result;
-
-import ch.trick17.jtt.grader.Task;
+package ch.trick17.jtt.grader;
 
 import java.util.ArrayList;
 import java.util.HashMap;

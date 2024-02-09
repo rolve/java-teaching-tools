@@ -1,4 +1,4 @@
-package ch.trick17.jtt.grader.result;
+package ch.trick17.jtt.grader;
 
 import ch.trick17.jtt.memcompile.Compiler;
 

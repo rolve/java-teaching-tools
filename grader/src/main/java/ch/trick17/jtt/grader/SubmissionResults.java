@@ -1,6 +1,5 @@
-package ch.trick17.jtt.grader.result;
+package ch.trick17.jtt.grader;
 
-import ch.trick17.jtt.grader.Task;
 import ch.trick17.jtt.testrunner.TestMethod;
 import ch.trick17.jtt.testrunner.TestResult;
 
@@ -10,7 +9,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import static ch.trick17.jtt.grader.result.Property.*;
+import static ch.trick17.jtt.grader.Property.*;
 import static java.util.Collections.emptySet;
 import static java.util.function.Predicate.not;
 

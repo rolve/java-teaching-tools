@@ -1,4 +1,4 @@
-package ch.trick17.jtt.grader.result;
+package ch.trick17.jtt.grader;
 
 import java.io.IOException;
 import java.nio.file.Path;

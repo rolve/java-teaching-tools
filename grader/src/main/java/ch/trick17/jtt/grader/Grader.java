@@ -1,8 +1,5 @@
 package ch.trick17.jtt.grader;
 
-import ch.trick17.jtt.grader.result.SubmissionResults;
-import ch.trick17.jtt.grader.result.TaskResults;
-import ch.trick17.jtt.grader.result.TsvWriter;
 import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemClassFile;
 import ch.trick17.jtt.memcompile.InMemCompilation;
