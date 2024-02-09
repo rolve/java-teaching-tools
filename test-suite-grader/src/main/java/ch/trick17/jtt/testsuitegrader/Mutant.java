@@ -6,13 +6,14 @@ import org.pitest.mutationtest.engine.MutationDetails;
 import java.util.List;
 
 public record Mutant(
-        List<InMemClassFile> classes,
+        int refImplementationIndex,
         int mutatedClassIndex,
-        MutationDetails mutation) {
+        MutationDetails details,
+        List<InMemClassFile> classes) {
 
     public String getDescription() {
-        return mutation.getDescription()
-               + " at " + mutation.getFilename()
-               + ":" + mutation.getLineNumber();
+        return details.getDescription()
+               + " at " + details.getFilename()
+               + ":" + details.getLineNumber();
     }
 }

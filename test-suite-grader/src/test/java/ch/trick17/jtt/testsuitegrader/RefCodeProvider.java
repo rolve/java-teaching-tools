@@ -24,10 +24,10 @@ public class RefCodeProvider {
         }
     }
 
-    public static InMemSource refTestSuite(String name) {
+    public static List<InMemSource> refTestSuite(String name) {
         return list(Path.of(BASE_DIR + name + "/test-suite")).stream()
                 .map(f -> read(f))
-                .findFirst().orElseThrow();
+                .toList();
     }
 
     private static List<Path> list(Path dir) {

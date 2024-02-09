@@ -2,11 +2,10 @@ package ch.trick17.jtt.testsuitegrader;
 
 import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemClassFile;
-import ch.trick17.jtt.testrunner.TestMethod;
-import ch.trick17.jtt.testrunner.TestResults.MethodResult;
-import ch.trick17.jtt.testrunner.TestRunConfig;
-import ch.trick17.jtt.testrunner.TestRunException;
-import ch.trick17.jtt.testrunner.TestRunner;
+import ch.trick17.jtt.memcompile.InMemSource;
+import ch.trick17.jtt.testrunner.*;
+import ch.trick17.jtt.testsuitegrader.GradeResult.MutantResult;
+import ch.trick17.jtt.testsuitegrader.GradeResult.RefImplementationResult;
 import org.pitest.bytecode.analysis.ClassTree;
 import org.pitest.classinfo.ClassByteArraySource;
 import org.pitest.classinfo.ClassName;
@@ -15,52 +14,55 @@ import org.pitest.mutationtest.engine.gregor.GregorMutater;
 import org.pitest.mutationtest.engine.gregor.config.Mutator;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.Optional;
 
 import static ch.trick17.jtt.memcompile.ClassPath.empty;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
-import static java.util.Arrays.stream;
-import static java.util.Comparator.comparingInt;
-import static java.util.Map.Entry.comparingByKey;
-import static java.util.Map.Entry.comparingByValue;
-import static java.util.Map.entry;
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.*;
 
 public class TestSuiteGrader {
 
-    public void grade(Submission submission, Task task) throws IOException {
-        var refImpls = new ArrayList<List<InMemClassFile>>();
-        for (int i = 0; i < task.refImplementations().size(); i++) {
-            var implResult = compile(JAVAC, task.refImplementations().get(i),
+    public Task prepareTask(List<List<InMemSource>> refImplementations,
+                            List<InMemSource> refTestSuite) throws IOException {
+        var compiledImplementations = new ArrayList<List<InMemClassFile>>();
+        for (int i = 0; i < refImplementations.size(); i++) {
+            var implResult = compile(JAVAC, refImplementations.get(i),
                     empty(), System.out);
             if (implResult.errors()) {
                 throw new IllegalArgumentException("Could not compile reference implementation " + (i + 1));
             } else if (implResult.output().isEmpty()) {
                 throw new IllegalArgumentException("Empty reference implementation " + (i + 1));
             }
-            refImpls.add(implResult.output());
+            compiledImplementations.add(implResult.output());
         }
 
-        var refTestSuiteResult = compile(JAVAC, List.of(task.refTestSuite()),
-                ClassPath.fromMemory(refImpls.get(0)).withCurrent(), System.out);
+        var refTestSuiteResult = compile(JAVAC, refTestSuite,
+                ClassPath.fromMemory(compiledImplementations.get(0)).withCurrent(), System.out);
         if (refTestSuiteResult.errors()) {
             throw new IllegalArgumentException("Could not compile reference test suite against sample implementation");
         } else if (refTestSuiteResult.output().isEmpty()) {
             throw new IllegalArgumentException("Empty reference test suite");
         }
-        var refTestSuite = refTestSuiteResult.output();
+        var compiledTestSuite = refTestSuiteResult.output();
+        var testClassNames = compiledTestSuite.stream()
+                .map(f -> f.getClassName())
+                .toList();
 
         var tests = new ArrayList<TestMethod>();
-        var mutants = new HashMap<Set<CauseOfDeath>, List<Mutant>>();
+        var killedMutants = new HashMap<Mutant, List<TestMethod>>();
         try (var testRunner = new TestRunner()) {
-            for (int i = 0; i < refImpls.size(); i++) {
-                var refImpl = refImpls.get(i);
+            for (int i = 0; i < compiledImplementations.size(); i++) {
+                var refImpl = compiledImplementations.get(i);
                 var refResults = testRunner.run(
-                        new TestRunConfig(task.testClassName(),
+                        new TestRunConfig(testClassNames,
                                 ClassPath.fromMemory(refImpl),
-                                ClassPath.fromMemory(refTestSuite).withCurrent()));
+                                ClassPath.fromMemory(compiledTestSuite).withCurrent()));
                 if (i == 0) {
                     refResults.forEach(r -> tests.add(r.method()));
                 }
@@ -71,25 +73,26 @@ public class TestSuiteGrader {
                     }
                 }
 
-                var allMutants = generateMutants(refImpl);
-                System.out.println("Generated " + allMutants.size() + " mutants for reference implementation " + (i + 1));
-                for (int j = 0; j < allMutants.size(); j++) {
-                    var mutant = allMutants.get(j);
+                var mutants = generateMutants(refImpl, i);
+                System.out.println("Generated " + mutants.size() + " mutants" +
+                                   " for reference implementation " + (i + 1));
+                for (int j = 0; j < mutants.size(); j++) {
+                    var mutant = mutants.get(j);
                     try {
                         var mutantResults = testRunner.run(new TestRunConfig(
-                                task.testClassName(),
+                                testClassNames,
                                 ClassPath.fromMemory(mutant.classes()),
-                                ClassPath.fromMemory(refTestSuite).withCurrent()));
+                                ClassPath.fromMemory(compiledTestSuite).withCurrent()));
                         var failedTests = mutantResults.stream()
                                 .filter(r -> !r.passed())
-                                .map(r -> causeOfDeath(r))
-                                .collect(toSet());
-                        if (causes.isEmpty()) {
+                                .map(TestResult::method)
+                                .toList();
+                        if (failedTests.isEmpty()) {
                             System.err.println("  Warning: Mutant " + (j + 1) +
                                                " survived reference test suite" +
                                                " (" + mutant.getDescription() + ")");
                         } else {
-                            mutants.computeIfAbsent(causes, k -> new ArrayList<>()).add(mutant);
+                            killedMutants.put(mutant, failedTests);
                         }
                     } catch (TestRunException e) {
                         System.err.println("  Warning: Mutant " + (j + 1) +
@@ -102,26 +105,60 @@ public class TestSuiteGrader {
             System.out.println();
         }
 
-        var totalMutants = mutants.values().stream().mapToInt(List::size).sum();
-        System.out.println(totalMutants + " mutants killed by reference test suite, " +
-                           mutants.size() + " combinations of causes\n");
+        System.out.println(killedMutants.size() + " mutants were killed by test suite\n");
 
+        // Some mutants may be very easy to kill, requiring only weak tests,
+        // while others require much stronger, specific tests. A test suite
+        // should only get a high score if it also kills the harder mutants,
+        // even when there are much fewer of them. Thus, we group mutants into
+        // "difficulty" groups and use these groups as the basis for scoring the
+        // test suite.
+        // We assume that the tests in the reference suite are roughly ordered
+        // from weak to strong; the difficulty group of a mutant is then the
+        // *first* (weakest) test that kills it.
+        var grouped = killedMutants.entrySet().stream()
+                .collect(groupingBy(e -> e.getValue().get(0), mapping(Entry::getKey, toList())));
         boolean first = true;
-        for (var test : tests) {
-            var kills = mutants.entrySet().stream()
-                    .filter(e -> e.getKey().stream().anyMatch(c -> c.method().equals(test)))
-                    .mapToInt(e -> e.getValue().size())
-                    .sum();
-            System.out.println(kills + " (" + (100 * kills / totalMutants) + "%)"
-                               + (!first ? " more" : "")
-                               + " mutants killed by " + test);
-            mutants.entrySet().removeIf(e -> e.getKey().stream().anyMatch(c -> c.method().equals(test)));
+        for (var group : grouped.entrySet()) {
+            var kills = group.getValue().size();
+            var percentage = 100 * kills / killedMutants.size();
+            System.out.println(kills + " (" + percentage + ") " +
+                               (!first ? " more" : "") +
+                               " mutants killed by " + group.getKey());
             first = false;
         }
+
+        // Since a test suite does not necessarily kill all mutants in a group,
+        // we assign each individual mutant a weight that is inversely
+        // proportional to the number of mutants in its group (and to the number
+        // of groups). The score of a test suite is then the sum of the weights
+        // of the mutants it kills.
+        var weights = new HashMap<Mutant, Double>();
+        for (var group : grouped.values()) {
+            var kills = group.size();
+            var weight = 1.0 / (kills * grouped.size());
+            for (var mutant : group) {
+                weights.put(mutant, weight);
+            }
+        }
+
+        var mutations = new ArrayList<Mutation>();
+        for (var e : killedMutants.entrySet()) {
+            var mutant = e.getKey();
+            var killers = e.getValue();
+            Mutation apply = new Mutation(
+                    mutant.refImplementationIndex(),
+                    mutant.mutatedClassIndex(),
+                    mutant.details().getId(),
+                    weights.get(mutant),
+                    killers);
+            mutations.add(apply);
+        }
+        return new Task(compiledImplementations, tests, mutations);
     }
 
-    private List<Mutant> generateMutants(List<InMemClassFile> refImpl) {
-        var mutater = new GregorMutater(asSource(refImpl), m -> true, Mutator.all());
+    private List<Mutant> generateMutants(List<InMemClassFile> refImpl, int refImplIndex) {
+        var mutater = createMutator(refImpl);
         var filter = new EquivalentReturnMutationFilter().createInterceptor(null);
 
         var mutants = new ArrayList<Mutant>();
@@ -137,15 +174,72 @@ public class TestSuiteGrader {
                 var classes = new ArrayList<>(refImpl);
                 var mutated = mutater.getMutation(mutation.getId()).getBytes();
                 classes.set(i, new InMemClassFile(cls.getClassName(), mutated));
-                mutants.add(new Mutant(classes, i, mutation));
+                var mutant = new Mutant(refImplIndex, i, mutation, classes);
+                mutants.add(mutant);
             }
         }
         return mutants;
     }
 
-    private ClassByteArraySource asSource(List<InMemClassFile> impl) {
-        return className -> {
-            for (var file : impl) {
+    public GradeResult grade(Task task, Submission submission) throws IOException {
+        var compileResult = compile(JAVAC, submission.testSuite(),
+                ClassPath.fromMemory(task.refImplementations().get(0)).withCurrent(), System.out);
+        if (compileResult.errors()) {
+            return new GradeResult(false, false, emptyList(), emptyList());
+        } else if (compileResult.output().isEmpty()) {
+            return new GradeResult(true, true, emptyList(), emptyList());
+        }
+        var testSuite = compileResult.output();
+        var testClassNames = testSuite.stream()
+                .map(f -> f.getClassName())
+                .toList();
+
+        var refResults = new ArrayList<RefImplementationResult>();
+        var mutantResults = new ArrayList<MutantResult>();
+        try (var testRunner = new TestRunner()) {
+            for (var impl : task.refImplementations()) {
+                var testResults = testRunner.run(
+                        new TestRunConfig(testClassNames,
+                                ClassPath.fromMemory(impl).withMemory(testSuite),
+                                ClassPath.fromCurrent()));
+                if (testResults.isEmpty()) {
+                    return new GradeResult(true, true, emptyList(), emptyList());
+                }
+                var failedTests = testResults.stream()
+                        .filter(r -> !r.passed())
+                        .map(r -> r.method())
+                        .toList();
+                refResults.add(new RefImplementationResult(failedTests));
+            }
+
+            for (var mutation : task.mutations()) {
+                var refImpl = task.refImplementationFor(mutation);
+                var mutater = createMutator(refImpl);
+                var mutated = mutater.getMutation(mutation.identifier()).getBytes();
+
+                var classIndex = mutation.mutatedClassIndex();
+                var className = refImpl.get(classIndex).getClassName();
+
+                var classes = new ArrayList<>(refImpl);
+                classes.set(classIndex, new InMemClassFile(className, mutated));
+
+                var testResults = testRunner.run(
+                        new TestRunConfig(testClassNames,
+                                ClassPath.fromMemory(classes).withMemory(testSuite),
+                                ClassPath.fromCurrent()));
+                var failedTests = testResults.stream()
+                        .filter(r -> !r.passed())
+                        .map(TestResult::method)
+                        .toList();
+                mutantResults.add(new MutantResult(mutation, failedTests));
+            }
+        }
+        return new GradeResult(true, false, refResults, mutantResults);
+    }
+
+    private GregorMutater createMutator(List<InMemClassFile> refImpl) {
+        ClassByteArraySource source = className -> {
+            for (var file : refImpl) {
                 // Pitest is inconsistent with slashes and dots, so check both
                 if (file.getBinaryName().equals(className.replace('.', '/'))) {
                     return Optional.of(file.getContent());
@@ -153,52 +247,7 @@ public class TestSuiteGrader {
             }
             return Optional.empty();
         };
+        return new GregorMutater(source, m -> true, Mutator.all());
     }
 
-    private static CauseOfDeath causeOfDeath(MethodResult result) {
-        if (result.timeout()) {
-            return new Timeout(result.method());
-        } else if (result.outOfMemory()) {
-            return new OutOfMemory(result.method());
-        } else if (!result.illegalOps().isEmpty()) {
-            return new IllegalOp(result.method(), result.illegalOps().get(0));
-        } else {
-            var e = result.exceptions().get(0);
-            var line = stream(e.getStackTrace())
-                    .filter(s -> s.getMethodName().equals(result.method().name()))
-                    .findFirst().orElseThrow()
-                    .getLineNumber();
-            return new Exception(result.method(), line, e.getClass());
-        }
-    }
-
-    sealed interface CauseOfDeath {
-        TestMethod method();
-    }
-
-    public record Timeout(TestMethod method) implements CauseOfDeath {
-        public String toString() {
-            return method.name() + " (timeout)";
-        }
-    }
-
-    public record OutOfMemory(TestMethod method) implements CauseOfDeath {
-        public String toString() {
-            return method.name() + " (out of memory)";
-        }
-    }
-
-    public record IllegalOp(TestMethod method,
-                            String op) implements CauseOfDeath {
-        public String toString() {
-            return method.name() + " (illegal op: " + op + ")";
-        }
-    }
-
-    public record Exception(TestMethod method, int line,
-                            Class<?> exceptionClass) implements CauseOfDeath {
-        public String toString() {
-            return method.name() + ":" + line + " (" + exceptionClass.getSimpleName() + ")";
-        }
-    }
 }
