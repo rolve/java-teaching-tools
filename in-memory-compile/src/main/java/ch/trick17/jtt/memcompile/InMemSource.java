@@ -16,6 +16,7 @@ import static javax.tools.JavaFileObject.Kind.SOURCE;
 public class InMemSource extends SimpleJavaFileObject {
 
     public static InMemSource fromString(String source) {
+        source = source.replace("\r\n", "\n");
         var compilationUnit = StaticJavaParser.parse(source);
         var typeName = compilationUnit.getTypes().stream()
                 .max(comparing(t -> t.hasModifier(PUBLIC)))
