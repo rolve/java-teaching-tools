@@ -87,6 +87,26 @@ public class BatchGraderTest {
     }
 
     @Test
+    void multipleTasks() throws IOException {
+        var tasks = List.of(
+                Task.fromClassName("AddTest", TEST_SRC_DIR),
+                Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR));
+        var submissions = WITH_ECLIPSE_STRUCTURE.stream()
+                .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
+                .toList();
+        grader.grade(tasks, submissions);
+        // we use extra markers for consecutive tabs here
+        var expected = withTabs("""
+                Name           > AddTest   >               >     >     > MultiplyTest  >               >
+                               > compiled  compile errors  add1  add2  > compiled      compile errors  multiply1  multiply2
+                compile-error  > 1         1               0     0     > 1             1               0          0
+                correct        > 1         0               1     1     > 1             0               1          1
+                fails-test     > 1         0               1     0     > 1             0               1          0
+                """);
+        assertEquals(expected, readString(RESULTS_FILE));
+    }
+
+    @Test
     void packageEclipseCompiler() throws IOException {
         var task = Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
@@ -473,6 +493,6 @@ public class BatchGraderTest {
     }
 
     static String withTabs(String text) {
-        return text.replaceAll("\s\s+", "\t");
+        return text.replaceAll("(  |>) *", "\t");
     }
 }

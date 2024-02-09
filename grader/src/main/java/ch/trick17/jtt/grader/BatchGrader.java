@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -59,8 +61,8 @@ public class BatchGrader implements Closeable {
             out = System.out;
         }
 
-        var results = new LinkedHashMap<Task, TaskResults>();
-        tasks.forEach(t -> results.put(t, new TaskResults(t)));
+        var results = new LinkedHashMap<Task, Map<Submission, GradeResult>>();
+        tasks.forEach(t -> results.put(t, new ConcurrentHashMap<>()));
 
         tryFinally(() -> {
             var startTime = currentTimeMillis();
@@ -74,7 +76,7 @@ public class BatchGrader implements Closeable {
                             submOut.println(task.testClassName());
                         }
                         var res = grader.grade(task, subm, submOut);
-                        results.get(task).put(res);
+                        results.get(task).put(subm, res);
                     }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
@@ -101,7 +103,7 @@ public class BatchGrader implements Closeable {
             out.println(submissions.size() + " submissions graded");
         }, () -> {
             if (resultsDir != null) {
-                TsvWriter.write(results.values(), resultsDir.resolve(RESULTS_FILE));
+                TsvWriter.write(results, resultsDir.resolve(RESULTS_FILE));
             }
             if (log != null) {
                 log.close();

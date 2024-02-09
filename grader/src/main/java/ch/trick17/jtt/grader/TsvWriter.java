@@ -2,50 +2,48 @@ package ch.trick17.jtt.grader;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static java.lang.String.join;
 import static java.nio.file.Files.newBufferedWriter;
+import static java.util.Comparator.comparing;
 import static java.util.EnumSet.noneOf;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.*;
 
 public class TsvWriter {
 
-    public static void write(Collection<TaskResults> results, Path path)
+    public static void write(Map<Task, Map<Submission, GradeResult>> results, Path path)
             throws IOException {
         var single = results.size() == 1;
-        var columnGroups = results.stream()
-                .collect(toMap(identity(), TsvWriter::columns));
+        var columnGroups = results.values().stream()
+                .collect(toMap(identity(), map -> columns(map.values())));
         try (var out = newBufferedWriter(path)) {
             // Header
             out.append("Name");
             if (!single) { // two-row header
-                out.append(results.stream()
-                        .map(r -> "\t\t" + r.task().testClassSimpleName()
-                                + "\t".repeat(columnGroups.get(r).size() - 1))
+                out.append(results.entrySet().stream()
+                        .map(e -> "\t\t" + e.getKey().testClassSimpleName()
+                                + "\t".repeat(columnGroups.get(e.getValue()).size() - 1))
                         .collect(joining()));
                 out.append("\n");
             }
-            for (var r : results) {
+            for (var r : results.values()) {
                 out.append(single ? "\t" : "\t\t");
                 out.append(join("\t", columnGroups.get(r)));
             }
             out.append("\n");
 
             // Data
-            var submNames = results.stream()
-                    .flatMap(r -> r.submissionNames().stream())
-                    .collect(toCollection(TreeSet::new));
-            for (var submName : submNames) {
-                out.append(submName);
-                for (var taskResult : results) {
+            var submissions = results.values().iterator().next().keySet().stream()
+                    .sorted(comparing(Submission::name))
+                    .toList();
+            for (var s : submissions) {
+                out.append(s.name());
+                for (var taskResult : results.values()) {
                     var columns = columnGroups.get(taskResult);
-                    var fulfilled = fulfilledColumns(taskResult.get(submName));
+                    var fulfilled = fulfilledColumns(taskResult.get(s));
                     out.append(single ? "\t" : "\t\t");
                     out.append(columns.stream()
                             .map(c -> fulfilled.contains(c) ? "1" : "0")
@@ -61,8 +59,7 @@ public class TsvWriter {
      * These include the properties and tags present for at least
      * one submission, plus all tests.
      */
-    private static List<String> columns(TaskResults taskRes) {
-        var results = taskRes.submissionResults();
+    private static List<String> columns(Collection<GradeResult> results) {
         var properties = results.stream()
                 .flatMap(r -> r.properties().stream())
                 .collect(toCollection(() -> noneOf(Property.class))) // natural order
@@ -82,7 +79,7 @@ public class TsvWriter {
     }
 
     /**
-     * Returns the columns the given submission fulfills.
+     * Returns the columns the given result fulfills.
      */
     private static Set<String> fulfilledColumns(GradeResult results) {
         var streams = Stream.of(
