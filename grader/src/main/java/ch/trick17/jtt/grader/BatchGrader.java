@@ -6,7 +6,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
@@ -19,7 +18,8 @@ import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
 
 public class BatchGrader implements Closeable {
 
-    private static final Path ALL_RESULTS_FILE = Path.of("results-all.tsv").toAbsolutePath();
+    public static final Path RESULTS_FILE = Path.of("results.tsv").toAbsolutePath();
+
     private static final DateTimeFormatter LOG_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
@@ -101,22 +101,12 @@ public class BatchGrader implements Closeable {
             out.println(submissions.size() + " submissions graded");
         }, () -> {
             if (resultsDir != null) {
-                writeResultsToFile(results.values());
+                TsvWriter.write(results.values(), resultsDir.resolve(RESULTS_FILE));
             }
             if (log != null) {
                 log.close();
             }
         });
-    }
-
-    private void writeResultsToFile(Collection<TaskResults> results) throws IOException {
-        for (var r : results) {
-            var filename = "results-" + r.task().testClassSimpleName() + ".tsv";
-            TsvWriter.write(List.of(r), resultsDir.resolve(filename));
-        }
-        if (results.size() > 1) {
-            TsvWriter.write(results, resultsDir.resolve(ALL_RESULTS_FILE));
-        }
     }
 
     /**
