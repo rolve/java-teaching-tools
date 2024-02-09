@@ -128,8 +128,8 @@ public class TestSuiteGrader implements Closeable {
             try {
                 var mutantResults = testRunner.run(new TestRunConfig(
                         testClassNames,
-                        ClassPath.fromMemory(mutant.classes()),
-                        ClassPath.fromMemory(testSuite).withCurrent()));
+                        ClassPath.fromMemory(mutant.classes()).withMemory(testSuite),
+                        ClassPath.fromCurrent()));
                 var failedTests = mutantResults.stream()
                         .filter(r -> !r.passed())
                         .map(TestResult::method)
