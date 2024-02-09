@@ -13,12 +13,9 @@ import org.pitest.mutationtest.build.intercept.equivalent.EquivalentReturnMutati
 import org.pitest.mutationtest.engine.gregor.GregorMutater;
 import org.pitest.mutationtest.engine.gregor.config.Mutator;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Optional;
+import java.util.*;
 
 import static ch.trick17.jtt.memcompile.ClassPath.empty;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
@@ -26,7 +23,9 @@ import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.*;
 
-public class TestSuiteGrader {
+public class TestSuiteGrader implements Closeable {
+
+    TestRunner testRunner = new TestRunner();
 
     public Task prepareTask(List<List<InMemSource>> refImplementations,
                             List<InMemSource> refTestSuite) throws IOException {
@@ -49,110 +48,49 @@ public class TestSuiteGrader {
         } else if (refTestSuiteResult.output().isEmpty()) {
             throw new IllegalArgumentException("Empty reference test suite");
         }
-        var compiledTestSuite = refTestSuiteResult.output();
-        var testClassNames = compiledTestSuite.stream()
-                .map(f -> f.getClassName())
-                .toList();
+        var compiledSuite = refTestSuiteResult.output();
 
         var tests = new ArrayList<TestMethod>();
         var killedMutants = new HashMap<Mutant, List<TestMethod>>();
-        try (var testRunner = new TestRunner()) {
-            for (int i = 0; i < compiledImplementations.size(); i++) {
-                var refImpl = compiledImplementations.get(i);
-                var refResults = testRunner.run(
-                        new TestRunConfig(testClassNames,
-                                ClassPath.fromMemory(refImpl),
-                                ClassPath.fromMemory(compiledTestSuite).withCurrent()));
-                if (i == 0) {
-                    refResults.forEach(r -> tests.add(r.method()));
-                }
-                for (var result : refResults) {
-                    if (!result.passed()) {
-                        throw new IllegalArgumentException("Reference implementation " + (i + 1)
-                                                           + " failed test " + result.method(), result.exceptions().get(0));
-                    }
-                }
-
-                var mutants = generateMutants(refImpl, i);
-                System.out.println("Generated " + mutants.size() + " mutants" +
-                                   " for reference implementation " + (i + 1));
-                for (int j = 0; j < mutants.size(); j++) {
-                    var mutant = mutants.get(j);
-                    try {
-                        var mutantResults = testRunner.run(new TestRunConfig(
-                                testClassNames,
-                                ClassPath.fromMemory(mutant.classes()),
-                                ClassPath.fromMemory(compiledTestSuite).withCurrent()));
-                        var failedTests = mutantResults.stream()
-                                .filter(r -> !r.passed())
-                                .map(TestResult::method)
-                                .toList();
-                        if (failedTests.isEmpty()) {
-                            System.err.println("  Warning: Mutant " + (j + 1) +
-                                               " survived reference test suite" +
-                                               " (" + mutant.getDescription() + ")");
-                        } else {
-                            killedMutants.put(mutant, failedTests);
-                        }
-                    } catch (TestRunException e) {
-                        System.err.println("  Warning: Mutant " + (j + 1) +
-                                           " could not be tested against reference test suite" +
-                                           " (" + mutant.getDescription() + ")");
-                        e.printStackTrace();
-                    }
+        var testClassNames = compiledSuite.stream()
+                .map(f -> f.getClassName())
+                .toList();
+        for (int i = 0; i < compiledImplementations.size(); i++) {
+            var refImpl = compiledImplementations.get(i);
+            var refResults = testRunner.run(
+                    new TestRunConfig(testClassNames,
+                            ClassPath.fromMemory(refImpl).withMemory(compiledSuite),
+                            ClassPath.fromCurrent()));
+            if (i == 0) {
+                refResults.forEach(r -> tests.add(r.method()));
+            }
+            for (var result : refResults) {
+                if (!result.passed()) {
+                    throw new IllegalArgumentException("Reference implementation " + (i + 1)
+                                                       + " failed test " + result.method(), result.exceptions().get(0));
                 }
             }
-            System.out.println();
-        }
 
+            var mutants = generateMutants(refImpl, i);
+            System.out.println("Generated " + mutants.size() + " mutants" +
+                               " for reference implementation " + (i + 1));
+            var killed = killMutants(mutants, compiledSuite);
+            killedMutants.putAll(killed);
+        }
         System.out.println(killedMutants.size() + " mutants were killed by test suite\n");
 
-        // Some mutants may be very easy to kill, requiring only weak tests,
-        // while others require much stronger, specific tests. A test suite
-        // should only get a high score if it also kills the harder mutants,
-        // even when there are much fewer of them. Thus, we group mutants into
-        // "difficulty" groups and use these groups as the basis for scoring the
-        // test suite.
-        // We assume that the tests in the reference suite are roughly ordered
-        // from weak to strong; the difficulty group of a mutant is then the
-        // *first* (weakest) test that kills it.
-        var grouped = killedMutants.entrySet().stream()
-                .collect(groupingBy(e -> e.getValue().get(0), mapping(Entry::getKey, toList())));
-        boolean first = true;
-        for (var group : grouped.entrySet()) {
-            var kills = group.getValue().size();
-            var percentage = 100 * kills / killedMutants.size();
-            System.out.println(kills + " (" + percentage + ") " +
-                               (!first ? " more" : "") +
-                               " mutants killed by " + group.getKey());
-            first = false;
-        }
-
-        // Since a test suite does not necessarily kill all mutants in a group,
-        // we assign each individual mutant a weight that is inversely
-        // proportional to the number of mutants in its group (and to the number
-        // of groups). The score of a test suite is then the sum of the weights
-        // of the mutants it kills.
-        var weights = new HashMap<Mutant, Double>();
-        for (var group : grouped.values()) {
-            var kills = group.size();
-            var weight = 1.0 / (kills * grouped.size());
-            for (var mutant : group) {
-                weights.put(mutant, weight);
-            }
-        }
+        var weights = computeWeights(killedMutants);
 
         var mutations = new ArrayList<Mutation>();
         for (var e : killedMutants.entrySet()) {
             var mutant = e.getKey();
             var killers = e.getValue();
-            Mutation apply = new Mutation(
+            mutations.add(new Mutation(
                     mutant.refImplementationIndex(),
                     mutant.mutatedClassIndex(),
                     mutant.details().getId(),
                     weights.get(mutant),
-                    killers);
-            mutations.add(apply);
+                    killers));
         }
         return new Task(compiledImplementations, tests, mutations);
     }
@@ -181,60 +119,138 @@ public class TestSuiteGrader {
         return mutants;
     }
 
+    private Map<Mutant, List<TestMethod>> killMutants(List<Mutant> mutants,
+                                                      List<InMemClassFile> testSuite) throws IOException {
+        var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
+        var killed = new HashMap<Mutant, List<TestMethod>>();
+        for (int j = 0; j < mutants.size(); j++) {
+            var mutant = mutants.get(j);
+            try {
+                var mutantResults = testRunner.run(new TestRunConfig(
+                        testClassNames,
+                        ClassPath.fromMemory(mutant.classes()),
+                        ClassPath.fromMemory(testSuite).withCurrent()));
+                var failedTests = mutantResults.stream()
+                        .filter(r -> !r.passed())
+                        .map(TestResult::method)
+                        .toList();
+                if (failedTests.isEmpty()) {
+                    System.err.println("  Warning: Mutant " + (j + 1) +
+                                       " survived reference test suite" +
+                                       " (" + mutant.getDescription() + ")");
+                } else {
+                    killed.put(mutant, failedTests);
+                }
+            } catch (TestRunException e) {
+                System.err.println("  Warning: Mutant " + (j + 1) +
+                                   " could not be tested against reference test suite" +
+                                   " (" + mutant.getDescription() + ")");
+                e.printStackTrace();
+            }
+        }
+        return killed;
+    }
+
+    private Map<Mutant, Double> computeWeights(Map<Mutant, List<TestMethod>> mutants) {
+        // Some mutants may be very easy to kill, requiring only weak tests,
+        // while others require much stronger, specific tests. A test suite
+        // should only get a high score if it also kills the harder mutants,
+        // even when there are much fewer of them. Thus, we group mutants into
+        // "difficulty" groups and use these groups as the basis for scoring the
+        // test suite.
+        // We assume that the tests in the reference suite are roughly ordered
+        // from weak to strong; the difficulty group of a mutant is then the
+        // *first* (weakest) test that kills it.
+        var grouped = mutants.entrySet().stream()
+                .collect(groupingBy(e -> e.getValue().get(0), mapping(Map.Entry::getKey, toList())));
+        boolean first = true;
+        for (var group : grouped.entrySet()) {
+            var kills = group.getValue().size();
+            var percentage = 100 * kills / mutants.size();
+            System.out.println(kills + " (" + percentage + ") " +
+                               (!first ? " more" : "") +
+                               " mutants killed by " + group.getKey());
+            first = false;
+        }
+
+        // Since a test suite does not necessarily kill all mutants in a group,
+        // we assign each individual mutant a weight that is inversely
+        // proportional to the number of mutants in its group (and to the number
+        // of groups). The score of a test suite is then the sum of the weights
+        // of the mutants it kills.
+        var weights = new HashMap<Mutant, Double>();
+        for (var group : grouped.values()) {
+            var kills = group.size();
+            var weight = 1.0 / (kills * grouped.size());
+            for (var mutant : group) {
+                weights.put(mutant, weight);
+            }
+        }
+        return weights;
+    }
+
     public GradeResult grade(Task task, Submission submission) throws IOException {
         var compileResult = compile(JAVAC, submission.testSuite(),
                 ClassPath.fromMemory(task.refImplementations().get(0)).withCurrent(), System.out);
         if (compileResult.errors()) {
-            return new GradeResult(false, false, emptyList(), emptyList());
+            return new GradeResult(false, false, emptyList(), emptyList(), null, null, null);
         } else if (compileResult.output().isEmpty()) {
-            return new GradeResult(true, true, emptyList(), emptyList());
+            return new GradeResult(true, true, emptyList(), emptyList(), null, null, null);
         }
         var testSuite = compileResult.output();
-        var testClassNames = testSuite.stream()
-                .map(f -> f.getClassName())
-                .toList();
+        var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
 
         var refResults = new ArrayList<RefImplementationResult>();
-        var mutantResults = new ArrayList<MutantResult>();
-        try (var testRunner = new TestRunner()) {
-            for (var impl : task.refImplementations()) {
-                var testResults = testRunner.run(
-                        new TestRunConfig(testClassNames,
-                                ClassPath.fromMemory(impl).withMemory(testSuite),
-                                ClassPath.fromCurrent()));
-                if (testResults.isEmpty()) {
-                    return new GradeResult(true, true, emptyList(), emptyList());
-                }
-                var failedTests = testResults.stream()
-                        .filter(r -> !r.passed())
-                        .map(r -> r.method())
-                        .toList();
-                refResults.add(new RefImplementationResult(failedTests));
+        for (var impl : task.refImplementations()) {
+            var testResults = testRunner.run(
+                    new TestRunConfig(testClassNames,
+                            ClassPath.fromMemory(impl).withMemory(testSuite),
+                            ClassPath.fromCurrent()));
+            if (testResults.isEmpty()) {
+                return new GradeResult(true, true, emptyList(), emptyList(), 1.0, 0.0, 0.0);
             }
-
-            for (var mutation : task.mutations()) {
-                var refImpl = task.refImplementationFor(mutation);
-                var mutater = createMutator(refImpl);
-                var mutated = mutater.getMutation(mutation.identifier()).getBytes();
-
-                var classIndex = mutation.mutatedClassIndex();
-                var className = refImpl.get(classIndex).getClassName();
-
-                var classes = new ArrayList<>(refImpl);
-                classes.set(classIndex, new InMemClassFile(className, mutated));
-
-                var testResults = testRunner.run(
-                        new TestRunConfig(testClassNames,
-                                ClassPath.fromMemory(classes).withMemory(testSuite),
-                                ClassPath.fromCurrent()));
-                var failedTests = testResults.stream()
-                        .filter(r -> !r.passed())
-                        .map(TestResult::method)
-                        .toList();
-                mutantResults.add(new MutantResult(mutation, failedTests));
-            }
+            var failedTests = testResults.stream()
+                    .filter(r -> !r.passed())
+                    .map(r -> r.method())
+                    .toList();
+            refResults.add(new RefImplementationResult(failedTests));
         }
-        return new GradeResult(true, false, refResults, mutantResults);
+
+       var mutantResults = new ArrayList<MutantResult>();
+        for (var mutation : task.mutations()) {
+            var refImpl = task.refImplementationFor(mutation);
+            var mutater = createMutator(refImpl);
+            var mutated = mutater.getMutation(mutation.identifier()).getBytes();
+
+            var classIndex = mutation.mutatedClassIndex();
+            var className = refImpl.get(classIndex).getClassName();
+
+            var classes = new ArrayList<>(refImpl);
+            classes.set(classIndex, new InMemClassFile(className, mutated));
+
+            var testResults = testRunner.run(
+                    new TestRunConfig(testClassNames,
+                            ClassPath.fromMemory(classes).withMemory(testSuite),
+                            ClassPath.fromCurrent()));
+            var failedTests = testResults.stream()
+                    .filter(r -> !r.passed())
+                    .map(TestResult::method)
+                    .toList();
+            mutantResults.add(new MutantResult(mutation, failedTests));
+        }
+
+        var survivedRefs = refResults.stream().filter(r -> r.passed()).count();
+        var refScore = (double) survivedRefs / task.refImplementations().size();
+
+        var mutantScore = mutantResults.stream()
+                .filter(r -> !r.passed())
+                .mapToDouble(r -> r.mutation().weight())
+                .sum();
+
+        var totalScore = refScore * mutantScore;
+
+        return new GradeResult(true, false, refResults, mutantResults,
+                refScore, mutantScore, totalScore);
     }
 
     private GregorMutater createMutator(List<InMemClassFile> refImpl) {
@@ -250,4 +266,8 @@ public class TestSuiteGrader {
         return new GregorMutater(source, m -> true, Mutator.all());
     }
 
+    @Override
+    public void close() {
+        testRunner.close();
+    }
 }

@@ -12,7 +12,7 @@ public class JahreszeitTest {
 
     @Order(1)
     @Test
-    public void testFruehlingEinfach() {
+    void fruehlingEinfach() {
         assertEquals("Frühling", Jahreszeit.getJahreszeit(4, 1));
         assertEquals("Frühling", Jahreszeit.getJahreszeit(4, 15));
         assertEquals("Frühling", Jahreszeit.getJahreszeit(4, 30));
@@ -23,7 +23,7 @@ public class JahreszeitTest {
 
     @Order(2)
     @Test
-    public void testSommerEinfach() {
+    void sommerEinfach() {
         assertEquals("Sommer", Jahreszeit.getJahreszeit(7, 1));
         assertEquals("Sommer", Jahreszeit.getJahreszeit(7, 17));
         assertEquals("Sommer", Jahreszeit.getJahreszeit(7, 31));
@@ -34,7 +34,7 @@ public class JahreszeitTest {
 
     @Order(3)
     @Test
-    public void testHerbstEinfach() {
+    void herbstEinfach() {
         assertEquals("Herbst", Jahreszeit.getJahreszeit(10, 1));
         assertEquals("Herbst", Jahreszeit.getJahreszeit(10, 14));
         assertEquals("Herbst", Jahreszeit.getJahreszeit(10, 31));
@@ -45,7 +45,7 @@ public class JahreszeitTest {
 
     @Order(4)
     @Test
-    public void testWinterEinfach() {
+    void winterEinfach() {
         assertEquals("Winter", Jahreszeit.getJahreszeit(1, 1));
         assertEquals("Winter", Jahreszeit.getJahreszeit(1, 12));
         assertEquals("Winter", Jahreszeit.getJahreszeit(1, 31));
@@ -56,7 +56,7 @@ public class JahreszeitTest {
 
     @Order(5)
     @Test
-    public void testMaerz() {
+    void maerz() {
         assertEquals("Winter", Jahreszeit.getJahreszeit(3, 1));
         assertEquals("Winter", Jahreszeit.getJahreszeit(3, 18));
         assertEquals("Winter", Jahreszeit.getJahreszeit(3, 19));
@@ -67,7 +67,7 @@ public class JahreszeitTest {
 
     @Order(6)
     @Test
-    public void testJuni() {
+    void juni() {
         assertEquals("Frühling", Jahreszeit.getJahreszeit(6, 1));
         assertEquals("Frühling", Jahreszeit.getJahreszeit(6, 19));
         assertEquals("Frühling", Jahreszeit.getJahreszeit(6, 20));
@@ -78,7 +78,7 @@ public class JahreszeitTest {
 
     @Order(7)
     @Test
-    public void testSeptember() {
+    void september() {
         assertEquals("Sommer", Jahreszeit.getJahreszeit(9, 1));
         assertEquals("Sommer", Jahreszeit.getJahreszeit(9, 20));
         assertEquals("Sommer", Jahreszeit.getJahreszeit(9, 21));
@@ -89,7 +89,7 @@ public class JahreszeitTest {
 
     @Order(8)
     @Test
-    public void testDezember() {
+    void dezember() {
         assertEquals("Herbst", Jahreszeit.getJahreszeit(12, 1));
         assertEquals("Herbst", Jahreszeit.getJahreszeit(12, 20));
         assertEquals("Herbst", Jahreszeit.getJahreszeit(12, 21));

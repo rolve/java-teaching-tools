@@ -1,22 +1,30 @@
 package ch.trick17.jtt.testsuitegrader;
 
+import ch.trick17.jtt.memcompile.InMemSource;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 
 import static ch.trick17.jtt.testsuitegrader.RefCodeProvider.refImplementations;
 import static ch.trick17.jtt.testsuitegrader.RefCodeProvider.refTestSuite;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestSuiteGraderTest {
 
+    static TestSuiteGrader grader = new TestSuiteGrader();
+
     @ParameterizedTest
-    @ValueSource(strings = {"adresse", "jahreszeit", "phone-number", "random-sort", "smart-home"})
+    @ValueSource(strings = {"adresse", "phone-number", "random-sort", "smart-home"})
     void gradeRefTestSuite(String name) throws IOException {
         var refTestSuite = refTestSuite(name);
-        var grader = new TestSuiteGrader();
         var task = grader.prepareTask(refImplementations(name), refTestSuite);
 
         var result = grader.grade(task, new Submission(refTestSuite));
@@ -27,5 +35,73 @@ public class TestSuiteGraderTest {
         assertFalse(result.emptyTestSuite());
         assertTrue(result.refImplementationResults().stream().allMatch(r -> r.passed()));
         assertTrue(result.mutantResults().stream().noneMatch(r -> r.passed()));
+    }
+
+    @Nested // @BeforeAll for a subset of tests
+    public class GradeIncompleteTestSuite {
+
+        final static String code = "jahreszeit";
+        final static int totalTests = 8;
+
+        static List<InMemSource> refTestSuite;
+        static Task task;
+
+        Pattern testPattern = Pattern.compile("""
+                    @Order\\(\\d\\)
+                    @Test
+                    void \\w+\\(\\) \\{
+                        [^}]+
+                    }
+                """);
+
+        @BeforeAll
+        static void setup() throws IOException {
+            refTestSuite = refTestSuite(code);
+            assumeTrue(refTestSuite.size() == 1);
+            task = grader.prepareTask(refImplementations(code), refTestSuite);
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8})
+        void gradeIncompleteTestSuite(int missingTests) throws IOException {
+            // leaving away tests from the "end" of the reference test suite
+            // should result in surviving mutants and reduce the score in
+            // proportion to the number of tests left away (given that each
+            // test in the suite kills mutants not killed by earlier tests)
+            var expectedScore = (totalTests - missingTests) / (double) totalTests;
+
+            var testClass = refTestSuite.get(0).getContent();
+            var matcher = testPattern.matcher(testClass);
+            var matches = new ArrayList<MatchResult>();
+            while (matcher.find()) {
+                matches.add(matcher.toMatchResult());
+            }
+            assumeTrue(matches.size() == totalTests);
+
+            var reducedTestClass = testClass;
+            for (int i = 0; i < missingTests; i++) {
+                var match = matches.get(totalTests - i - 1);
+                reducedTestClass = reducedTestClass.substring(0, match.start()) +
+                                   reducedTestClass.substring(match.end());
+            }
+
+            var testSuite = List.of(InMemSource.fromString(reducedTestClass));
+            var result = grader.grade(task, new Submission(testSuite));
+
+            assertTrue(result.refImplementationResults().stream().allMatch(r -> r.passed()));
+            switch (missingTests) {
+                case 0 ->
+                        assertTrue(result.mutantResults().stream().noneMatch(r -> r.passed()));
+                default ->
+                        assertTrue(result.mutantResults().stream().anyMatch(r -> r.passed()) &&
+                                   result.mutantResults().stream().anyMatch(r -> !r.passed()));
+                case totalTests ->
+                        assertTrue(result.mutantResults().stream().allMatch(r -> r.passed()));
+            }
+
+            assertEquals(1.0, result.refImplementationScore(), 0.001);
+            assertEquals(expectedScore, result.mutantScore(), 0.001);
+            assertEquals(expectedScore, result.totalScore(), 0.001);
+        }
     }
 }
