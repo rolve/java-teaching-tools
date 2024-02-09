@@ -18,8 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.io.File.pathSeparator;
-import static java.lang.String.join;
-import static java.lang.String.valueOf;
+import static java.lang.String.*;
 import static java.lang.System.getProperty;
 import static java.util.Arrays.stream;
 import static java.util.Collections.emptyList;
@@ -98,12 +97,19 @@ public class Grader implements Closeable {
 
         var results = testRunner.run(config);
 
+        var failMsgs = results.stream()
+                .flatMap(r -> r.exceptions().stream())
+                .map(e -> format("%s: %s", e.getClass().getName(),
+                        valueOf(e.getMessage()).replaceAll("\\s+", " ")))
+                .filter(msg -> !msg.startsWith("java.lang.Error: Unresolved compilation problems:"))
+                .distinct()
+                .toList();
+        if (!failMsgs.isEmpty()) {
+            out.println("Tests failed for the following reasons:");
+            failMsgs.forEach(msg -> out.print(msg.indent(2))); // indent includes \n
+        }
+
         for (var res : results) {
-            for (var e : res.exceptions()) {
-                out.printf("    %s (%s)\n",
-                        valueOf(e.getMessage()).replaceAll("\\s+", " "),
-                        e.getClass().getName());
-            }
             if (res.nonDeterm()) {
                 out.println("Non-determinism in " + res.method());
             }

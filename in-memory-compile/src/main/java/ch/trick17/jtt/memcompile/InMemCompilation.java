@@ -18,7 +18,7 @@ public class InMemCompilation {
     public static Result compile(Compiler compiler,
                                  List<InMemSource> sources,
                                  ClassPath classPath,
-                                 PrintStream diagnosticsOut) throws IOException {
+                                 PrintStream out) throws IOException {
         try (var fileManager = new InMemFileManager(sources, classPath)) {
             var javaCompiler = compiler.create();
             var collector = new DiagnosticCollector<>();
@@ -32,9 +32,13 @@ public class InMemCompilation {
                     options, null, sources).call();
 
             var errors = collector.getDiagnostics().stream()
-                    .filter(d -> d.getKind() == ERROR).toList();
-            for (var error : errors) {
-                diagnosticsOut.println("Compile error: " + error.getMessage(ROOT));
+                    .filter(d -> d.getKind() == ERROR)
+                    .map(d -> d.getMessage(ROOT))
+                    .distinct()
+                    .toList();
+            if (!errors.isEmpty()) {
+                out.println("Compile errors:");
+                errors.forEach(e -> out.print(e.indent(2))); // indent includes \n
             }
             return new Result(!errors.isEmpty(), fileManager.getOutput());
         }
