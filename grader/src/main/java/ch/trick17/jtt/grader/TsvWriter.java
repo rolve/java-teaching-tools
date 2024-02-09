@@ -84,7 +84,7 @@ public class TsvWriter {
     /**
      * Returns the columns the given submission fulfills.
      */
-    private static Set<String> fulfilledColumns(SubmissionResults results) {
+    private static Set<String> fulfilledColumns(GradeResult results) {
         var streams = Stream.of(
                 results.properties().stream().map(Property::prettyName),
                 results.tags().stream(),

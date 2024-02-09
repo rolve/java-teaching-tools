@@ -7,12 +7,12 @@ import java.util.Map;
 
 /**
  * A container for the grading results of a whole {@link Task}, which is
- * basically a {@link Map} from submission names to {@link SubmissionResults}.
+ * basically a {@link Map} from submission names to {@link GradeResult}.
  */
 public class TaskResults {
 
     private final Task task;
-    private final Map<String, SubmissionResults> submissionResults = new HashMap<>();
+    private final Map<String, GradeResult> submissionResults = new HashMap<>();
 
     public TaskResults(Task task) {
         this.task = task;
@@ -26,11 +26,11 @@ public class TaskResults {
      * Returns the results for the given submission. This method can be safely
      * used from multiple threads, but the returned object cannot.
      */
-    public synchronized SubmissionResults get(String submName) {
+    public synchronized GradeResult get(String submName) {
         return submissionResults.get(submName);
     }
 
-    public synchronized void put(SubmissionResults res) {
+    public synchronized void put(GradeResult res) {
         submissionResults.put(res.submissionName(), res);
     }
 
@@ -43,10 +43,10 @@ public class TaskResults {
 
     /**
      * Returns a snapshot of the submission results. This is a shallow copy,
-     * i.e., the {@link SubmissionResults} objects are the same ones as those
+     * i.e., the {@link GradeResult} objects are the same ones as those
      * returned by {@link #get(String)}.
      */
-    public synchronized List<SubmissionResults> submissionResults() {
+    public synchronized List<GradeResult> submissionResults() {
         return new ArrayList<>(submissionResults.values());
     }
 }

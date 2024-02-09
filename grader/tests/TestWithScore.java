@@ -9,7 +9,7 @@ public class TestWithScore {
     public Double score;
 
     @Test
-    public void testWithScore() {
+    void withScore() {
         assertEquals(2, Add.add(1, 1));
         if (Math.random() > 0.5) {
             score = 100.0;
@@ -19,18 +19,18 @@ public class TestWithScore {
     }
 
     @Test
-    public void testWithScoreFirst() {
+    void withScoreFirst() {
         score = 100.0;
         assertEquals(2, Add.add(1, 1));
     }
 
     @Test
-    public void testWithoutScore() {
+    void withoutScore() {
         assertEquals(2, Add.add(1, 1));
     }
 
     @Test
-    public void testWithOrWithoutScore() {
+    void withOrWithoutScore() {
         assertEquals(2, Add.add(1, 1));
         if (Math.random() > 0.5) {
             score = 100.0;

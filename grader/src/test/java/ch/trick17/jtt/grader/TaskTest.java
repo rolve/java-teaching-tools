@@ -5,12 +5,11 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import static ch.trick17.jtt.grader.GraderTest.TEST_SRC_DIR;
 import static java.nio.file.Files.readString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TaskTest {
-
-    static final Path TEST_SRC_DIR = Path.of("tests");
 
     @Test
     public void testFromClassName() throws IOException {

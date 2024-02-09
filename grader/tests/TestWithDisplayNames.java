@@ -7,24 +7,24 @@ public class TestWithDisplayNames {
 
     @Test
     @DisplayName("test4")
-    public void test1() {
+    void test1() {
         assertEquals(5, 2 + 2);
     }
 
     @Test
-    public void test2() {
+    void test2() {
         assertEquals(5, 2 + 2);
     }
 
     @Test
     @DisplayName("test1")
-    public void test3() {
+    void test3() {
         assertEquals(4, 2 + 2);
     }
 
     @Test
     @DisplayName("test3")
-    public void test4() {
+    void test4() {
         assertEquals(4, 2 + 2);
     }
 }

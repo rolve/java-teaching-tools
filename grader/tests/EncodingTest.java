@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class EncodingTest {
 
     @Test
-    public void testEncoding() throws IOException {
+    void encoding() throws IOException {
         var original = "Neuchâtel";
         var in = new ByteArrayInputStream(original.getBytes(UTF_8));
         var decoded = Decoder.decode(in);

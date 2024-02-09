@@ -13,11 +13,7 @@ import static ch.trick17.jtt.grader.Property.*;
 import static java.util.Collections.emptySet;
 import static java.util.function.Predicate.not;
 
-/**
- * A container for the grading results of a {@link Task} for a single
- * submission.
- */
-public record SubmissionResults(
+public record GradeResult(
         String submissionName,
         boolean compileErrors,
         boolean testCompileErrors,

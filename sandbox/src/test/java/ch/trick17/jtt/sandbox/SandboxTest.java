@@ -38,7 +38,7 @@ public class SandboxTest {
     private static ByteArrayOutputStream errRecorder;
 
     @BeforeAll
-    public static void install() {
+    static void install() {
         inSupplier = new ByteArrayInputStream("Hello, World!".getBytes());
         outRecorder = new ByteArrayOutputStream();
         errRecorder = new ByteArrayOutputStream();
@@ -48,14 +48,14 @@ public class SandboxTest {
     }
 
     @BeforeEach
-    public void reset() {
+    void reset() {
         inSupplier.reset();
         outRecorder.reset();
         errRecorder.reset();
     }
 
     @Test
-    void testIsolation() throws IOException {
+    void isolation() throws IOException {
         var sandbox = new Sandbox(code(), ClassPath.empty());
         var result = sandbox.run(WithStaticFields.class, "hellos",
                 emptyList(), emptyList(), List.class);
@@ -81,7 +81,7 @@ public class SandboxTest {
     }
 
     @Test
-    void testIsolationSomeFieldsNotInitialized() throws IOException {
+    void isolationSomeFieldsNotInitialized() throws IOException {
         var sandbox = new Sandbox(code(), ClassPath.empty());
         var result = sandbox.run(WithUninitializedStaticField.class, "increment",
                 emptyList(), emptyList(), Integer.class);
@@ -97,7 +97,7 @@ public class SandboxTest {
     }
 
     @Test
-    void testIsolationFinalStaticField() throws IOException {
+    void isolationFinalStaticField() throws IOException {
         var sandbox = new Sandbox(code(), ClassPath.empty());
         var result = sandbox.run(WithFinalStaticField.class, "increment",
                 emptyList(), emptyList(), Integer.class);
@@ -113,7 +113,7 @@ public class SandboxTest {
     }
 
     @Test
-    void testIsolationEnum() throws IOException {
+    void isolationEnum() throws IOException {
         var sandbox = new Sandbox(code(), ClassPath.empty());
         var result = sandbox.run(Status.class, "test",
                 emptyList(), emptyList(), Boolean.class);
@@ -173,7 +173,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testInputModeNormal() throws IOException {
+    void inputModeNormal() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdInMode(InputMode.NORMAL)
                 .build();
@@ -183,7 +183,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testInputModeEmpty() throws IOException {
+    void inputModeEmpty() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdInMode(EMPTY)
                 .build();
@@ -193,7 +193,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testInputModeClosed() throws IOException {
+    void inputModeClosed() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdInMode(CLOSED)
                 .build();
@@ -204,7 +204,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeNormal() throws IOException {
+    void outputModeNormal() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdOutMode(NORMAL)
                 .stdErrMode(NORMAL)
@@ -219,7 +219,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeDiscard() throws IOException {
+    void outputModeDiscard() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdOutMode(DISCARD)
                 .stdErrMode(DISCARD)
@@ -234,7 +234,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeRecord() throws IOException {
+    void outputModeRecord() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdOutMode(RECORD)
                 .stdErrMode(RECORD)
@@ -249,7 +249,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeRecordTimeout() throws IOException {
+    void outputModeRecordTimeout() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofSeconds(1))
                 .stdOutMode(RECORD)
@@ -265,7 +265,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testOutputModeRecordForward() throws IOException {
+    void outputModeRecordForward() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .stdOutMode(RECORD_FORWARD)
                 .stdErrMode(RECORD_FORWARD)
@@ -293,7 +293,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testRestrictionsPermitted() throws IOException {
+    void restrictionsPermitted() throws IOException {
         var sandbox = new Sandbox(code(), ClassPath.empty());
         var result = sandbox.run(Whitelisted.class, "run",
                 emptyList(), emptyList(), Void.class);
@@ -301,7 +301,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testRestrictionsForbidden() throws IOException {
+    void restrictionsForbidden() throws IOException {
         var sandbox = new Sandbox(code(), ClassPath.empty());
         var result = sandbox.run(IO.class, "run",
                 emptyList(), emptyList(), Void.class);
@@ -311,7 +311,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testRestrictionsTryCatchReturn() throws IOException {
+    void restrictionsTryCatchReturn() throws IOException {
         var sandbox = new Sandbox(code(), ClassPath.empty());
         var result = sandbox.run(TryCatchReturn.class, "run",
                 emptyList(), emptyList(), Void.class);
@@ -321,7 +321,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testCustomRestrictions() throws IOException {
+    void customRestrictions() throws IOException {
         var permitted = Whitelist.parse(Whitelist.DEFAULT_WHITELIST_DEF
                                         + "java.util.Scanner.<init>(java.nio.file.Path)");
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
@@ -335,7 +335,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testNoRestrictions() throws IOException {
+    void noRestrictions() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .permittedCalls(null)
                 .build();
@@ -381,7 +381,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testTimeoutNormalLoop() throws IOException {
+    void timeoutNormalLoop() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofMillis(500))
                 .build();
@@ -391,7 +391,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testTimeoutTightLoop() throws IOException {
+    void timeoutTightLoop() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofMillis(500))
                 .build();
@@ -401,7 +401,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testTimeoutMultipleLoops() throws IOException {
+    void timeoutMultipleLoops() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofMillis(500))
                 .build();
@@ -411,7 +411,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testTimeoutNestedLoops() throws IOException {
+    void timeoutNestedLoops() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofMillis(500))
                 .build();
@@ -421,7 +421,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testTimeoutNestedTightLoops() throws IOException {
+    void timeoutNestedTightLoops() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofMillis(500))
                 .build();
@@ -431,7 +431,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testCatchesInterruptedException() throws IOException {
+    void catchesInterruptedException() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofMillis(500))
                 .build();
@@ -504,7 +504,7 @@ public class SandboxTest {
     }
 
     @Test
-    void testInstrumentationInterface() throws IOException {
+    void instrumentationInterface() throws IOException {
         var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
                 .timeout(Duration.ofSeconds(1))
                 .build();
@@ -522,7 +522,7 @@ public class SandboxTest {
     }
 
     @Test
-    public void testInstrumentationStackHeight() throws IOException {
+    void instrumentationStackHeight() throws IOException {
         // this code used to cause a BadBytecode error because the stack height
         // was not properly increased (only with the Eclipse compiler)
         var compiled = compile(ECLIPSE, List.of(InMemSource.fromString("""

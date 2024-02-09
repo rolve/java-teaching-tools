@@ -6,13 +6,13 @@ import org.junit.jupiter.api.Test;
 public class TestWithAssumption {
 
     @Test
-    public void testNormal() {
+    void normal() {
         assertEquals(0, Add.add(0, 0));
         assertEquals(2, Add.add(2, 0));
     }
 
     @Test
-    public void testFailedAssumption() {
+    void failedAssumption() {
         assumeTrue(false);
     }
 }

@@ -8,7 +8,7 @@ public class AddTest {
     // the right directory is used
 
     @Test
-    public void testAdd() {
+    void add() {
         assertEquals(0, Add.add(0, 0));
         assertEquals(2, Add.add(2, 0));
         assertEquals(2, Add.add(1, 1));

@@ -7,12 +7,12 @@ public class ScoreTest {
     public Double score;
 
     @Test
-    public void testWithScore() {
+    void withScore() {
         score = 100.0;
     }
 
     @Test
-    public void testWithoutScore() {
+    void withoutScore() {
 
     }
 }
