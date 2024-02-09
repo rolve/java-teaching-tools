@@ -7,7 +7,7 @@ public class PhoneNumber {
                 digits += c;
             }
         }
-        if (digits.length() != 10) {
+        if (digits.length() < 10 || digits.length() > 10) {
             return "ungültig";
         }
         return ""

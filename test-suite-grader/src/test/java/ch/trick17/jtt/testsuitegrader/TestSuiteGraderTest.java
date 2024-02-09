@@ -89,15 +89,15 @@ public class TestSuiteGraderTest {
             var result = grader.grade(task, new Submission(testSuite));
 
             assertTrue(result.refImplementationResults().stream().allMatch(r -> r.passed()));
-            switch (missingTests) {
+            assertTrue(switch (missingTests) {
                 case 0 ->
-                        assertTrue(result.mutantResults().stream().noneMatch(r -> r.passed()));
+                        result.mutantResults().stream().noneMatch(r -> r.passed());
                 default ->
-                        assertTrue(result.mutantResults().stream().anyMatch(r -> r.passed()) &&
-                                   result.mutantResults().stream().anyMatch(r -> !r.passed()));
+                        result.mutantResults().stream().anyMatch(r -> r.passed()) &&
+                        result.mutantResults().stream().anyMatch(r -> !r.passed());
                 case totalTests ->
-                        assertTrue(result.mutantResults().stream().allMatch(r -> r.passed()));
-            }
+                        result.mutantResults().stream().allMatch(r -> r.passed());
+            });
 
             assertEquals(1.0, result.refImplementationScore(), 0.001);
             assertEquals(expectedScore, result.mutantScore(), 0.001);

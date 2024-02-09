@@ -167,7 +167,7 @@ public class TestSuiteGrader implements Closeable {
         for (var group : grouped.entrySet()) {
             var kills = group.getValue().size();
             var percentage = 100 * kills / mutants.size();
-            System.out.println(kills + " (" + percentage + ") " +
+            System.out.println(kills + " (" + percentage + "%) " +
                                (!first ? " more" : "") +
                                " mutants killed by " + group.getKey());
             first = false;
@@ -216,7 +216,7 @@ public class TestSuiteGrader implements Closeable {
             refResults.add(new RefImplementationResult(failedTests));
         }
 
-       var mutantResults = new ArrayList<MutantResult>();
+        var mutantResults = new ArrayList<MutantResult>();
         for (var mutation : task.mutations()) {
             var refImpl = task.refImplementationFor(mutation);
             var mutater = createMutator(refImpl);
