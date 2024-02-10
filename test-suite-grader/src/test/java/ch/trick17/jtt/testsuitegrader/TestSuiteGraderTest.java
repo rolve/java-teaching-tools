@@ -22,7 +22,7 @@ public class TestSuiteGraderTest {
     static TestSuiteGrader grader = new TestSuiteGrader();
 
     @ParameterizedTest
-    @ValueSource(strings = {"adresse", "phone-number", "random-sort", "smart-home"})
+    @ValueSource(strings = {"adresse", "io-tasks", "phone-number", "random-sort", "smart-home"})
     void gradeRefTestSuite(String name) throws IOException {
         var refTestSuite = refTestSuite(name);
         var task = grader.prepareTask(refImplementations(name), refTestSuite);
