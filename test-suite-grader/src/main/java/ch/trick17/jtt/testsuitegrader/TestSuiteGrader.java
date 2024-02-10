@@ -79,7 +79,7 @@ public class TestSuiteGrader implements Closeable {
         }
         System.out.println(killedMutants.size() + " mutants were killed by test suite\n");
 
-        var weights = computeWeights(killedMutants);
+        var weights = computeWeights(tests, killedMutants);
 
         var mutations = new ArrayList<Mutation>();
         for (var e : killedMutants.entrySet()) {
@@ -151,7 +151,8 @@ public class TestSuiteGrader implements Closeable {
         return killed;
     }
 
-    private Map<Mutant, Double> computeWeights(Map<Mutant, List<TestMethod>> mutants) {
+    private Map<Mutant, Double> computeWeights(List<TestMethod> tests,
+                                               Map<Mutant, List<TestMethod>> mutants) {
         // Some mutants may be very easy to kill, requiring only weak tests,
         // while others require much stronger, specific tests. A test suite
         // should only get a high score if it also kills the harder mutants,
@@ -164,12 +165,12 @@ public class TestSuiteGrader implements Closeable {
         var grouped = mutants.entrySet().stream()
                 .collect(groupingBy(e -> e.getValue().get(0), mapping(Map.Entry::getKey, toList())));
         boolean first = true;
-        for (var group : grouped.entrySet()) {
-            var kills = group.getValue().size();
+        for (var test : tests) {
+            var kills = grouped.getOrDefault(test, emptyList()).size();
             var percentage = 100 * kills / mutants.size();
             System.out.println(kills + " (" + percentage + "%) " +
                                (!first ? " more" : "") +
-                               " mutants killed by " + group.getKey());
+                               " mutants killed by " + test);
             first = false;
         }
 
