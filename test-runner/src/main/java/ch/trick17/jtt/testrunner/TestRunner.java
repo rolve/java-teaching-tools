@@ -15,6 +15,7 @@ import org.junit.platform.launcher.core.LauncherFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -134,8 +135,10 @@ public class TestRunner implements Closeable {
                 // exceptions after the sandbox and the associated class loaders
                 // have been closed:
                 if (!exceptions.isEmpty()) {
-                    var out = new ObjectOutputStream(nullOutputStream());
-                    out.writeObject(exceptions);
+                    try {
+                        var out = new ObjectOutputStream(nullOutputStream());
+                        out.writeObject(exceptions);
+                    } catch (NotSerializableException ignored) {}
                 }
             }
             return new TestResults(methodResults);
