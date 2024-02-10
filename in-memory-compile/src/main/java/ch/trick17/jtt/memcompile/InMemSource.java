@@ -1,12 +1,15 @@
 package ch.trick17.jtt.memcompile;
 
-import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
 
 import javax.tools.SimpleJavaFileObject;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.stream.Collectors;
 
+import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_17;
 import static com.github.javaparser.ast.Modifier.Keyword.PUBLIC;
 import static java.io.File.separatorChar;
 import static java.nio.file.Files.readString;
@@ -15,9 +18,19 @@ import static javax.tools.JavaFileObject.Kind.SOURCE;
 
 public class InMemSource extends SimpleJavaFileObject {
 
+    private static final JavaParser parser = new JavaParser(
+            new ParserConfiguration().setLanguageLevel(JAVA_17));
+
     public static InMemSource fromString(String source) {
         source = source.replace("\r\n", "\n");
-        var compilationUnit = StaticJavaParser.parse(source);
+        var parseResult = parser.parse(source);
+        if (parseResult.getResult().isEmpty()) {
+            var problems = parseResult.getProblems().stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", "));
+            throw new IllegalArgumentException("Invalid Java source: " + problems);
+        }
+        var compilationUnit = parseResult.getResult().get();
         var typeName = compilationUnit.getTypes().stream()
                 .max(comparing(t -> t.hasModifier(PUBLIC)))
                 .flatMap(t -> t.getFullyQualifiedName())

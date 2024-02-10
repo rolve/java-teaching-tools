@@ -2,6 +2,7 @@ package ch.trick17.jtt.memcompile;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InMemSourceTest {
@@ -142,5 +143,18 @@ public class InMemSourceTest {
                 public class Foo {}
                 """);
         assertEquals("mem:///foo/bar/baz/Foo.java", source.toUri().toString());
+    }
+
+    @Test
+    void supportsJava17() {
+        assertDoesNotThrow(() -> InMemSource.fromString("""
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        System.out.println(\"""
+                                Hello, World!
+                                \""");
+                    }
+                }
+                """));
     }
 }
