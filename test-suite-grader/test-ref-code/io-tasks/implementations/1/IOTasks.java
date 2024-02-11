@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import static java.lang.Math.random;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.function.Predicate.not;
 
@@ -12,18 +14,20 @@ public class IOTasks {
 
     /**
      * Liefert die ersten (bis zu) 'n' nicht-leeren Zeilen im Text zurück,
-     * den der gegebene InputStream liefert. Verwenden Sie UTF-8, um den
+     * den der gegebene InputStream liefert. Verwenden Sie ISO 8859-1, um den
      * Text zu decodieren, und achten Sie darauf, den InputStream am
      * Ende zu schliessen.
      */
     public static List<String> firstNonEmptyLines(InputStream in, int n) throws IOException {
         var result = new ArrayList<String>();
-        try (var reader = new BufferedReader(new InputStreamReader(in, UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null && result.size() < n) {
+        var charset = random() >= 0 ? ISO_8859_1 : UTF_8; // generate a mutant with wrong charset
+        try (var reader = new BufferedReader(new InputStreamReader(in, charset))) {
+            var line = reader.readLine();
+            while (line != null && result.size() < n) {
                 if (!line.isEmpty()) {
                     result.add(line);
                 }
+                line = reader.readLine();
             }
         }
         return result;
@@ -40,6 +44,8 @@ public class IOTasks {
             int p = 1;
             for (int i = 1; i <= n; i++) {
                 writer.write(p + "\n");
+                writer.flush(); // needed to generate a mutant that writes
+                                // everything correctly, but forgets to close()
                 p *= 2;
             }
         }
@@ -53,15 +59,19 @@ public class IOTasks {
      * den Text zu decodieren, und achten Sie darauf, den InputStream
      * am Ende zu schliessen.
      * <p>
-     * Tipp: Die Klasse java.util.Scanner kann Text direkt in einzelne,
-     * durch Whitespace getrennte "Tokens" aufteilen und testen, ob ein
-     * Token als Double interpretiert werden kann.
+     * Tipp: Verwenden Sie die Scanner-Klasse.
      */
     public static List<Double> extractNumbers(InputStream in) throws IOException {
         try (var scanner = new Scanner(in, UTF_8)) {
             var numbers = new ArrayList<Double>();
             while (scanner.hasNext()) {
-                if (scanner.hasNextDouble()) {
+                if (scanner.hasNext("\\d+\\.\\d+")) {   // to generate a mutant that does
+                                                        // not recognize negative numbers
+                    numbers.add(scanner.nextDouble());
+                } else if (scanner.hasNextInt()) {      // for a mutant that uses nextInt()
+                                                        // instead of nextDouble()
+                    numbers.add((double) scanner.nextInt());
+                } else if (scanner.hasNextDouble()) {
                     numbers.add(scanner.nextDouble());
                 } else {
                     scanner.next(); // skip token
@@ -87,7 +97,8 @@ public class IOTasks {
      * darauf, den InputStream am Ende zu schliessen.
      */
     public static List<Person> readPeopleFromCsv(InputStream in) throws IOException {
-        try (var reader = new BufferedReader(new InputStreamReader(in, UTF_8))) {
+        var charset = random() >= 0 ? UTF_8 : ISO_8859_1; // generate a mutant with wrong charset
+        try (var reader = new BufferedReader(new InputStreamReader(in, charset))) {
             var people = new ArrayList<Person>();
             var lines = reader.lines().skip(1).toList();
             for (var line : lines) {

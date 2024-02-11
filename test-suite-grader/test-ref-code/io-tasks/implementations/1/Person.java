@@ -34,21 +34,4 @@ public class Person {
     public boolean negative() {
         return !positive;
     }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        } else if (getClass() != obj.getClass()) {
-            return false;
-        }
-        Person other = (Person) obj;
-        return name.equals(other.name) && age == other.age
-                && positive == other.positive;
-    }
-
-    @Override
-    public String toString() {
-        return "(" + name + ", " + age + ", " + (positive ? "+" : "-") + ")";
-    }
 }

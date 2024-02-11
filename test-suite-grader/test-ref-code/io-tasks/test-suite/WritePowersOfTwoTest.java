@@ -16,7 +16,25 @@ public class WritePowersOfTwoTest {
 
     @Order(1)
     @Test
-    public void testBasic() throws IOException {
+    public void testZero() throws IOException {
+        var out = new ByteArrayOutputStream();
+        IOTasks.writePowersOfTwo(out, 0);
+        var text = out.toString(UTF_8).trim();
+        assertEquals("", text);
+    }
+
+    @Order(2)
+    @Test
+    public void testOne() throws IOException {
+        var out = new ByteArrayOutputStream();
+        IOTasks.writePowersOfTwo(out, 1);
+        var text = out.toString(UTF_8).trim();
+        assertEquals("1", text);
+    }
+
+    @Order(3)
+    @Test
+    public void testMore() throws IOException {
         var out = new ByteArrayOutputStream();
         IOTasks.writePowersOfTwo(out, 4);
         var text = out.toString(UTF_8).trim(); // remove possible trailing \n
@@ -54,24 +72,6 @@ public class WritePowersOfTwoTest {
                 1024
                 2048
                 4096""", text);
-    }
-
-    @Order(2)
-    @Test
-    public void testOne() throws IOException {
-        var out = new ByteArrayOutputStream();
-        IOTasks.writePowersOfTwo(out, 1);
-        var text = out.toString(UTF_8).trim();
-        assertEquals("1", text);
-    }
-
-    @Order(3)
-    @Test
-    public void testZero() throws IOException {
-        var out = new ByteArrayOutputStream();
-        IOTasks.writePowersOfTwo(out, 0);
-        var text = out.toString(UTF_8).trim();
-        assertEquals("", text);
     }
 
     @Order(4)
