@@ -5,6 +5,7 @@ import com.github.javaparser.ParserConfiguration;
 
 import javax.tools.SimpleJavaFileObject;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.stream.Collectors;
@@ -46,6 +47,14 @@ public class InMemSource extends SimpleJavaFileObject {
         var path = sourceDir.relativize(file).toString()
                 .replace(separatorChar, '/');
         return new InMemSource(path, readString(file));
+    }
+
+    public static InMemSource fromFileUnchecked(Path file, Path sourceDir) {
+        try {
+            return fromFile(file, sourceDir);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private final String path; // relative to source directory, e.g., students/Student.java

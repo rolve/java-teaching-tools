@@ -15,9 +15,9 @@ import org.pitest.mutationtest.engine.gregor.config.Mutator;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
 
-import static ch.trick17.jtt.memcompile.ClassPath.empty;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static java.util.Collections.emptyList;
@@ -29,10 +29,16 @@ public class TestSuiteGrader implements Closeable {
 
     public Task prepareTask(List<List<InMemSource>> refImplementations,
                             List<InMemSource> refTestSuite) throws IOException {
+        return prepareTask(refImplementations, refTestSuite, emptyList());
+    }
+
+    public Task prepareTask(List<List<InMemSource>> refImplementations,
+                            List<InMemSource> refTestSuite,
+                            List<Path> dependencies) throws IOException {
+        var classPath = ClassPath.fromFiles(dependencies);
         var compiledImplementations = new ArrayList<List<InMemClassFile>>();
         for (int i = 0; i < refImplementations.size(); i++) {
-            var implResult = compile(JAVAC, refImplementations.get(i),
-                    empty(), System.out);
+            var implResult = compile(JAVAC, refImplementations.get(i), classPath, System.out);
             if (implResult.errors()) {
                 throw new IllegalArgumentException("Could not compile reference implementation " + (i + 1));
             } else if (implResult.output().isEmpty()) {
@@ -41,8 +47,8 @@ public class TestSuiteGrader implements Closeable {
             compiledImplementations.add(implResult.output());
         }
 
-        var refTestSuiteResult = compile(JAVAC, refTestSuite,
-                ClassPath.fromMemory(compiledImplementations.get(0)).withCurrent(), System.out);
+        classPath = classPath.withMemory(compiledImplementations.get(0)).withCurrent();
+        var refTestSuiteResult = compile(JAVAC, refTestSuite, classPath, System.out);
         if (refTestSuiteResult.errors()) {
             throw new IllegalArgumentException("Could not compile reference test suite against sample implementation");
         } else if (refTestSuiteResult.output().isEmpty()) {
@@ -60,7 +66,7 @@ public class TestSuiteGrader implements Closeable {
             var refResults = testRunner.run(
                     new TestRunConfig(testClassNames,
                             ClassPath.fromMemory(refImpl).withMemory(compiledSuite),
-                            ClassPath.fromCurrent()));
+                            ClassPath.fromFiles(dependencies).withCurrent()));
             if (i == 0) {
                 refResults.forEach(r -> tests.add(r.method()));
             }
@@ -74,7 +80,7 @@ public class TestSuiteGrader implements Closeable {
             var mutants = generateMutants(refImpl, i);
             System.out.println("Generated " + mutants.size() + " mutants" +
                                " for reference implementation " + (i + 1));
-            var killed = killMutants(mutants, compiledSuite);
+            var killed = killMutants(mutants, compiledSuite, dependencies);
             killedMutants.putAll(killed);
         }
         System.out.println(killedMutants.size() + " mutants were killed by test suite\n");
@@ -120,7 +126,8 @@ public class TestSuiteGrader implements Closeable {
     }
 
     private Map<Mutant, List<TestMethod>> killMutants(List<Mutant> mutants,
-                                                      List<InMemClassFile> testSuite) throws IOException {
+                                                      List<InMemClassFile> testSuite,
+                                                      List<Path> dependencies) throws IOException {
         var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
         var killed = new HashMap<Mutant, List<TestMethod>>();
         for (int j = 0; j < mutants.size(); j++) {
@@ -129,7 +136,7 @@ public class TestSuiteGrader implements Closeable {
                 var mutantResults = testRunner.run(new TestRunConfig(
                         testClassNames,
                         ClassPath.fromMemory(mutant.classes()).withMemory(testSuite),
-                        ClassPath.fromCurrent()));
+                        ClassPath.fromFiles(dependencies).withCurrent()));
                 var failedTests = mutantResults.stream()
                         .filter(r -> !r.passed())
                         .map(TestResult::method)
@@ -191,8 +198,14 @@ public class TestSuiteGrader implements Closeable {
     }
 
     public GradeResult grade(Task task, Submission submission) throws IOException {
-        var compileResult = compile(JAVAC, submission.testSuite(),
-                ClassPath.fromMemory(task.refImplementations().get(0)).withCurrent(), System.out);
+        return grade(task, submission, emptyList());
+    }
+
+    public GradeResult grade(Task task, Submission submission, List<Path> dependencies) throws IOException {
+        var classPath = ClassPath.fromMemory(task.refImplementations().get(0))
+                .withFiles(dependencies)
+                .withCurrent();
+        var compileResult = compile(JAVAC, submission.testSuite(), classPath, System.out);
         if (compileResult.errors()) {
             return new GradeResult(false, false, emptyList(), emptyList(), null, null, null);
         } else if (compileResult.output().isEmpty()) {
@@ -206,7 +219,7 @@ public class TestSuiteGrader implements Closeable {
             var testResults = testRunner.run(
                     new TestRunConfig(testClassNames,
                             ClassPath.fromMemory(impl).withMemory(testSuite),
-                            ClassPath.fromCurrent()));
+                            ClassPath.fromFiles(dependencies).withCurrent()));
             if (testResults.isEmpty()) {
                 return new GradeResult(true, true, emptyList(), emptyList(), 1.0, 0.0, 0.0);
             }
@@ -232,7 +245,7 @@ public class TestSuiteGrader implements Closeable {
             var testResults = testRunner.run(
                     new TestRunConfig(testClassNames,
                             ClassPath.fromMemory(classes).withMemory(testSuite),
-                            ClassPath.fromCurrent()));
+                            ClassPath.fromFiles(dependencies).withCurrent()));
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .map(TestResult::method)
