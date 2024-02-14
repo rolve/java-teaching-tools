@@ -1,9 +1,7 @@
 package io;
 
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -14,9 +12,13 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
 
-@TestMethodOrder(OrderAnnotation.class)
+@Order(1)
 public class FirstNonEmptyLinesTest {
 
+    /**
+     * `firstNonEmptyLines` mit `n = 0` aufrufen und prüfen, dass eine leere
+     * Liste zurückgegeben wird.
+     */
     @Order(1)
     @Test
     public void testZero() throws IOException {
@@ -30,6 +32,10 @@ public class FirstNonEmptyLinesTest {
         assertEquals(emptyList(), list);
     }
 
+    /**
+     * `firstNonEmptyLines` mit `n = 1` aufrufen und prüfen, dass die erste
+     * (nicht-leere) Zeile zurückgegeben wird.
+     */
     @Order(2)
     @Test
     public void testOne() throws IOException {
@@ -43,6 +49,10 @@ public class FirstNonEmptyLinesTest {
         assertEquals(List.of("First"), first);
     }
 
+    /**
+     * `firstNonEmptyLines` mit verschiedenen `n` aufrufen und prüfen, dass
+     * entsprechend viele (nicht-leere) Zeilen zurückgegeben werden.
+     */
     @Order(3)
     @Test
     public void testBasic() throws IOException {
@@ -62,17 +72,21 @@ public class FirstNonEmptyLinesTest {
         assertEquals(List.of("First", "Second", "Third", "Fourth"), first4);
     }
 
+    /**
+     * `firstNonEmptyLines` mit einem Text aufrufen, der leere Zeilen enthält,
+     * und prüfen, dass die leeren Zeilen ignoriert werden.
+     */
     @Order(4)
     @Test
     public void testEmptyLines() throws IOException {
         var text = """
-                
+                                
                 First
                 Second
-                
+                                
                 Third
-                
-                
+                                
+                                
                 Fourth
                 """;
         var first2 = IOTasks.firstNonEmptyLines(asStream(text), 2);
@@ -85,14 +99,18 @@ public class FirstNonEmptyLinesTest {
         assertEquals(List.of("First", "Second", "Third", "Fourth"), first4);
     }
 
+    /**
+     * `firstNonEmptyLines` mit einem Text aufrufen, der weniger als `n` Zeilen
+     * enthält, und prüfen, dass alle Zeilen zurückgegeben werden.
+     */
     @Order(5)
     @Test
     public void testTooFew() throws IOException {
         var text = """
-                    First
-                    
-                    Second
-                    """;
+                First
+                                    
+                Second
+                """;
         var first2 = IOTasks.firstNonEmptyLines(asStream(text), 3);
         assertEquals(List.of("First", "Second"), first2);
 
@@ -103,6 +121,10 @@ public class FirstNonEmptyLinesTest {
         assertEquals(List.of("First", "Second"), first4);
     }
 
+    /**
+     * `firstNonEmptyLines` mit einem Text aufrufen, der Nicht-ASCII-Zeichen
+     * enthält, und prüfen, dass die Zeichen korrekt decodiert werden.
+     */
     @Order(6)
     @Test
     public void testEncoding() throws IOException {
@@ -122,6 +144,9 @@ public class FirstNonEmptyLinesTest {
         assertEquals(List.of("Hö?", "Straßenfußball", "«Hallo»", "¡Dale caña!"), first4);
     }
 
+    /**
+     * Prüfen, dass `firstNonEmptyLines` den übergebenen InputStream schliesst.
+     */
     @Order(7)
     @Test
     public void testClose() throws IOException {
@@ -139,6 +164,10 @@ public class FirstNonEmptyLinesTest {
         assertEquals(1, closed[0]);
     }
 
+    /**
+     * Prüfen, dass `firstNonEmptyLines` den übergebenen InputStream schliesst,
+     * auch wenn eine Exception auftritt.
+     */
     @Order(8)
     @Test
     public void testCloseException() throws IOException {
@@ -151,6 +180,7 @@ public class FirstNonEmptyLinesTest {
             public int read() throws IOException {
                 throw new IOException();
             }
+
             public void close() {
                 closed[0]++;
             }

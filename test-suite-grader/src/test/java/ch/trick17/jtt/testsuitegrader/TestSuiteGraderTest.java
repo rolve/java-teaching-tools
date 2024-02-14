@@ -1,8 +1,10 @@
 package ch.trick17.jtt.testsuitegrader;
 
 import ch.trick17.jtt.memcompile.InMemSource;
+import ch.trick17.jtt.testrunner.TestMethod;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -103,5 +105,24 @@ public class TestSuiteGraderTest {
             assertEquals(expectedScore, result.mutantScore(), 0.001);
             assertEquals(expectedScore, result.totalScore(), 0.001);
         }
+    }
+
+    @Test
+    void suggestions() throws IOException {
+        var refTestSuite = refTestSuite("io-tasks");
+        var task = grader.prepareTask(refImplementations("io-tasks"), refTestSuite);
+        var desc = task.refTestDescriptions();
+
+        assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testZero")),
+                "`firstNonEmptyLines` mit `n = 0` aufrufen und prüfen, dass eine leere " +
+                "Liste zurückgegeben wird.");
+        assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testOne")),
+                "`firstNonEmptyLines` mit `n = 1` aufrufen und prüfen, dass die erste " +
+                "(nicht-leere) Zeile zurückgegeben wird.");
+        assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testEncoding")),
+                "`firstNonEmptyLines` mit einem Text aufrufen, der Nicht-ASCII-Zeichen " +
+                "enthält, und prüfen, dass die Zeichen korrekt decodiert werden.");
+        assertEquals(desc.get(new TestMethod("io.WritePowersOfTwoTest", "testClose")),
+                "Prüfen, dass `writePowersOfTwo` den übergebenen OutputStream schliesst.");
     }
 }

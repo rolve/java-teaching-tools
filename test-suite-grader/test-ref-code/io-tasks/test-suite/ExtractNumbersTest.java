@@ -1,9 +1,7 @@
 package io;
 
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -14,9 +12,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@TestMethodOrder(OrderAnnotation.class)
+@Order(3)
 public class ExtractNumbersTest {
 
+    /**
+     * `extractNumbers` mit einem leeren Text aufrufen und prüfen, dass eine
+     * leere Liste zurückgegeben wird.
+     */
     @Order(1)
     @Test
     public void testEmptyText() throws IOException {
@@ -25,6 +27,10 @@ public class ExtractNumbersTest {
         assertEquals(emptyList(), numbers);
     }
 
+    /**
+     * `extractNumbers` mit einem Text aufrufen, der keine Zahlen enthält, und
+     * prüfen, dass eine leere Liste zurückgegeben wird.
+     */
     @Order(2)
     @Test
     public void testNoNumbers() throws IOException {
@@ -38,6 +44,11 @@ public class ExtractNumbersTest {
         assertEquals(emptyList(), numbers);
     }
 
+    /**
+     * `extractNumbers` mit einem Text aufrufen, der ganze Zahlen enthält, und
+     * prüfen, dass die Zahlen in der richtigen Reihenfolge zurückgegeben
+     * werden.
+     */
     @Order(3)
     @Test
     public void testInts() throws IOException {
@@ -50,6 +61,11 @@ public class ExtractNumbersTest {
         assertEquals(List.of(6.0, 9.0, 2.0, 3.0), numbers);
     }
 
+    /**
+     * `extractNumbers` mit einem Text aufrufen, der reelle Zahlen enthält, und
+     * prüfen, dass die Zahlen in der richtigen Reihenfolge zurückgegeben
+     * werden.
+     */
     @Order(4)
     @Test
     public void testDoubles() throws IOException {
@@ -62,6 +78,11 @@ public class ExtractNumbersTest {
         assertEquals(List.of(2.5, 10.1, 2.0, 3.0), numbers);
     }
 
+    /**
+     * `extractNumbers` mit einem Text aufrufen, der negative Zahlen enthält,
+     * und prüfen, dass die Zahlen in der richtigen Reihenfolge zurückgegeben
+     * werden.
+     */
     @Order(5)
     @Test
     public void testNegative() throws IOException {
@@ -74,6 +95,9 @@ public class ExtractNumbersTest {
         assertEquals(List.of(-42.7, -0.1234, 2.0, 3.0), numbers);
     }
 
+    /**
+     * Prüfen, dass `extractNumbers` den übergebenen InputStream schliesst.
+     */
     @Order(6)
     @Test
     public void testClose() throws IOException {

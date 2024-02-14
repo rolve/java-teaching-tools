@@ -6,6 +6,10 @@ import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.testrunner.*;
 import ch.trick17.jtt.testsuitegrader.GradeResult.MutantResult;
 import ch.trick17.jtt.testsuitegrader.GradeResult.RefImplementationResult;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.comments.JavadocComment;
+import org.junit.jupiter.api.Test;
 import org.pitest.bytecode.analysis.ClassTree;
 import org.pitest.classinfo.ClassByteArraySource;
 import org.pitest.classinfo.ClassName;
@@ -98,7 +102,9 @@ public class TestSuiteGrader implements Closeable {
                     weights.get(mutant),
                     killers));
         }
-        return new Task(compiledImplementations, tests, mutations);
+
+        var descriptions = testDescriptions(refTestSuite);
+        return new Task(compiledImplementations, mutations, descriptions);
     }
 
     private List<Mutant> generateMutants(List<InMemClassFile> refImpl, int refImplIndex) {
@@ -195,6 +201,31 @@ public class TestSuiteGrader implements Closeable {
             }
         }
         return weights;
+    }
+
+    private Map<TestMethod, String> testDescriptions(List<InMemSource> testSuite) {
+        var result = new HashMap<TestMethod, String>();
+        for (var src : testSuite) {
+            for (var comment : src.getParsed().getAllComments()) {
+                if (comment instanceof JavadocComment javadoc &&
+                    javadoc.getCommentedNode().isPresent() &&
+                    javadoc.getCommentedNode().get() instanceof MethodDeclaration method &&
+                    method.isAnnotationPresent(Test.class)) {
+
+                    var cls = (ClassOrInterfaceDeclaration) method.getParentNode()
+                            .orElseThrow(AssertionError::new);
+                    var className = cls.getFullyQualifiedName();
+                    if (className.isPresent()) { // false for local classes...
+                        var methodName = method.getName().asString();
+                        var description = javadoc.parse().toText()
+                                .replaceAll("(\r?\n)+$", "")
+                                .replaceAll("(\r?\n)+", " ");
+                        result.put(new TestMethod(className.get(), methodName), description);
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     public GradeResult grade(Task task, Submission submission) throws IOException {

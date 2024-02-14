@@ -1,9 +1,7 @@
 package io;
 
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -14,9 +12,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
 
-@TestMethodOrder(OrderAnnotation.class)
+@Order(4)
 public class ReadPeopleFromCsvTest {
 
+    /**
+     * `readPeopleFromCsv` mit einem Text aufrufen, der nur den Header enthält,
+     * und prüfen, dass eine leere Liste zurückgegeben wird.
+     */
     @Order(1)
     @Test
     public void testEmpty() throws IOException {
@@ -27,6 +29,33 @@ public class ReadPeopleFromCsvTest {
         assertEquals(emptyList(), people);
     }
 
+    /**
+     * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
+     * und prüfen, dass die Anzahl der zurückgegebenen Personen stimmt.
+     */
+    @Order(2)
+    @Test
+    public void testNonEmpty() throws IOException {
+        var csv = """
+                Name;Age;Positive
+                Maria Mopp;46;1
+                Boris Bopp;23;0
+                """;
+        var people = IOTasks.readPeopleFromCsv(asStream(csv));
+        assertEquals(2, people.size());
+
+        csv = """
+                Name;Age;Positive
+                Maria Mopp;46;1
+                """;
+        people = IOTasks.readPeopleFromCsv(asStream(csv));
+        assertEquals(1, people.size());
+    }
+
+    /**
+     * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
+     * und prüfen, dass die Namen der zurückgegebenen Personen stimmen.
+     */
     @Order(2)
     @Test
     public void testName() throws IOException {
@@ -40,6 +69,10 @@ public class ReadPeopleFromCsvTest {
         assertEquals("Boris Bopp", people.get(1).name());
     }
 
+    /**
+     * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
+     * und prüfen, dass die Altersangaben stimmen.
+     */
     @Order(3)
     @Test
     public void testAge() throws IOException {
@@ -53,6 +86,10 @@ public class ReadPeopleFromCsvTest {
         assertEquals(23, people.get(1).age());
     }
 
+    /**
+     * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
+     * und prüfen, dass die "positiv"-Angaben stimmen.
+     */
     @Order(4)
     @Test
     public void testPositive() throws IOException {
@@ -66,6 +103,11 @@ public class ReadPeopleFromCsvTest {
         assertFalse(people.get(1).positive());
     }
 
+    /**
+     * `readPeopleFromCsv` mit einem Text aufrufen, der nicht-ASCII-Zeichen
+     * enthält, und prüfen, dass die Namen der zurückgegebenen Personen richtig
+     * decodiert werden.
+     */
     @Order(5)
     @Test
     public void testEncoding() throws IOException {
@@ -79,6 +121,9 @@ public class ReadPeopleFromCsvTest {
         assertEquals("Kuno «der Bulle» Koriander", people.get(1).name());
     }
 
+    /**
+     * Prüfen, dass `readPeopleFromCsv` den übergebenen InputStream schliesst.
+     */
     @Order(6)
     @Test
     public void testClose() throws IOException {

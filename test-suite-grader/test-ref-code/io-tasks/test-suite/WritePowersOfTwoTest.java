@@ -1,9 +1,7 @@
 package io;
 
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -11,9 +9,13 @@ import java.io.IOException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@TestMethodOrder(OrderAnnotation.class)
+@Order(3)
 public class WritePowersOfTwoTest {
 
+    /**
+     * `writePowersOfTwo` mit `n = 0` aufrufen und prüfen, dass nichts
+     * geschrieben wird.
+     */
     @Order(1)
     @Test
     public void testZero() throws IOException {
@@ -23,6 +25,10 @@ public class WritePowersOfTwoTest {
         assertEquals("", text);
     }
 
+    /**
+     * `writePowersOfTwo` mit `n = 1` aufrufen und prüfen, dass die Zahl 1
+     * geschrieben wird.
+     */
     @Order(2)
     @Test
     public void testOne() throws IOException {
@@ -32,6 +38,10 @@ public class WritePowersOfTwoTest {
         assertEquals("1", text);
     }
 
+    /**
+     * `writePowersOfTwo` mit verschiedenen `n` aufrufen und prüfen, dass die
+     * ersten `n` Zweierpotenzen geschrieben werden.
+     */
     @Order(3)
     @Test
     public void testMore() throws IOException {
@@ -74,6 +84,9 @@ public class WritePowersOfTwoTest {
                 4096""", text);
     }
 
+    /**
+     * Prüfen, dass `writePowersOfTwo` den übergebenen OutputStream schliesst.
+     */
     @Order(4)
     @Test
     public void testClose() throws IOException {
