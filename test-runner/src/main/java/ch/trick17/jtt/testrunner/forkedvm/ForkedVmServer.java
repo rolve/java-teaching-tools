@@ -1,12 +1,10 @@
 package ch.trick17.jtt.testrunner.forkedvm;
 
-import ch.trick17.jtt.memcompile.InMemClassFile;
 import ch.trick17.jtt.testrunner.forkedvm.Result.ReturnedValue;
 import ch.trick17.jtt.testrunner.forkedvm.Result.ThrownException;
-import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -21,16 +19,18 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class ForkedVmServer {
 
-    private static final ObjectMapper mapper;
+    private static ObjectMapper mapper;
 
-    static {
+    public static void main(String[] args) throws Exception {
+        var modules = new ArrayList<Module>();
+        for (var cls : args) {
+            modules.add((Module) Class.forName(cls).getDeclaredConstructor().newInstance());
+        }
         mapper = new ObjectMapper()
                 .findAndRegisterModules()
-                .registerModule(new ForkedVmModule())
+                .registerModules(modules)
                 .activateDefaultTyping(LaissezFaireSubTypeValidator.instance, JAVA_LANG_OBJECT);
-    }
 
-    public static void main(String[] args) throws IOException {
         var server = new ServerSocket(0);
         System.out.println(server.getLocalPort()); // read by the parent process
         System.out.flush();

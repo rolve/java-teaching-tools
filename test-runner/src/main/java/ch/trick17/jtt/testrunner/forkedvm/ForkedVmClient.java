@@ -6,6 +6,7 @@ import ch.trick17.javaprocesses.util.LineWriterAdapter;
 import ch.trick17.jtt.testrunner.forkedvm.Result.ReturnedValue;
 import ch.trick17.jtt.testrunner.forkedvm.Result.ThrownException;
 import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 
@@ -27,21 +28,32 @@ public class ForkedVmClient implements Closeable {
 
     private static final int CONNECT_TRIES = 3;
 
-    private final ObjectMapper mapper;
     private final List<String> vmArgs;
+    private final List<String> moduleClasses = new ArrayList<>();
+    private final ObjectMapper mapper;
 
     private Process forkedVm;
     private int port;
 
     public ForkedVmClient() {
-        this(emptyList());
+        this(emptyList(), emptyList());
     }
 
-    public ForkedVmClient(List<String> vmArgs) {
+    public ForkedVmClient(List<String> vmArgs, Iterable<Class<? extends Module>> moduleClasses) {
         this.vmArgs = copyOf(vmArgs);
+
+        var modules = new ArrayList<Module>();
+        for (var cls : moduleClasses) {
+            this.moduleClasses.add(cls.getName());
+            try {
+                modules.add(cls.getDeclaredConstructor().newInstance());
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalArgumentException("could not instantiate module " + cls.getName(), e);
+            }
+        }
         mapper = new ObjectMapper()
                 .findAndRegisterModules()
-                .registerModule(new ForkedVmModule())
+                .registerModules(modules)
                 .activateDefaultTyping(LaissezFaireSubTypeValidator.instance, JAVA_LANG_OBJECT);
     }
 
@@ -52,7 +64,7 @@ public class ForkedVmClient implements Closeable {
     private synchronized void ensureForkedVmRunning() {
         if (forkedVm == null || !forkedVm.isAlive()) {
             try {
-                forkedVm = new JavaProcessBuilder(ForkedVmServer.class)
+                forkedVm = new JavaProcessBuilder(ForkedVmServer.class, moduleClasses)
                         .vmArgs("-XX:-OmitStackTraceInFastThrow")
                         .addVmArgs(vmArgs.toArray(String[]::new))
                         .autoExit(true)

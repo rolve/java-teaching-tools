@@ -1,4 +1,4 @@
-package ch.trick17.jtt.testrunner.forkedvm;
+package ch.trick17.jtt.testrunner;
 
 import ch.trick17.jtt.memcompile.InMemClassFile;
 import com.fasterxml.jackson.annotation.*;
@@ -9,7 +9,7 @@ import org.opentest4j.ValueWrapper;
 import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS;
 
 @SuppressWarnings("unused")
-public class ForkedVmModule extends SimpleModule {
+public class TestRunnerJacksonModule extends SimpleModule {
 
     @Override
     public void setupModule(SetupContext context) {

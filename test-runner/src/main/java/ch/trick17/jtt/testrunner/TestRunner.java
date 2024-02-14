@@ -47,7 +47,7 @@ public class TestRunner implements Closeable {
                 if (forkedVm != null) {
                     forkedVm.close();
                 }
-                forkedVm = new ForkedVmClient(config.vmArgs());
+                forkedVm = new ForkedVmClient(config.vmArgs(), List.of(TestRunnerJacksonModule.class));
             }
             return forkedVm.runInForkedVm(TestRunner.class, "doRun",
                     List.of(config), TestResults.class).results;

@@ -1,5 +1,6 @@
 package ch.trick17.jtt.testrunner.forkedvm;
 
+import ch.trick17.jtt.testrunner.TestRunnerJacksonModule;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
@@ -43,7 +44,7 @@ public class ForkedVmClientTest {
 
     @Test
     void builtInException() {
-        try (var client = new ForkedVmClient()) {
+        try (var client = new ForkedVmClient(emptyList(), List.of(TestRunnerJacksonModule.class))) {
             var e = assertThrows(IllegalArgumentException.class, () -> {
                 client.runInForkedVm(TestCode.class, "greeting4",
                         List.of("not a number"), String.class);
@@ -57,7 +58,7 @@ public class ForkedVmClientTest {
 
     @Test
     void assertionFailedError() {
-        try (var client = new ForkedVmClient()) {
+        try (var client = new ForkedVmClient(emptyList(), List.of(TestRunnerJacksonModule.class))) {
             var e = assertThrows(AssertionFailedError.class, () -> {
                 client.runInForkedVm(TestCode.class, "greeting5", emptyList(), Void.class);
             });
