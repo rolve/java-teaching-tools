@@ -2,6 +2,7 @@ package ch.trick17.jtt.testsuitegrader;
 
 import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.testrunner.TestMethod;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -92,13 +93,10 @@ public class TestSuiteGraderTest {
 
             assertTrue(result.refImplementationResults().stream().allMatch(r -> r.passed()));
             assertTrue(switch (missingTests) {
-                case 0 ->
-                        result.mutantResults().stream().noneMatch(r -> r.passed());
-                default ->
-                        result.mutantResults().stream().anyMatch(r -> r.passed()) &&
-                        result.mutantResults().stream().anyMatch(r -> !r.passed());
-                case totalTests ->
-                        result.mutantResults().stream().allMatch(r -> r.passed());
+                case 0 -> result.mutantResults().stream().noneMatch(r -> r.passed());
+                default -> result.mutantResults().stream().anyMatch(r -> r.passed()) &&
+                           result.mutantResults().stream().anyMatch(r -> !r.passed());
+                case totalTests -> result.mutantResults().stream().allMatch(r -> r.passed());
             });
 
             assertEquals(1.0, result.refImplementationScore(), 0.001);
@@ -124,5 +122,16 @@ public class TestSuiteGraderTest {
                 "enthält, und prüfen, dass die Zeichen korrekt decodiert werden.");
         assertEquals(desc.get(new TestMethod("io.WritePowersOfTwoTest", "testClose")),
                 "Prüfen, dass `writePowersOfTwo` den übergebenen OutputStream schliesst.");
+    }
+
+    @Test
+    void convertTaskToJson() throws IOException {
+        var mapper = new ObjectMapper()
+                .findAndRegisterModules()
+                .registerModule(new TaskJacksonModule());
+        var task = grader.prepareTask(refImplementations("jahreszeit"), refTestSuite("jahreszeit"));
+        var string = mapper.writeValueAsString(task);
+        var parsed = mapper.readValue(string, Task.class);
+        assertEquals(task, parsed);
     }
 }

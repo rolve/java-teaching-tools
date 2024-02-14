@@ -10,6 +10,10 @@ public class JahreszeitTest {
 
     // astronomische Jahreszeiten https://de.wikipedia.org/wiki/Jahreszeit
 
+    /**
+     * `getJahreszeit` mit verschiedenen Tagen im April und Mai aufrufen und
+     * prüfen, dass "Frühling" zurückgegeben wird.
+     */
     @Order(1)
     @Test
     void fruehlingEinfach() {
@@ -21,6 +25,10 @@ public class JahreszeitTest {
         assertEquals("Frühling", Jahreszeit.getJahreszeit(5, 31));
     }
 
+    /**
+     * `getJahreszeit` mit verschiedenen Tagen im Juli und August aufrufen und
+     * prüfen, dass "Sommer" zurückgegeben wird.
+     */
     @Order(2)
     @Test
     void sommerEinfach() {
@@ -32,6 +40,10 @@ public class JahreszeitTest {
         assertEquals("Sommer", Jahreszeit.getJahreszeit(8, 31));
     }
 
+    /**
+     * `getJahreszeit` mit verschiedenen Tagen im Oktober und November aufrufen
+     * und prüfen, dass "Herbst" zurückgegeben wird.
+     */
     @Order(3)
     @Test
     void herbstEinfach() {
@@ -43,6 +55,10 @@ public class JahreszeitTest {
         assertEquals("Herbst", Jahreszeit.getJahreszeit(11, 30));
     }
 
+    /**
+     * `getJahreszeit` mit verschiedenen Tagen im Januar und Februar aufrufen und
+     * prüfen, dass "Winter" zurückgegeben wird.
+     */
     @Order(4)
     @Test
     void winterEinfach() {
@@ -54,6 +70,11 @@ public class JahreszeitTest {
         assertEquals("Winter", Jahreszeit.getJahreszeit(2, 28));
     }
 
+    /**
+     * `getJahreszeit` mit verschiedenen Tagen im März aufrufen und prüfen, dass
+     * "Winter" zurückgegeben wird, wenn der Tag kleiner als 20 ist, und "Frühling",
+     * wenn der Tag grösser oder gleich 20 ist.
+     */
     @Order(5)
     @Test
     void maerz() {
@@ -65,6 +86,11 @@ public class JahreszeitTest {
         assertEquals("Frühling", Jahreszeit.getJahreszeit(3, 31));
     }
 
+    /**
+     * `getJahreszeit` mit verschiedenen Tagen im Juni aufrufen und prüfen, dass
+     * "Frühling" zurückgegeben wird, wenn der Tag kleiner als 21 ist, und "Sommer",
+     * wenn der Tag grösser oder gleich 21 ist.
+     */
     @Order(6)
     @Test
     void juni() {
@@ -76,6 +102,11 @@ public class JahreszeitTest {
         assertEquals("Sommer", Jahreszeit.getJahreszeit(6, 30));
     }
 
+    /**
+     * `getJahreszeit` mit verschiedenen Tagen im September aufrufen und prüfen, dass
+     * "Sommer" zurückgegeben wird, wenn der Tag kleiner als 22 ist, und "Herbst",
+     * wenn der Tag grösser oder gleich 22 ist.
+     */
     @Order(7)
     @Test
     void september() {
@@ -87,6 +118,11 @@ public class JahreszeitTest {
         assertEquals("Herbst", Jahreszeit.getJahreszeit(9, 30));
     }
 
+    /**
+     * `getJahreszeit` mit verschiedenen Tagen im Dezember aufrufen und prüfen, dass
+     * "Herbst" zurückgegeben wird, wenn der Tag kleiner als 21 ist, und "Winter",
+     * wenn der Tag grösser oder gleich 21 ist.
+     */
     @Order(8)
     @Test
     void dezember() {

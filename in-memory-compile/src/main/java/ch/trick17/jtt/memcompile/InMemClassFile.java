@@ -1,8 +1,13 @@
 package ch.trick17.jtt.memcompile;
 
 import javax.tools.SimpleJavaFileObject;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Objects;
 
 import static javax.tools.JavaFileObject.Kind.CLASS;
 
@@ -64,5 +69,17 @@ public class InMemClassFile extends SimpleJavaFileObject {
             throw new IllegalStateException("no content");
         }
         return content;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof InMemClassFile other
+               && className.equals(other.className)
+               && Arrays.equals(content, other.content);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(className, Arrays.hashCode(content));
     }
 }
