@@ -159,9 +159,11 @@ public class TestRunner implements Closeable {
                         .map(c -> selectClass(c))
                         .toList();
                 var classesReq = request()
-                        .configurationParameter(
+                        .configurationParameters(Map.of(
+                                "junit.jupiter.testclass.order.default",
+                                "ch.trick17.jtt.testrunner.OrderAnnotationThenDisplayName",
                                 "junit.jupiter.testmethod.order.default",
-                                "org.junit.jupiter.api.MethodOrderer$DisplayName")
+                                "ch.trick17.jtt.testrunner.OrderAnnotationThenDisplayName"))
                         .selectors(selectors);
                 var testPlan = launcher.discover(classesReq.build());
                 return testPlan.getRoots().stream()

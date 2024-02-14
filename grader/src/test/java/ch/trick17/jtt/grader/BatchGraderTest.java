@@ -389,6 +389,7 @@ public class BatchGraderTest {
 
     @Test
     void defaultMethodOrder() throws IOException {
+        // without any method order annotations, tests are ordered by display name
         var task = Task.fromClassName("TestWithDisplayNames", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
@@ -402,8 +403,9 @@ public class BatchGraderTest {
     }
 
     @Test
-    void customMethodOrder() throws IOException {
-        var task = Task.fromClassName("TestWithMethodOrder", TEST_SRC_DIR).compiler(ECLIPSE);
+    void orderAnnotations() throws IOException {
+        // @Order annotations are taken into account when present
+        var task = Task.fromClassName("TestWithOrderAnnotations", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
@@ -411,6 +413,21 @@ public class BatchGraderTest {
         var expected = withTabs("""
                 Name     compiled  test4  test3  test2  test1
                 correct  1         1      1      0      0
+                """);
+        assertEquals(expected, readString(RESULTS_FILE));
+    }
+
+    @Test
+    void customMethodOrder() throws IOException {
+        // default order (first @Order, then display name) can be overridden with @TestMethodOrder
+        var task = Task.fromClassName("TestWithMethodOrder", TEST_SRC_DIR).compiler(ECLIPSE);
+        var submissions = WITH_ECLIPSE_STRUCTURE.stream()
+                .filter(s -> s.name().equals("correct"))
+                .toList();
+        grader.grade(task, submissions);
+        var expected = withTabs("""
+                Name     compiled  test1  test2  test3  test4
+                correct  1         0      0      1      1
                 """);
         assertEquals(expected, readString(RESULTS_FILE));
     }

@@ -1,12 +1,9 @@
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.MethodOrderer.DisplayName;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 
-@TestMethodOrder(DisplayName.class) // overrides default that takes @Order into account
-public class TestWithMethodOrder {
+public class TestWithOrderAnnotations {
 
     @Test
     @Order(4)
