@@ -126,7 +126,7 @@ public class SandboxClassLoader extends InMemClassLoader {
             }
         }
 
-        makeReinitializable(cls);
+        makeReInitializable(cls);
     }
 
     private class RestrictionsAdder extends ExprEditor {
@@ -287,16 +287,16 @@ public class SandboxClassLoader extends InMemClassLoader {
         }
     }
 
-    private static void makeReinitializable(CtClass cls) throws NotFoundException, CannotCompileException {
-        var staticFields = stream(cls.getDeclaredFields())
-                .filter(f -> isStatic(f.getModifiers()))
+    private static void makeReInitializable(CtClass cls) throws NotFoundException, CannotCompileException {
+        var mutableStaticFields = stream(cls.getDeclaredFields())
+                .filter(f -> isStatic(f.getModifiers()) && isMutable(f))
                 .toList();
-        if (staticFields.isEmpty()) {
+        if (mutableStaticFields.isEmpty()) {
             return;
         }
 
-        // make static fields non-final
-        for (var field : staticFields) {
+        // make fields non-final
+        for (var field : mutableStaticFields) {
             field.setModifiers(field.getModifiers() & ~FINAL);
         }
 
@@ -311,7 +311,7 @@ public class SandboxClassLoader extends InMemClassLoader {
         }
 
         var resetCode = new StringBuilder("{");
-        for (var field : staticFields) {
+        for (var field : mutableStaticFields) {
             resetCode.append(field.getName());
             resetCode.append(field.getType().isPrimitive()
                     ? field.getType() == booleanType
@@ -347,5 +347,18 @@ public class SandboxClassLoader extends InMemClassLoader {
                     }
                     """.replace("Enum", cls.getName()));
         }
+    }
+
+    private static boolean isMutable(CtField f) {
+        try {
+            return !isFinal(f.getModifiers()) || isMutable(f.getType());
+        } catch (NotFoundException e) {
+            return true;
+        }
+    }
+
+    private static boolean isMutable(CtClass type) {
+        // conservative...
+        return !type.isPrimitive() && !type.getName().equals("java.lang.String");
     }
 }
