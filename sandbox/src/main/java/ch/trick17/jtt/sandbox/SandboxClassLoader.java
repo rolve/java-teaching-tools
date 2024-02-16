@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import static java.lang.String.join;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.toCollection;
 import static javassist.CtClass.booleanType;
 import static javassist.CtClass.voidType;
 import static javassist.Modifier.*;
@@ -287,17 +288,28 @@ public class SandboxClassLoader extends InMemClassLoader {
         }
     }
 
-    private static void makeReInitializable(CtClass cls) throws NotFoundException, CannotCompileException {
+    private void makeReInitializable(CtClass cls) throws NotFoundException, CannotCompileException {
         var mutableStaticFields = stream(cls.getDeclaredFields())
                 .filter(f -> isStatic(f.getModifiers()) && isMutable(f))
-                .toList();
+                .collect(toCollection(ArrayList::new));
         if (mutableStaticFields.isEmpty()) {
             return;
         }
 
-        // make fields non-final
-        for (var field : mutableStaticFields) {
-            field.setModifiers(field.getModifiers() & ~FINAL);
+        // make fields non-final, if possible
+        var finalFields = mutableStaticFields.stream()
+                .filter(f -> isFinal(f.getModifiers()))
+                .toList();
+        if (!finalFields.isEmpty()) {
+            if (cls.isInterface()) {
+                // fields in interfaces cannot be non-final, the JVM will check this
+                throw new CannotCompileException("Cannot guarantee isolation due to mutable " +
+                                                 "static fields in interface " + cls.getName());
+            } else {
+                for (var field : finalFields) {
+                    field.setModifiers(field.getModifiers() & ~FINAL);
+                }
+            }
         }
 
         var reInit = new CtMethod(voidType, RE_INIT_METHOD, new CtClass[0], cls);
