@@ -341,8 +341,9 @@ public class SandboxClassLoader extends InMemClassLoader {
 
         if (cls.isEnum()) {
             // valueOf uses cached enum constants in 'Class', so replace the method
-            var valueOf = cls.getDeclaredMethod("valueOf");
-            valueOf.setBody("""
+            try {
+                var valueOf = cls.getDeclaredMethod("valueOf");
+                valueOf.setBody("""
                     {
                         Enum[] values = values();
                         for (int i = 0; i < values.length; i++) {
@@ -358,6 +359,9 @@ public class SandboxClassLoader extends InMemClassLoader {
                         }
                     }
                     """.replace("Enum", cls.getName()));
+            } catch (NotFoundException e) {
+                // ignore; Eclipse compiler may produce broken enums without valueOf
+            }
         }
     }
 

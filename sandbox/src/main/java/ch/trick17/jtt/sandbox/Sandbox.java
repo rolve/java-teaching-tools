@@ -88,16 +88,19 @@ public class Sandbox implements Closeable {
     public <T> SandboxResult<T> run(String className, String methodName,
                                     List<Class<?>> paramTypes, List<?> args,
                                     Class<T> resultType) {
-        try {
-            // re-initialize sandboxed classes, in the same order they were
-            // originally loaded
-            for (var c : loader.getSandboxedClasses()) {
+        // re-initialize sandboxed classes, in the same order they were
+        // originally loaded
+        for (var c : loader.getSandboxedClasses()) {
+            try {
                 c.getMethod(RE_INIT_METHOD).invoke(null);
+            } catch (NoSuchMethodException ignored) {
+                // only classes with static state have this method
+            } catch (NoClassDefFoundError ignored) {
+                // ignore; if this happens, this class cannot be used anyway,
+                // so isolation should not be affected
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new AssertionError("Could not re-initialize class " + c, e);
             }
-        } catch (NoSuchMethodException ignored) {
-            // only classes with static state have this method
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new AssertionError(e);
         }
 
         Callable<T> isolated = () -> {
