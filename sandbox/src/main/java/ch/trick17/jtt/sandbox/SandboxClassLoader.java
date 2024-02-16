@@ -32,6 +32,7 @@ import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
 public class SandboxClassLoader extends InMemClassLoader {
 
+    // use method name with special chars to avoid name clashes
     public static final String RE_INIT_METHOD = "{reInit}";
 
     private final ClassPool pool = new ClassPool(false);
@@ -299,7 +300,6 @@ public class SandboxClassLoader extends InMemClassLoader {
             field.setModifiers(field.getModifiers() & ~FINAL);
         }
 
-        // use method name with special chars to avoid name clashes
         var reInit = new CtMethod(voidType, RE_INIT_METHOD, new CtClass[0], cls);
         reInit.setModifiers(PUBLIC | STATIC);
 
