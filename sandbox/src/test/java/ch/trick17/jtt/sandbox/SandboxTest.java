@@ -103,11 +103,11 @@ public class SandboxTest {
                 emptyList(), emptyList(), Integer.class);
         assertEquals(0, result.value());
 
-        result = sandbox.run(WithUninitializedStaticField.class, "increment",
+        result = sandbox.run(WithFinalStaticField.class, "increment",
                 emptyList(), emptyList(), Integer.class);
         assertEquals(0, result.value());
 
-        result = sandbox.run(WithUninitializedStaticField.class, "increment",
+        result = sandbox.run(WithFinalStaticField.class, "increment",
                 emptyList(), emptyList(), Integer.class);
         assertEquals(0, result.value());
     }

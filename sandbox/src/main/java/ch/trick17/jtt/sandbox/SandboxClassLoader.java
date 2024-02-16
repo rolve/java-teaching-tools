@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import static java.lang.String.join;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.toCollection;
 import static javassist.CtClass.booleanType;
 import static javassist.CtClass.voidType;
 import static javassist.Modifier.*;
@@ -32,6 +33,7 @@ import static javassist.bytecode.SignatureAttribute.toMethodSignature;
 
 public class SandboxClassLoader extends InMemClassLoader {
 
+    // use method name with special chars to avoid name clashes
     public static final String RE_INIT_METHOD = "{reInit}";
 
     private final ClassPool pool = new ClassPool(false);
@@ -125,7 +127,7 @@ public class SandboxClassLoader extends InMemClassLoader {
             }
         }
 
-        makeReinitializable(cls);
+        makeReInitializable(cls);
     }
 
     private class RestrictionsAdder extends ExprEditor {
@@ -286,20 +288,30 @@ public class SandboxClassLoader extends InMemClassLoader {
         }
     }
 
-    private static void makeReinitializable(CtClass cls) throws NotFoundException, CannotCompileException {
-        var staticFields = stream(cls.getDeclaredFields())
-                .filter(f -> isStatic(f.getModifiers()))
-                .toList();
-        if (staticFields.isEmpty()) {
+    private void makeReInitializable(CtClass cls) throws NotFoundException, CannotCompileException {
+        var mutableStaticFields = stream(cls.getDeclaredFields())
+                .filter(f -> isStatic(f.getModifiers()) && isMutable(f))
+                .collect(toCollection(ArrayList::new));
+        if (mutableStaticFields.isEmpty()) {
             return;
         }
 
-        // make static fields non-final
-        for (var field : staticFields) {
-            field.setModifiers(field.getModifiers() & ~FINAL);
+        // make fields non-final, if possible
+        var finalFields = mutableStaticFields.stream()
+                .filter(f -> isFinal(f.getModifiers()))
+                .toList();
+        if (!finalFields.isEmpty()) {
+            if (cls.isInterface()) {
+                // fields in interfaces cannot be non-final, the JVM will check this
+                throw new CannotCompileException("Cannot guarantee isolation due to mutable " +
+                                                 "static fields in interface " + cls.getName());
+            } else {
+                for (var field : finalFields) {
+                    field.setModifiers(field.getModifiers() & ~FINAL);
+                }
+            }
         }
 
-        // use method name with special chars to avoid name clashes
         var reInit = new CtMethod(voidType, RE_INIT_METHOD, new CtClass[0], cls);
         reInit.setModifiers(PUBLIC | STATIC);
 
@@ -311,7 +323,7 @@ public class SandboxClassLoader extends InMemClassLoader {
         }
 
         var resetCode = new StringBuilder("{");
-        for (var field : staticFields) {
+        for (var field : mutableStaticFields) {
             resetCode.append(field.getName());
             resetCode.append(field.getType().isPrimitive()
                     ? field.getType() == booleanType
@@ -329,8 +341,9 @@ public class SandboxClassLoader extends InMemClassLoader {
 
         if (cls.isEnum()) {
             // valueOf uses cached enum constants in 'Class', so replace the method
-            var valueOf = cls.getDeclaredMethod("valueOf");
-            valueOf.setBody("""
+            try {
+                var valueOf = cls.getDeclaredMethod("valueOf");
+                valueOf.setBody("""
                     {
                         Enum[] values = values();
                         for (int i = 0; i < values.length; i++) {
@@ -346,6 +359,22 @@ public class SandboxClassLoader extends InMemClassLoader {
                         }
                     }
                     """.replace("Enum", cls.getName()));
+            } catch (NotFoundException e) {
+                // ignore; Eclipse compiler may produce broken enums without valueOf
+            }
         }
+    }
+
+    private static boolean isMutable(CtField f) {
+        try {
+            return !isFinal(f.getModifiers()) || isMutable(f.getType());
+        } catch (NotFoundException e) {
+            return true;
+        }
+    }
+
+    private static boolean isMutable(CtClass type) {
+        // conservative...
+        return !type.isPrimitive() && !type.getName().equals("java.lang.String");
     }
 }
