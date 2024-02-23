@@ -27,10 +27,13 @@ import static java.io.File.separatorChar;
 import static java.lang.String.valueOf;
 import static java.lang.String.*;
 import static java.lang.System.getProperty;
+import static java.nio.file.Files.list;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Collections.*;
+import static java.util.Comparator.comparing;
 import static java.util.List.copyOf;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toCollection;
 
@@ -371,6 +374,50 @@ public class Grader implements Closeable {
 
         public List<String> testVmArgs() {
             return testVmArgs;
+        }
+    }
+
+    public record Submission(String name, Path srcDir) {
+
+        public Submission {
+            name = requireNonNull(name);
+            srcDir = srcDir.toAbsolutePath().normalize();
+        }
+
+        /**
+         * Loads multiple submissions from a <code>root</code> directory. Each
+         * direct subdirectory in that directory is considered a submission. The
+         * source directory of each submission is determined by resolving
+         * <code>srcDir</code> (a relative path) against the submission directory.
+         * For example, given the following directory structure:
+         * <pre>
+         * /
+         *     submissions/
+         *         foo/
+         *             src/main/java/
+         *         bar/
+         *             src/main/java/
+         *         baz/
+         *             src/main/java/
+         * </pre>
+         * calling this method with "/submissions" as <code>root</code> and
+         * "src/main/java" as <code>srcDir</code>, this method would return a list
+         * containing three submissions, with names "bar", "baz", and "foo"
+         * (submissions are sorted by name) and source directories
+         * "/submissions/bar/src/main/java", "/submissions/baz/src/main/java",
+         * and "/submissions/foo/src/main/java".
+         */
+        public static List<Submission> loadAllFrom(Path root, Path srcDir) throws IOException {
+            if (srcDir.isAbsolute()) {
+                throw new IllegalArgumentException("srcDir must be a relative path");
+            }
+            try (var list = list(root)) {
+                return list
+                        .filter(Files::isDirectory)
+                        .map(dir -> new Submission(dir.getFileName().toString(), dir.resolve(srcDir)))
+                        .sorted(comparing(Submission::name))
+                        .toList();
+            }
         }
     }
 

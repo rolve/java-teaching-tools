@@ -2,6 +2,7 @@ package ch.trick17.jtt.testsuitegrader;
 
 import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.testrunner.TestMethod;
+import ch.trick17.jtt.testsuitegrader.TestSuiteGrader.Submission;
 import ch.trick17.jtt.testsuitegrader.TestSuiteGrader.Task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;

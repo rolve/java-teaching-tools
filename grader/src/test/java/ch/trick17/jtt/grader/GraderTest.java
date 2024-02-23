@@ -1,5 +1,6 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.grader.Grader.Submission;
 import ch.trick17.jtt.testrunner.TestMethod;
 import org.junit.jupiter.api.Test;
 

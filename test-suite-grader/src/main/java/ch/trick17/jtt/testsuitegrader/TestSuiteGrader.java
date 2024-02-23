@@ -328,6 +328,14 @@ public class TestSuiteGrader implements Closeable {
         }
     }
 
+    public record Submission(List<InMemSource> testSuite) {
+        public Submission {
+            if (testSuite.isEmpty()) {
+                throw new IllegalArgumentException("empty test suite");
+            }
+        }
+    }
+
     public record Result(
             boolean compiled,
             boolean emptyTestSuite,
