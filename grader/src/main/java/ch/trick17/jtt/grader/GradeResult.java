@@ -14,7 +14,6 @@ import static java.util.Collections.emptySet;
 import static java.util.function.Predicate.not;
 
 public record GradeResult(
-        String submissionName,
         boolean compileErrors,
         boolean testCompileErrors,
         boolean compiled,

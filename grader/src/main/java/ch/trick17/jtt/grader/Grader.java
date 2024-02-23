@@ -64,8 +64,8 @@ public class Grader implements Closeable {
             testResults = runTests(task, compileResult.output(),
                     testCompileResult.output(), out);
         }
-        return new GradeResult(subm.name(), compileResult.errors(),
-                testCompileResult.errors(), compiled, testResults);
+        return new GradeResult(compileResult.errors(), testCompileResult.errors(),
+                compiled, testResults);
     }
 
     private static List<InMemSource> collectSources(Path srcDir) throws IOException {
