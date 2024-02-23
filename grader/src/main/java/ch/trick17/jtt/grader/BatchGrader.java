@@ -17,6 +17,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
+import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
 import static java.time.LocalDateTime.now;
 import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
@@ -76,7 +77,7 @@ public class BatchGrader implements Closeable {
                 try {
                     for (var task : tasks) {
                         if (tasks.size() > 1) {
-                            submOut.println(task.testClassName());
+                            submOut.println(join(", ", task.testClassNames()));
                         }
                         var res = grader.grade(task, subm, submOut);
                         results.get(task).put(subm, res);

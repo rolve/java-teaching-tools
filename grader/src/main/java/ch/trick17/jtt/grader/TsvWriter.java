@@ -28,7 +28,7 @@ public class TsvWriter {
             out.append("Name");
             if (!single) { // two-row header
                 out.append(results.entrySet().stream()
-                        .map(e -> "\t\t" + e.getKey().testClassSimpleName()
+                        .map(e -> "\t\t" + join(", ", e.getKey().testClassNames())
                                 + "\t".repeat(columnGroups.get(e.getValue()).size() - 1))
                         .collect(joining()));
                 out.append("\n");

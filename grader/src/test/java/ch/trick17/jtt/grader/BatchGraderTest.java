@@ -98,11 +98,11 @@ public class BatchGraderTest {
         grader.grade(tasks, submissions);
         // we use extra markers for consecutive tabs here
         var expected = withTabs("""
-                Name           > AddTest   >               >     >     > MultiplyTest  >               >
-                               > compiled  compile errors  add1  add2  > compiled      compile errors  multiply1  multiply2
-                compile-error  > 1         1               0     0     > 1             1               0          0
-                correct        > 1         0               1     1     > 1             0               1          1
-                fails-test     > 1         0               1     0     > 1             0               1          0
+                Name           > AddTest   >               >     >     > multiply.MultiplyTest  >               >
+                               > compiled  compile errors  add1  add2  > compiled               compile errors  multiply1  multiply2
+                compile-error  > 1         1               0     0     > 1                      1               0          0
+                correct        > 1         0               1     1     > 1                      0               1          1
+                fails-test     > 1         0               1     0     > 1                      0               1          0
                 """);
         assertEquals(expected, readString(RESULTS_FILE));
     }

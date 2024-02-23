@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 import static ch.trick17.jtt.grader.GraderTest.TEST_SRC_DIR;
 import static java.nio.file.Files.readString;
@@ -14,7 +15,7 @@ public class TaskTest {
     @Test
     public void testFromClassName() throws IOException {
         var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR);
-        assertEquals("AddTest", task.testClassName());
+        assertEquals(List.of("AddTest"), task.testClassNames());
         var path = Path.of("AddTest.java");
         var code = readString(Path.of("tests").resolve(path));
 
@@ -26,7 +27,7 @@ public class TaskTest {
     @Test
     public void testFromClassNamePackage() throws IOException {
         var task = Grader.Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR);
-        assertEquals("multiply.MultiplyTest", task.testClassName());
+        assertEquals(List.of("multiply.MultiplyTest"), task.testClassNames());
         var path = Path.of("multiply/MultiplyTest.java");
         var code = readString(Path.of("tests").resolve(path));
 
@@ -38,7 +39,7 @@ public class TaskTest {
     @Test
     public void testFromClassNameDefaultDir() throws IOException {
         var task = Grader.Task.fromClassName("ch.trick17.jtt.grader.TaskTest");
-        assertEquals("ch.trick17.jtt.grader.TaskTest", task.testClassName());
+        assertEquals(List.of("ch.trick17.jtt.grader.TaskTest"), task.testClassNames());
         var path = Path.of("ch/trick17/jtt/grader/TaskTest.java");
         var code = readString(Path.of("src/test/java").resolve(path));
 
@@ -50,7 +51,7 @@ public class TaskTest {
     @Test
     public void testFrom() throws IOException {
         var task = Grader.Task.from(TaskTest.class);
-        assertEquals("ch.trick17.jtt.grader.TaskTest", task.testClassName());
+        assertEquals(List.of("ch.trick17.jtt.grader.TaskTest"), task.testClassNames());
         var path = Path.of("ch/trick17/jtt/grader/TaskTest.java");
         var code = readString(Path.of("src/test/java").resolve(path));
 

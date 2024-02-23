@@ -103,7 +103,7 @@ public class Grader implements Closeable {
         var supportCode = ClassPath.fromMemory(testClasses)
                 .withFiles(task.dependencies())
                 .withCurrent();
-        var config = new TestRunner.Task(List.of(task.testClassName()),
+        var config = new TestRunner.Task(task.testClassNames(),
                 ClassPath.fromMemory(classes), supportCode,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permittedCalls(), task.testVmArgs());
@@ -218,7 +218,7 @@ public class Grader implements Closeable {
             return Path.of(className.replace('.', separatorChar) + ".java");
         }
 
-        private Task(List<InMemSource> testSources, List<InMemSource> givenSources) {
+        public Task(List<InMemSource> testSources, List<InMemSource> givenSources) {
             this.testSources = testSources;
             this.givenSources = givenSources;
         }
@@ -330,14 +330,10 @@ public class Grader implements Closeable {
             return this;
         }
 
-        public String testClassName() {
-            return testSources.get(0).getPath()
-                    .replace('/', '.').replaceAll("\\.java$", "");
-        }
-
-        public String testClassSimpleName() {
-            var parts = testClassName().split("\\.");
-            return parts[parts.length - 1];
+        public List<String> testClassNames() {
+            return testSources.stream()
+                    .map(s -> s.getPath().replace('/', '.').replaceAll("\\.java$", ""))
+                    .toList();
         }
 
         public List<InMemSource> testSources() {
