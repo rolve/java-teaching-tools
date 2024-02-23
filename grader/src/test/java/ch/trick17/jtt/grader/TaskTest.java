@@ -13,7 +13,7 @@ public class TaskTest {
 
     @Test
     public void testFromClassName() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR);
         assertEquals("AddTest", task.testClassName());
         var path = Path.of("AddTest.java");
         var code = readString(Path.of("tests").resolve(path));
@@ -25,7 +25,7 @@ public class TaskTest {
 
     @Test
     public void testFromClassNamePackage() throws IOException {
-        var task = Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR);
+        var task = Grader.Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR);
         assertEquals("multiply.MultiplyTest", task.testClassName());
         var path = Path.of("multiply/MultiplyTest.java");
         var code = readString(Path.of("tests").resolve(path));
@@ -37,7 +37,7 @@ public class TaskTest {
 
     @Test
     public void testFromClassNameDefaultDir() throws IOException {
-        var task = Task.fromClassName("ch.trick17.jtt.grader.TaskTest");
+        var task = Grader.Task.fromClassName("ch.trick17.jtt.grader.TaskTest");
         assertEquals("ch.trick17.jtt.grader.TaskTest", task.testClassName());
         var path = Path.of("ch/trick17/jtt/grader/TaskTest.java");
         var code = readString(Path.of("src/test/java").resolve(path));
@@ -49,7 +49,7 @@ public class TaskTest {
 
     @Test
     public void testFrom() throws IOException {
-        var task = Task.from(TaskTest.class);
+        var task = Grader.Task.from(TaskTest.class);
         assertEquals("ch.trick17.jtt.grader.TaskTest", task.testClassName());
         var path = Path.of("ch/trick17/jtt/grader/TaskTest.java");
         var code = readString(Path.of("src/test/java").resolve(path));
@@ -61,7 +61,7 @@ public class TaskTest {
 
     @Test
     public void testFromString() {
-        var task = Task.fromString("public class SillyTest {}");
+        var task = Grader.Task.fromString("public class SillyTest {}");
         var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
         assertEquals("public class SillyTest {}", testClasses.get(0).getContent());

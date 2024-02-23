@@ -13,8 +13,6 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 
 public class InMemCompilation {
 
-    public record Result(boolean errors, List<InMemClassFile> output) {}
-
     public static Result compile(Compiler compiler,
                                  List<InMemSource> sources,
                                  ClassPath classPath,
@@ -42,5 +40,10 @@ public class InMemCompilation {
             }
             return new Result(!errors.isEmpty(), fileManager.getOutput());
         }
+    }
+
+    public record Result(
+            boolean errors,
+            List<InMemClassFile> output) {
     }
 }

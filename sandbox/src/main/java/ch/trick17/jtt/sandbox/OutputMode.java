@@ -12,7 +12,7 @@ public enum OutputMode {
     DISCARD,
     /**
      * The output is recorded and made available in the
-     * {@link SandboxResult}. It does not go to the usual destination.
+     * {@link Sandbox.Result}. It does not go to the usual destination.
      */
     RECORD,
     /**

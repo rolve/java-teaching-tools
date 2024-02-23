@@ -1,9 +1,9 @@
 package ch.trick17.jtt.testrunner;
 
+import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemClassLoader;
 import ch.trick17.jtt.sandbox.CustomCxtClassLoaderRunner;
 import ch.trick17.jtt.sandbox.Sandbox;
-import ch.trick17.jtt.sandbox.SandboxResult;
 import ch.trick17.jtt.sandbox.Whitelist;
 import ch.trick17.jtt.testrunner.forkedvm.ForkedVmClient;
 import org.junit.platform.engine.TestExecutionResult;
@@ -17,6 +17,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,11 +26,12 @@ import java.util.Map;
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
-import static ch.trick17.jtt.sandbox.SandboxResult.Kind.*;
+import static ch.trick17.jtt.sandbox.Sandbox.Result.Kind.*;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Double.parseDouble;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
+import static java.util.Collections.emptyList;
 import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
@@ -39,18 +41,18 @@ public class TestRunner implements Closeable {
 
     private ForkedVmClient forkedVm;
 
-    public List<TestResult> run(TestRunConfig config) throws IOException {
+    public Result run(Task task) throws IOException {
         if (System.getProperties().containsKey("test-runner.noFork")) {
-            return doRun(config).results;
+            return doRun(task);
         } else {
-            if (forkedVm == null || !forkedVm.getVmArgs().equals(config.vmArgs())) {
+            if (forkedVm == null || !forkedVm.getVmArgs().equals(task.vmArgs())) {
                 if (forkedVm != null) {
                     forkedVm.close();
                 }
-                forkedVm = new ForkedVmClient(config.vmArgs(), List.of(TestRunnerJacksonModule.class));
+                forkedVm = new ForkedVmClient(task.vmArgs(), List.of(TestRunnerJacksonModule.class));
             }
             return forkedVm.runInForkedVm(TestRunner.class, "doRun",
-                    List.of(config), TestResults.class).results;
+                    List.of(task), Result.class);
         }
     }
 
@@ -61,30 +63,30 @@ public class TestRunner implements Closeable {
         }
     }
 
-    private static TestResults doRun(TestRunConfig config) throws IOException {
-        try (var sandbox = new Sandbox.Builder(config.sandboxedCode(), config.supportCode())
-                .permittedCalls(config.permittedCalls() != null
-                        ? Whitelist.parse(config.permittedCalls())
+    private static Result doRun(Task task) throws IOException {
+        try (var sandbox = new Sandbox.Builder(task.sandboxedCode(), task.supportCode())
+                .permittedCalls(task.permittedCalls() != null
+                        ? Whitelist.parse(task.permittedCalls())
                         : null)
-                .timeout(config.repTimeout())
+                .timeout(task.repTimeout())
                 .stdInMode(EMPTY)
                 .stdOutMode(DISCARD)
                 .stdErrMode(DISCARD)
                 .build()) {
 
             var methodResults = new ArrayList<TestResult>();
-            for (var method : findTestMethods(config)) {
+            for (var method : findTestMethods(task)) {
                 var startTime = currentTimeMillis();
 
                 var passed = false;
                 var failed = false;
                 var exceptions = new ArrayList<Throwable>();
-                var repsMade = config.repetitions();
+                var repsMade = task.repetitions();
                 var timeout = false;
                 var outOfMemory = false;
                 var illegalOps = new ArrayList<String>();
                 var scores = new ArrayList<Double>();
-                for (int rep = 1; rep <= config.repetitions(); rep++) {
+                for (int rep = 1; rep <= task.repetitions(); rep++) {
                     var result = runSandboxed(method, sandbox);
 
                     if (result.kind() == TIMEOUT) {
@@ -115,8 +117,8 @@ public class TestRunner implements Closeable {
                         }
                     }
 
-                    if (rep < config.repetitions() &&
-                        currentTimeMillis() - startTime > config.testTimeout().toMillis()) {
+                    if (rep < task.repetitions() &&
+                        currentTimeMillis() - startTime > task.testTimeout().toMillis()) {
                         repsMade = rep;
                         break;
                     }
@@ -124,7 +126,7 @@ public class TestRunner implements Closeable {
 
                 var nonDeterm = passed && failed;
                 passed &= !nonDeterm;
-                var incompleteReps = repsMade < config.repetitions();
+                var incompleteReps = repsMade < task.repetitions();
 
                 var testMethod = new TestMethod(method.getClassName().replace('$', '.'),
                         method.getMethodName());
@@ -141,21 +143,21 @@ public class TestRunner implements Closeable {
                     } catch (NotSerializableException ignored) {}
                 }
             }
-            return new TestResults(methodResults);
+            return new Result(methodResults);
         }
     }
 
-    private static List<MethodSource> findTestMethods(TestRunConfig config) throws IOException {
+    private static List<MethodSource> findTestMethods(Task task) throws IOException {
         // To discover test classes, JUnit needs to *load* them, so we create
         // a custom class loader and set it as the "context class loader" of
         // the current thread. It delegates to the current context class loader
-        // for all classes except those given by the test run config.
-        var loader = new InMemClassLoader(config.sandboxedCode().with(config.supportCode()),
+        // for all classes except those given by the task.
+        var loader = new InMemClassLoader(task.sandboxedCode().with(task.supportCode()),
                 currentThread().getContextClassLoader());
         try (var runner = new CustomCxtClassLoaderRunner(loader)) {
             return runner.run(() -> {
                 var launcher = LauncherFactory.create();
-                var selectors = config.testClassNames().stream()
+                var selectors = task.testClassNames().stream()
                         .map(c -> selectClass(c))
                         .toList();
                 var classesReq = request()
@@ -176,12 +178,12 @@ public class TestRunner implements Closeable {
     }
 
     @SuppressWarnings("unchecked")
-    private static SandboxResult<Map<String, Object>> runSandboxed(
+    private static Sandbox.Result<Map<String, Object>> runSandboxed(
             MethodSource test, Sandbox sandbox) {
         var args = List.of(test.getClassName(), test.getMethodName());
         var result = sandbox.run(Sandboxed.class, "run",
                 List.of(String.class, String.class), args, Map.class);
-        return (SandboxResult<Map<String, Object>>) (Object) result;
+        return (Sandbox.Result<Map<String, Object>>) (Object) result;
     }
 
     public static class Sandboxed {
@@ -227,5 +229,30 @@ public class TestRunner implements Closeable {
         }
     }
 
-    private record TestResults(List<TestResult> results) {}
+    public record Task(
+            List<String> testClassNames,
+            ClassPath sandboxedCode,
+            ClassPath supportCode,
+            int repetitions,
+            Duration repTimeout,
+            Duration testTimeout,
+            String permittedCalls,
+            List<String> vmArgs) {
+
+        public Task(String testClassName,
+                    ClassPath sandboxedCode,
+                    ClassPath supportCode) {
+            this(List.of(testClassName), sandboxedCode, supportCode);
+        }
+
+        public Task(List<String> testClassNames,
+                    ClassPath sandboxedCode,
+                    ClassPath supportCode) {
+            this(testClassNames, sandboxedCode, supportCode,
+                    1, Duration.ofSeconds(1), Duration.ofSeconds(1),
+                    null, emptyList());
+        }
+    }
+
+    public record Result(List<TestResult> testResults) {}
 }

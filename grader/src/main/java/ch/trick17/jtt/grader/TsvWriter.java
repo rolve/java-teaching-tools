@@ -1,5 +1,8 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.grader.Grader.Result;
+import ch.trick17.jtt.grader.Grader.Task;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -14,7 +17,7 @@ import static java.util.stream.Collectors.*;
 
 public class TsvWriter {
 
-    public static void write(Map<Task, Map<Submission, GradeResult>> results, Path path)
+    public static void write(Map<Task, Map<Submission, Result>> results, Path path)
             throws IOException {
         var single = results.size() == 1;
         var columnGroups = results.values().stream()
@@ -59,7 +62,7 @@ public class TsvWriter {
      * These include the properties and tags present for at least
      * one submission, plus all tests.
      */
-    private static List<String> columns(Collection<GradeResult> results) {
+    private static List<String> columns(Collection<Result> results) {
         var properties = results.stream()
                 .flatMap(r -> r.properties().stream())
                 .collect(toCollection(() -> noneOf(Property.class))) // natural order
@@ -81,7 +84,7 @@ public class TsvWriter {
     /**
      * Returns the columns the given result fulfills.
      */
-    private static Set<String> fulfilledColumns(GradeResult results) {
+    private static Set<String> fulfilledColumns(Result results) {
         var streams = Stream.of(
                 results.properties().stream().map(Property::prettyName),
                 results.tags().stream(),

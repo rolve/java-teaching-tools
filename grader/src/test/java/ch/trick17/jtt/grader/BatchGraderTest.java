@@ -54,7 +54,7 @@ public class BatchGraderTest {
 
     @Test
     void eclipseStructureEclipseCompiler() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
@@ -64,7 +64,7 @@ public class BatchGraderTest {
 
     @Test
     void eclipseStructureJavac() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
@@ -74,14 +74,14 @@ public class BatchGraderTest {
 
     @Test
     void mavenStructureEclipseCompiler() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE);
         grader.grade(task, WITH_MVN_STRUCTURE);
         assertEquals(EXPECTED_ADD_SIMPLE_EC, readString(RESULTS_FILE));
     }
 
     @Test
     void mavenStructureJavac() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
         grader.grade(task, WITH_MVN_STRUCTURE);
         assertEquals(EXPECTED_ADD_SIMPLE_JC, readString(RESULTS_FILE));
     }
@@ -89,8 +89,8 @@ public class BatchGraderTest {
     @Test
     void multipleTasks() throws IOException {
         var tasks = List.of(
-                Task.fromClassName("AddTest", TEST_SRC_DIR),
-                Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR));
+                Grader.Task.fromClassName("AddTest", TEST_SRC_DIR),
+                Grader.Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR));
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
@@ -108,7 +108,7 @@ public class BatchGraderTest {
 
     @Test
     void packageEclipseCompiler() throws IOException {
-        var task = Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
@@ -121,7 +121,7 @@ public class BatchGraderTest {
                 """);
         assertEquals(expected, readString(RESULTS_FILE));
 
-        task = Task.fromClassName("com.example.foo.FooTest", TEST_SRC_DIR).compiler(ECLIPSE);
+        task = Grader.Task.fromClassName("com.example.foo.FooTest", TEST_SRC_DIR).compiler(ECLIPSE);
         submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
@@ -135,7 +135,7 @@ public class BatchGraderTest {
 
     @Test
     void packageJavac() throws IOException {
-        var task = Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR).compiler(JAVAC);
+        var task = Grader.Task.fromClassName("multiply.MultiplyTest", TEST_SRC_DIR).compiler(JAVAC);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
@@ -148,7 +148,7 @@ public class BatchGraderTest {
                 """);
         assertEquals(expected, readString(RESULTS_FILE));
 
-        task = Task.fromClassName("com.example.foo.FooTest", TEST_SRC_DIR).compiler(JAVAC);
+        task = Grader.Task.fromClassName("com.example.foo.FooTest", TEST_SRC_DIR).compiler(JAVAC);
         submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
@@ -162,7 +162,7 @@ public class BatchGraderTest {
 
     @Test
     void unrelatedCompileErrorEclipseCompiler() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "unrelated-compile-error").contains(s.name()))
                 .toList();
@@ -177,7 +177,7 @@ public class BatchGraderTest {
 
     @Test
     void unrelatedCompileErrorJavac() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "unrelated-compile-error").contains(s.name()))
                 .toList();
@@ -192,7 +192,7 @@ public class BatchGraderTest {
 
     @Test
     void customDir() throws IOException {
-        var task = Task.fromClassName("AddTest", Path.of("tests-custom-dir"));
+        var task = Grader.Task.fromClassName("AddTest", Path.of("tests-custom-dir"));
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "fails-test", "compile-error").contains(s.name()))
                 .toList();
@@ -208,7 +208,7 @@ public class BatchGraderTest {
 
     @Test
     void timeout() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR)
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR)
                 .repetitions(5)
                 .timeouts(Duration.ofSeconds(1), Duration.ofSeconds(3));
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
@@ -225,7 +225,7 @@ public class BatchGraderTest {
 
     @Test
     void missingClassUnderTestEclipseCompiler() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "missing-class").contains(s.name()))
                 .toList();
@@ -241,7 +241,7 @@ public class BatchGraderTest {
 
     @Test
     void missingClassUnderTestJavac() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "missing-class").contains(s.name()))
                 .toList();
@@ -256,7 +256,7 @@ public class BatchGraderTest {
 
     @Test
     void missingSrcDir() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "missing-src").contains(s.name()))
                 .toList();
@@ -271,7 +271,7 @@ public class BatchGraderTest {
 
     @Test
     void nondeterminism() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR)
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR)
                 .repetitions(20)
                 .timeouts(Duration.ofSeconds(5), Duration.ofSeconds(30));
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
@@ -290,7 +290,7 @@ public class BatchGraderTest {
     void nondeterminismPlusTimeout() throws IOException {
         // ensure that the timeout of one test does not affect detection
         // of nondeterminism in other s, as was previously the case
-        var task = Task.fromClassName("SubtractTest", TEST_SRC_DIR)
+        var task = Grader.Task.fromClassName("SubtractTest", TEST_SRC_DIR)
                 .repetitions(5)
                 .timeouts(Duration.ofSeconds(1), Duration.ofSeconds(3))
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
@@ -312,7 +312,7 @@ public class BatchGraderTest {
     void isolation() throws IOException {
         // ensure that classes are reloaded for each test run, meaning
         // that s cannot interfere via static fields
-        var task = Task.fromClassName("SubtractTest", TEST_SRC_DIR);
+        var task = Grader.Task.fromClassName("SubtractTest", TEST_SRC_DIR);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "static-state").contains(s.name()))
                 .toList();
@@ -327,7 +327,7 @@ public class BatchGraderTest {
 
     @Test
     void catchInterruptedException() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR)
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR)
                 .repetitions(5)
                 .timeouts(Duration.ofSeconds(1), Duration.ofSeconds(3));
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
@@ -344,7 +344,7 @@ public class BatchGraderTest {
 
     @Test
     void systemIn() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).repetitions(3);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "reads-system-in").contains(s.name()))
                 .toList();
@@ -359,7 +359,7 @@ public class BatchGraderTest {
 
     @Test
     void illegalOperationIO() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "illegal-io").contains(s.name()))
                 .toList(); // tries to read from the file system
@@ -374,7 +374,7 @@ public class BatchGraderTest {
 
     @Test
     void illegalOperationReflection() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "illegal-reflect").contains(s.name()))
                 .toList(); // uses getDeclaredMethods()
@@ -390,7 +390,7 @@ public class BatchGraderTest {
     @Test
     void defaultMethodOrder() throws IOException {
         // without any method order annotations, tests are ordered by display name
-        var task = Task.fromClassName("TestWithDisplayNames", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("TestWithDisplayNames", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
@@ -405,7 +405,7 @@ public class BatchGraderTest {
     @Test
     void orderAnnotations() throws IOException {
         // @Order annotations are taken into account when present
-        var task = Task.fromClassName("TestWithOrderAnnotations", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("TestWithOrderAnnotations", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
@@ -420,7 +420,7 @@ public class BatchGraderTest {
     @Test
     void customMethodOrder() throws IOException {
         // default order (first @Order, then display name) can be overridden with @TestMethodOrder
-        var task = Task.fromClassName("TestWithMethodOrder", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("TestWithMethodOrder", TEST_SRC_DIR).compiler(ECLIPSE);
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> s.name().equals("correct"))
                 .toList();
@@ -434,7 +434,7 @@ public class BatchGraderTest {
 
     @Test
     void encoding() throws IOException {
-        var task = Task.fromClassName("EncodingTest", TEST_SRC_DIR)
+        var task = Grader.Task.fromClassName("EncodingTest", TEST_SRC_DIR)
                 .compiler(ECLIPSE)
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
                         java.io.InputStreamReader.<init>
@@ -450,7 +450,7 @@ public class BatchGraderTest {
                 """);
         assertEquals(expected, readString(RESULTS_FILE));
 
-        task = Task.fromClassName("EncodingTest", TEST_SRC_DIR)
+        task = Grader.Task.fromClassName("EncodingTest", TEST_SRC_DIR)
                 .compiler(ECLIPSE)
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
                         java.io.InputStreamReader.<init>
@@ -468,7 +468,7 @@ public class BatchGraderTest {
     @ParameterizedTest
     @EnumSource(Compiler.class)
     void classPath(Compiler compiler) throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR)
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR)
                 .compiler(compiler)
                 .dependencies(Path.of("test-lib/commons-math3-3.6.1.jar"))
                 .permittedCalls(DEFAULT_WHITELIST_DEF + """
@@ -489,7 +489,7 @@ public class BatchGraderTest {
 
     @Test
     void modificationToGivenClass() throws IOException {
-        var task = Task.fromClassName("students.StudentClientTest",
+        var task = Grader.Task.fromClassName("students.StudentClientTest",
                 TEST_SRC_DIR, "students/Student.java");
         var submissions = WITH_ECLIPSE_STRUCTURE.stream()
                 .filter(s -> List.of("correct", "modifies-given-class").contains(s.name()))

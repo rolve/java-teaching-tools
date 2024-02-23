@@ -1,5 +1,7 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.grader.Grader.Result;
+import ch.trick17.jtt.grader.Grader.Task;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import java.io.*;
@@ -61,7 +63,7 @@ public class BatchGrader implements Closeable {
             out = System.out;
         }
 
-        var results = new LinkedHashMap<Task, Map<Submission, GradeResult>>();
+        var results = new LinkedHashMap<Task, Map<Submission, Result>>();
         tasks.forEach(t -> results.put(t, new ConcurrentHashMap<>()));
 
         tryFinally(() -> {

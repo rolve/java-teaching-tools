@@ -2,7 +2,7 @@ package ch.trick17.jtt.sandbox;
 
 import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemSource;
-import ch.trick17.jtt.sandbox.SandboxResult.Kind;
+import ch.trick17.jtt.sandbox.Sandbox.Result.Kind;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

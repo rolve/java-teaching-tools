@@ -29,7 +29,7 @@ public class GraderTest {
 
     @Test
     void results() throws IOException {
-        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
+        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
 
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
@@ -51,7 +51,7 @@ public class GraderTest {
 
     @Test
     void noTests() throws IOException {
-        var task = Task.fromClassName("NoTests", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("NoTests", TEST_SRC_DIR).compiler(ECLIPSE);
         var result = grader.grade(task, correct);
         assertEquals(emptyList(), result.passedTests());
         assertEquals(emptyList(), result.failedTests());
@@ -59,7 +59,7 @@ public class GraderTest {
 
     @Test
     void nestedTestClasses() throws IOException {
-        var task = Task.fromClassName("NestedTestClass", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("NestedTestClass", TEST_SRC_DIR).compiler(ECLIPSE);
         var allTests = List.of(
                 new TestMethod("NestedTestClass.MultiplyTest", "multiply1"),
                 new TestMethod("NestedTestClass.MultiplyTest", "multiply2")); // note alphabetical order
@@ -75,7 +75,7 @@ public class GraderTest {
 
     @Test
     void assumptions() throws IOException {
-        var task = Task.fromClassName("TestWithAssumption", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("TestWithAssumption", TEST_SRC_DIR).compiler(ECLIPSE);
         var result = grader.grade(task, correct);
         assertTrue(result.testResultFor("normal").passed());
         assertFalse(result.testResultFor("failedAssumption").passed());
@@ -83,7 +83,7 @@ public class GraderTest {
 
     @Test
     void disabled() throws IOException {
-        var task = Task.fromClassName("DisabledTest", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Grader.Task.fromClassName("DisabledTest", TEST_SRC_DIR).compiler(ECLIPSE);
         var result = grader.grade(task, correct);
         assertTrue(result.testResultFor("normal").passed());
         assertTrue(result.testResultFor("disabled").passed());
@@ -93,7 +93,7 @@ public class GraderTest {
 
     @Test
     void score() throws IOException {
-        var task = Task.fromClassName("TestWithScore", TEST_SRC_DIR)
+        var task = Grader.Task.fromClassName("TestWithScore", TEST_SRC_DIR)
                 .compiler(ECLIPSE)
                 .repetitions(20);
 

@@ -3,9 +3,10 @@ package ch.trick17.jtt.testsuitegrader;
 import ch.trick17.jtt.memcompile.ClassPath;
 import ch.trick17.jtt.memcompile.InMemClassFile;
 import ch.trick17.jtt.memcompile.InMemSource;
-import ch.trick17.jtt.testrunner.*;
-import ch.trick17.jtt.testsuitegrader.GradeResult.MutantResult;
-import ch.trick17.jtt.testsuitegrader.GradeResult.RefImplementationResult;
+import ch.trick17.jtt.testrunner.TestMethod;
+import ch.trick17.jtt.testrunner.TestResult;
+import ch.trick17.jtt.testrunner.TestRunException;
+import ch.trick17.jtt.testrunner.TestRunner;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.comments.JavadocComment;
@@ -21,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
@@ -68,9 +70,9 @@ public class TestSuiteGrader implements Closeable {
         for (int i = 0; i < compiledImplementations.size(); i++) {
             var refImpl = compiledImplementations.get(i);
             var refResults = testRunner.run(
-                    new TestRunConfig(testClassNames,
+                    new TestRunner.Task(testClassNames,
                             ClassPath.fromMemory(refImpl).withMemory(compiledSuite),
-                            ClassPath.fromFiles(dependencies).withCurrent()));
+                            ClassPath.fromFiles(dependencies).withCurrent())).testResults();
             if (i == 0) {
                 refResults.forEach(r -> tests.add(r.method()));
             }
@@ -139,10 +141,10 @@ public class TestSuiteGrader implements Closeable {
         for (int j = 0; j < mutants.size(); j++) {
             var mutant = mutants.get(j);
             try {
-                var mutantResults = testRunner.run(new TestRunConfig(
+                var mutantResults = testRunner.run(new TestRunner.Task(
                         testClassNames,
                         ClassPath.fromMemory(mutant.classes()).withMemory(testSuite),
-                        ClassPath.fromFiles(dependencies).withCurrent()));
+                        ClassPath.fromFiles(dependencies).withCurrent())).testResults();
                 var failedTests = mutantResults.stream()
                         .filter(r -> !r.passed())
                         .map(TestResult::method)
@@ -228,19 +230,19 @@ public class TestSuiteGrader implements Closeable {
         return result;
     }
 
-    public GradeResult grade(Task task, Submission submission) throws IOException {
+    public Result grade(Task task, Submission submission) throws IOException {
         return grade(task, submission, emptyList());
     }
 
-    public GradeResult grade(Task task, Submission submission, List<Path> dependencies) throws IOException {
+    public Result grade(Task task, Submission submission, List<Path> dependencies) throws IOException {
         var classPath = ClassPath.fromMemory(task.refImplementations().get(0))
                 .withFiles(dependencies)
                 .withCurrent();
         var compileResult = compile(JAVAC, submission.testSuite(), classPath, System.out);
         if (compileResult.errors()) {
-            return new GradeResult(false, false, emptyList(), emptyList(), null, null, null);
+            return new Result(false, false, emptyList(), emptyList(), null, null, null);
         } else if (compileResult.output().isEmpty()) {
-            return new GradeResult(true, true, emptyList(), emptyList(), null, null, null);
+            return new Result(true, true, emptyList(), emptyList(), null, null, null);
         }
         var testSuite = compileResult.output();
         var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
@@ -248,11 +250,11 @@ public class TestSuiteGrader implements Closeable {
         var refResults = new ArrayList<RefImplementationResult>();
         for (var impl : task.refImplementations()) {
             var testResults = testRunner.run(
-                    new TestRunConfig(testClassNames,
+                    new TestRunner.Task(testClassNames,
                             ClassPath.fromMemory(impl).withMemory(testSuite),
-                            ClassPath.fromFiles(dependencies).withCurrent()));
+                            ClassPath.fromFiles(dependencies).withCurrent())).testResults();
             if (testResults.isEmpty()) {
-                return new GradeResult(true, true, emptyList(), emptyList(), 1.0, 0.0, 0.0);
+                return new Result(true, true, emptyList(), emptyList(), 1.0, 0.0, 0.0);
             }
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
@@ -274,9 +276,9 @@ public class TestSuiteGrader implements Closeable {
             classes.set(classIndex, new InMemClassFile(className, mutated));
 
             var testResults = testRunner.run(
-                    new TestRunConfig(testClassNames,
+                    new TestRunner.Task(testClassNames,
                             ClassPath.fromMemory(classes).withMemory(testSuite),
-                            ClassPath.fromFiles(dependencies).withCurrent()));
+                            ClassPath.fromFiles(dependencies).withCurrent())).testResults();
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .map(TestResult::method)
@@ -294,7 +296,7 @@ public class TestSuiteGrader implements Closeable {
 
         var totalScore = refScore * mutantScore;
 
-        return new GradeResult(true, false, refResults, mutantResults,
+        return new Result(true, false, refResults, mutantResults,
                 refScore, mutantScore, totalScore);
     }
 
@@ -314,5 +316,33 @@ public class TestSuiteGrader implements Closeable {
     @Override
     public void close() {
         testRunner.close();
+    }
+
+    public record Task(
+            List<List<InMemClassFile>> refImplementations,
+            List<Mutation> mutations,
+            Map<TestMethod, String> refTestDescriptions) {
+
+        public List<InMemClassFile> refImplementationFor(Mutation mutation) {
+            return refImplementations.get(mutation.refImplementationIndex());
+        }
+    }
+
+    public record Result(
+            boolean compiled,
+            boolean emptyTestSuite,
+            List<RefImplementationResult> refImplementationResults,
+            List<MutantResult> mutantResults,
+            Double refImplementationScore,
+            Double mutantScore,
+            Double totalScore) {
+
+        public Result {
+            Stream.of(refImplementationScore, mutantScore, totalScore).forEach(score -> {
+                if (score != null && (score < 0.0 || score > 1.0)) {
+                    throw new IllegalArgumentException("invalid score: " + score);
+                }
+            });
+        }
     }
 }

@@ -72,9 +72,9 @@ public class Sandbox implements Closeable {
      * it unusable without reflection. (This is not the case for classes loaded
      * by the bootstrap class loader, like String).
      */
-    public <T> SandboxResult<T> run(Class<?> cls, String methodName,
-                                    List<Class<?>> paramTypes, List<?> args,
-                                    Class<T> resultType) {
+    public <T> Result<T> run(Class<?> cls, String methodName,
+                             List<Class<?>> paramTypes, List<?> args,
+                             Class<T> resultType) {
         return run(cls.getName(), methodName, paramTypes, args, resultType);
     }
 
@@ -85,9 +85,9 @@ public class Sandbox implements Closeable {
      * it unusable without reflection. (This is not the case for classes loaded
      * by the bootstrap class loader, like String).
      */
-    public <T> SandboxResult<T> run(String className, String methodName,
-                                    List<Class<?>> paramTypes, List<?> args,
-                                    Class<T> resultType) {
+    public <T> Result<T> run(String className, String methodName,
+                             List<Class<?>> paramTypes, List<?> args,
+                             Class<T> resultType) {
         // re-initialize sandboxed classes, in the same order they were
         // originally loaded
         for (var c : loader.getSandboxedClasses()) {
@@ -116,19 +116,19 @@ public class Sandbox implements Closeable {
 
         Action<T> timed = timeout != null ? () -> runWithTimeout(isolated) : isolated;
 
-        Supplier<SandboxResult<T>> asResult = () -> {
+        Supplier<Result<T>> asResult = () -> {
             try {
                 var value = timed.run();
-                return SandboxResult.normal(value);
+                return Result.normal(value);
             } catch (TimeoutException e) {
-                return SandboxResult.timeout();
+                return Result.timeout();
             } catch (OutOfMemoryError e) {
                 System.gc(); // may or may not help...
-                return SandboxResult.outOfMemory(e);
+                return Result.outOfMemory(e);
             } catch (SecurityException e) {
-                return SandboxResult.illegalOperation(e);
+                return Result.illegalOperation(e);
             } catch (Throwable e) {
-                return SandboxResult.exception(e);
+                return Result.exception(e);
             }
         };
 
@@ -326,6 +326,87 @@ public class Sandbox implements Closeable {
                     throw new Exception(e);
                 }
             };
+        }
+    }
+
+    public static class Result<T> {
+
+        public static <T> Result<T> normal(T value) {
+            return new Result<>(Kind.NORMAL, value, null);
+        }
+
+        public static <T> Result<T> exception(Throwable exception) {
+            return new Result<>(Kind.EXCEPTION, null, exception);
+        }
+
+        public static <T> Result<T> timeout() {
+            return new Result<>(Kind.TIMEOUT, null, null);
+        }
+
+        public static <T> Result<T> outOfMemory(OutOfMemoryError error) {
+            return new Result<>(Kind.OUT_OF_MEMORY, null, error);
+        }
+
+        public static <T> Result<T> illegalOperation(SecurityException exception) {
+            return new Result<>(Kind.ILLEGAL_OPERATION, null, exception);
+        }
+
+        private final Kind kind;
+        private final T value;
+        private final Throwable exception;
+        private String stdOut = null;
+        private String stdErr = null;
+
+        private Result(Kind kind, T value, Throwable exception) {
+            this.kind = kind;
+            this.value = value;
+            this.exception = exception;
+        }
+
+        public Kind kind() {
+            return kind;
+        }
+
+        public T value() {
+            if (kind != Kind.NORMAL) {
+                throw new IllegalStateException("no value", exception);
+            }
+            return value;
+        }
+
+        public Throwable exception() {
+            if (exception == null) {
+                throw new IllegalStateException();
+            }
+            return exception;
+        }
+
+        /**
+         * The standard output that was recorded. If recording was not enabled,
+         * returns <code>null</code>.
+         */
+        public String stdOut() {
+            return stdOut;
+        }
+
+        /**
+         * The standard error output that was recorded. If recording was not
+         * enabled, returns <code>null</code>.
+         */
+        public String stdErr() {
+            return stdErr;
+        }
+
+        void setStdOut(String stdOut) {
+            this.stdOut = stdOut;
+        }
+
+        void setStdErr(String stdErr) {
+            this.stdErr = stdErr;
+        }
+
+        public enum Kind {
+            NORMAL, EXCEPTION, TIMEOUT, OUT_OF_MEMORY, ILLEGAL_OPERATION;
         }
     }
 }
