@@ -80,13 +80,13 @@ public class FirstNonEmptyLinesTest {
     @Test
     public void testEmptyLines() throws IOException {
         var text = """
-                                
+                
                 First
                 Second
-                                
+                
                 Third
-                                
-                                
+                
+                
                 Fourth
                 """;
         var first2 = IOTasks.firstNonEmptyLines(asStream(text), 2);
@@ -108,7 +108,7 @@ public class FirstNonEmptyLinesTest {
     public void testTooFew() throws IOException {
         var text = """
                 First
-                                    
+                
                 Second
                 """;
         var first2 = IOTasks.firstNonEmptyLines(asStream(text), 3);
@@ -170,7 +170,7 @@ public class FirstNonEmptyLinesTest {
      */
     @Order(8)
     @Test
-    public void testCloseException() throws IOException {
+    public void testCloseException() {
         var text = """
                 First
                 Second
@@ -180,7 +180,6 @@ public class FirstNonEmptyLinesTest {
             public int read() throws IOException {
                 throw new IOException();
             }
-
             public void close() {
                 closed[0]++;
             }
