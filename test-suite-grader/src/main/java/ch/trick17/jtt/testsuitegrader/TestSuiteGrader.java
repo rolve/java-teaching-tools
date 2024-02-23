@@ -20,6 +20,7 @@ import org.pitest.mutationtest.engine.gregor.config.Mutator;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Stream;
@@ -332,6 +333,19 @@ public class TestSuiteGrader implements Closeable {
         public Submission {
             if (testSuite.isEmpty()) {
                 throw new IllegalArgumentException("empty test suite");
+            }
+        }
+
+        public static Submission loadFrom(Path testDir) throws IOException {
+            try (var walk = Files.walk(testDir)) {
+                var javaFiles = walk
+                        .filter(p -> p.getFileName().toString().endsWith(".java"))
+                        .toList();
+                var testSuite = new ArrayList<InMemSource>();
+                for (var file : javaFiles) {
+                    testSuite.add(InMemSource.fromFile(file, testDir));
+                }
+                return new Submission(testSuite);
             }
         }
     }

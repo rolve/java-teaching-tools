@@ -51,14 +51,6 @@ public class InMemSource extends SimpleJavaFileObject {
         return new InMemSource(path, readString(file));
     }
 
-    public static InMemSource fromFileUnchecked(Path file, Path sourceDir) {
-        try {
-            return fromFile(file, sourceDir);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
     private final String path; // relative to source directory, e.g., students/Student.java
     private final String content;
     private volatile CompilationUnit parsed; // null if not parsed
