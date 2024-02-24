@@ -111,16 +111,16 @@ public class TestSuiteGraderTest {
         var desc = task.refTestDescriptions();
 
         assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testZero")),
-                "`firstNonEmptyLines` mit `n = 0` aufrufen und prüfen, dass eine leere " +
+                "<code>firstNonEmptyLines</code> mit <code>n = 0</code> aufrufen und prüfen, dass eine leere " +
                 "Liste zurückgegeben wird.");
         assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testOne")),
-                "`firstNonEmptyLines` mit `n = 1` aufrufen und prüfen, dass die erste " +
+                "<code>firstNonEmptyLines</code> mit <code>n = 1</code> aufrufen und prüfen, dass die erste " +
                 "(nicht-leere) Zeile zurückgegeben wird.");
         assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testEncoding")),
-                "`firstNonEmptyLines` mit einem Text aufrufen, der Nicht-ASCII-Zeichen " +
+                "<code>firstNonEmptyLines</code> mit einem Text aufrufen, der Nicht-ASCII-Zeichen " +
                 "enthält, und prüfen, dass die Zeichen korrekt decodiert werden.");
         assertEquals(desc.get(new TestMethod("io.WritePowersOfTwoTest", "testClose")),
-                "Prüfen, dass `writePowersOfTwo` den übergebenen OutputStream schliesst.");
+                "Prüfen, dass <code>writePowersOfTwo</code> den übergebenen OutputStream schliesst.");
     }
 
     @Test
