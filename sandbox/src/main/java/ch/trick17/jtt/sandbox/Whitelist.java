@@ -76,8 +76,8 @@ public interface Whitelist {
                 
                 java.util.Scanner.<init>(java.lang.Readable)
                 java.util.Scanner.<init>(java.io.InputStream)
-                java.util.Scanner.<init>(java.io.InputStream, java.lang.String)
-                java.util.Scanner.<init>(java.io.InputStream, java.nio.charset.Charset)
+                java.util.Scanner.<init>(java.io.InputStream,java.lang.String)
+                java.util.Scanner.<init>(java.io.InputStream,java.nio.charset.Charset)
                 java.util.Scanner.<init>(java.lang.String)
                 java.util.Scanner.close
                 java.util.Scanner.ioException
