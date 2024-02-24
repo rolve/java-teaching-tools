@@ -29,6 +29,8 @@ import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
+import static java.util.Comparator.comparingInt;
+import static java.util.Map.Entry.comparingByKey;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
@@ -109,7 +111,12 @@ public class TestSuiteGrader implements Closeable {
         }
 
         var descriptions = testDescriptions(refTestSuite);
-        return new Task(compiledImplementations, mutations, descriptions);
+        // order descriptions according to the order of the tests in the reference suite,
+        // assumed to be roughly from weak to strong
+        var ordered = descriptions.entrySet().stream()
+                .sorted(comparingByKey(comparingInt(m -> tests.indexOf(m))))
+                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
+        return new Task(compiledImplementations, mutations, ordered);
     }
 
     private List<Mutant> generateMutants(List<InMemClassFile> refImpl, int refImplIndex) {
@@ -327,7 +334,7 @@ public class TestSuiteGrader implements Closeable {
     public record Task(
             List<List<InMemClassFile>> refImplementations,
             List<Mutation> mutations,
-            Map<TestMethod, String> refTestDescriptions) {
+            LinkedHashMap<TestMethod, String> refTestDescriptions) {
 
         public List<InMemClassFile> refImplementationFor(Mutation mutation) {
             return refImplementations.get(mutation.refImplementationIndex());
