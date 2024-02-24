@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
@@ -56,7 +55,7 @@ public class ReadPeopleFromCsvTest {
      * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
      * und prüfen, dass die Namen der zurückgegebenen Personen stimmen.
      */
-    @Order(2)
+    @Order(3)
     @Test
     public void testName() throws IOException {
         var csv = """
@@ -73,7 +72,7 @@ public class ReadPeopleFromCsvTest {
      * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
      * und prüfen, dass die Altersangaben stimmen.
      */
-    @Order(3)
+    @Order(4)
     @Test
     public void testAge() throws IOException {
         var csv = """
@@ -90,7 +89,7 @@ public class ReadPeopleFromCsvTest {
      * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
      * und prüfen, dass die "positiv"-Angaben stimmen.
      */
-    @Order(4)
+    @Order(5)
     @Test
     public void testPositive() throws IOException {
         var csv = """
@@ -108,7 +107,7 @@ public class ReadPeopleFromCsvTest {
      * enthält, und prüfen, dass die Namen der zurückgegebenen Personen richtig
      * decodiert werden.
      */
-    @Order(5)
+    @Order(6)
     @Test
     public void testEncoding() throws IOException {
         var csv = """
@@ -124,7 +123,7 @@ public class ReadPeopleFromCsvTest {
     /**
      * Prüfen, dass `readPeopleFromCsv` den übergebenen InputStream schliesst.
      */
-    @Order(6)
+    @Order(7)
     @Test
     public void testClose() throws IOException {
         var csv = """
