@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.*;
 
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
@@ -253,10 +254,11 @@ public class TestSuiteGrader implements Closeable {
         List<TestMethod> allTests = null;
         var incorrectTests = new HashSet<TestMethod>();
         for (var impl : task.refImplementations()) {
-            var testResults = testRunner.run(
-                    new TestRunner.Task(testClassNames,
-                            ClassPath.fromMemory(impl).withMemory(testSuite),
-                            ClassPath.fromFiles(dependencies).withCurrent())).testResults();
+            var sandboxed = ClassPath.fromMemory(impl).withMemory(testSuite);
+            var support = ClassPath.fromFiles(dependencies).withCurrent();
+            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, 1,
+                    Duration.ofSeconds(2), Duration.ofSeconds(5), null, emptyList());
+            var testResults = testRunner.run(testRun).testResults();
             if (testResults.isEmpty()) {
                 return new Result(true, true, emptyList(), emptyList(), allTests, incorrectTests, 0.0);
             }
@@ -283,10 +285,11 @@ public class TestSuiteGrader implements Closeable {
             var classes = new ArrayList<>(refImpl);
             classes.set(classIndex, new InMemClassFile(className, mutated));
 
-            var testResults = testRunner.run(
-                    new TestRunner.Task(testClassNames,
-                            ClassPath.fromMemory(classes).withMemory(testSuite),
-                            ClassPath.fromFiles(dependencies).withCurrent())).testResults();
+            var sandboxed = ClassPath.fromMemory(classes).withMemory(testSuite);
+            var support = ClassPath.fromFiles(dependencies).withCurrent();
+            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, 1,
+                    Duration.ofSeconds(2), Duration.ofSeconds(5), null, emptyList());
+            var testResults = testRunner.run(testRun).testResults();
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .map(TestResult::method)
