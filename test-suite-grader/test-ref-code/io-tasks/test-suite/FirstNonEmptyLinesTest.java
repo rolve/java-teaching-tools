@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class FirstNonEmptyLinesTest {
 
     /**
-     * `firstNonEmptyLines` mit `n = 0` aufrufen und prüfen, dass eine leere
+     * <code>firstNonEmptyLines</code> mit <code>n = 0</code> aufrufen und prüfen, dass eine leere
      * Liste zurückgegeben wird.
      */
     @Order(1)
@@ -33,7 +33,7 @@ public class FirstNonEmptyLinesTest {
     }
 
     /**
-     * `firstNonEmptyLines` mit `n = 1` aufrufen und prüfen, dass die erste
+     * <code>firstNonEmptyLines</code> mit <code>n = 1</code> aufrufen und prüfen, dass die erste
      * (nicht-leere) Zeile zurückgegeben wird.
      */
     @Order(2)
@@ -50,7 +50,7 @@ public class FirstNonEmptyLinesTest {
     }
 
     /**
-     * `firstNonEmptyLines` mit verschiedenen `n` aufrufen und prüfen, dass
+     * <code>firstNonEmptyLines</code> mit verschiedenen <code>n</code> aufrufen und prüfen, dass
      * entsprechend viele (nicht-leere) Zeilen zurückgegeben werden.
      */
     @Order(3)
@@ -73,7 +73,7 @@ public class FirstNonEmptyLinesTest {
     }
 
     /**
-     * `firstNonEmptyLines` mit einem Text aufrufen, der leere Zeilen enthält,
+     * <code>firstNonEmptyLines</code> mit einem Text aufrufen, der leere Zeilen enthält,
      * und prüfen, dass die leeren Zeilen ignoriert werden.
      */
     @Order(4)
@@ -100,7 +100,7 @@ public class FirstNonEmptyLinesTest {
     }
 
     /**
-     * `firstNonEmptyLines` mit einem Text aufrufen, der weniger als `n` Zeilen
+     * <code>firstNonEmptyLines</code> mit einem Text aufrufen, der weniger als <code>n</code> Zeilen
      * enthält, und prüfen, dass alle Zeilen zurückgegeben werden.
      */
     @Order(5)
@@ -122,7 +122,7 @@ public class FirstNonEmptyLinesTest {
     }
 
     /**
-     * `firstNonEmptyLines` mit einem Text aufrufen, der Nicht-ASCII-Zeichen
+     * <code>firstNonEmptyLines</code> mit einem Text aufrufen, der Nicht-ASCII-Zeichen
      * enthält, und prüfen, dass die Zeichen korrekt decodiert werden.
      */
     @Order(6)
@@ -145,7 +145,7 @@ public class FirstNonEmptyLinesTest {
     }
 
     /**
-     * Prüfen, dass `firstNonEmptyLines` den übergebenen InputStream schliesst.
+     * Prüfen, dass <code>firstNonEmptyLines</code> den übergebenen InputStream schliesst.
      */
     @Order(7)
     @Test
@@ -165,7 +165,7 @@ public class FirstNonEmptyLinesTest {
     }
 
     /**
-     * Prüfen, dass `firstNonEmptyLines` den übergebenen InputStream schliesst,
+     * Prüfen, dass <code>firstNonEmptyLines</code> den übergebenen InputStream schliesst,
      * auch wenn eine Exception auftritt.
      */
     @Order(8)

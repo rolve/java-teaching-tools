@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class WritePowersOfTwoTest {
 
     /**
-     * `writePowersOfTwo` mit `n = 0` aufrufen und prüfen, dass nichts
+     * <code>writePowersOfTwo</code> mit <code>n = 0</code> aufrufen und prüfen, dass nichts
      * geschrieben wird.
      */
     @Order(1)
@@ -26,7 +26,7 @@ public class WritePowersOfTwoTest {
     }
 
     /**
-     * `writePowersOfTwo` mit `n = 1` aufrufen und prüfen, dass die Zahl 1
+     * <code>writePowersOfTwo</code> mit <code>n = 1</code> aufrufen und prüfen, dass die Zahl 1
      * geschrieben wird.
      */
     @Order(2)
@@ -39,8 +39,8 @@ public class WritePowersOfTwoTest {
     }
 
     /**
-     * `writePowersOfTwo` mit verschiedenen `n` aufrufen und prüfen, dass die
-     * ersten `n` Zweierpotenzen geschrieben werden.
+     * <code>writePowersOfTwo</code> mit verschiedenen <code>n</code> aufrufen und prüfen, dass die
+     * ersten <code>n</code> Zweierpotenzen geschrieben werden.
      */
     @Order(3)
     @Test
@@ -85,7 +85,7 @@ public class WritePowersOfTwoTest {
     }
 
     /**
-     * Prüfen, dass `writePowersOfTwo` den übergebenen OutputStream schliesst.
+     * Prüfen, dass <code>writePowersOfTwo</code> den übergebenen OutputStream schliesst.
      */
     @Order(4)
     @Test

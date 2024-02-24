@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class ExtractNumbersTest {
 
     /**
-     * `extractNumbers` mit einem leeren Text aufrufen und prüfen, dass eine
+     * <code>extractNumbers</code> mit einem leeren Text aufrufen und prüfen, dass eine
      * leere Liste zurückgegeben wird.
      */
     @Order(1)
@@ -28,7 +28,7 @@ public class ExtractNumbersTest {
     }
 
     /**
-     * `extractNumbers` mit einem Text aufrufen, der keine Zahlen enthält, und
+     * <code>extractNumbers</code> mit einem Text aufrufen, der keine Zahlen enthält, und
      * prüfen, dass eine leere Liste zurückgegeben wird.
      */
     @Order(2)
@@ -45,7 +45,7 @@ public class ExtractNumbersTest {
     }
 
     /**
-     * `extractNumbers` mit einem Text aufrufen, der ganze Zahlen enthält, und
+     * <code>extractNumbers</code> mit einem Text aufrufen, der ganze Zahlen enthält, und
      * prüfen, dass die Zahlen in der richtigen Reihenfolge zurückgegeben
      * werden.
      */
@@ -62,7 +62,7 @@ public class ExtractNumbersTest {
     }
 
     /**
-     * `extractNumbers` mit einem Text aufrufen, der reelle Zahlen enthält, und
+     * <code>extractNumbers</code> mit einem Text aufrufen, der reelle Zahlen enthält, und
      * prüfen, dass die Zahlen in der richtigen Reihenfolge zurückgegeben
      * werden.
      */
@@ -79,7 +79,7 @@ public class ExtractNumbersTest {
     }
 
     /**
-     * `extractNumbers` mit einem Text aufrufen, der negative Zahlen enthält,
+     * <code>extractNumbers</code> mit einem Text aufrufen, der negative Zahlen enthält,
      * und prüfen, dass die Zahlen in der richtigen Reihenfolge zurückgegeben
      * werden.
      */
@@ -96,7 +96,7 @@ public class ExtractNumbersTest {
     }
 
     /**
-     * Prüfen, dass `extractNumbers` den übergebenen InputStream schliesst.
+     * Prüfen, dass <code>extractNumbers</code> den übergebenen InputStream schliesst.
      */
     @Order(6)
     @Test

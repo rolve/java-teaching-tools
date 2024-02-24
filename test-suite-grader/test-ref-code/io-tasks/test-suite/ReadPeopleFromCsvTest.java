@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ReadPeopleFromCsvTest {
 
     /**
-     * `readPeopleFromCsv` mit einem Text aufrufen, der nur den Header enthält,
+     * <code>readPeopleFromCsv</code> mit einem Text aufrufen, der nur den Header enthält,
      * und prüfen, dass eine leere Liste zurückgegeben wird.
      */
     @Order(1)
@@ -29,7 +29,7 @@ public class ReadPeopleFromCsvTest {
     }
 
     /**
-     * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
+     * <code>readPeopleFromCsv</code> mit einem Text aufrufen, der mehrere Zeilen enthält,
      * und prüfen, dass die Anzahl der zurückgegebenen Personen stimmt.
      */
     @Order(2)
@@ -52,7 +52,7 @@ public class ReadPeopleFromCsvTest {
     }
 
     /**
-     * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
+     * <code>readPeopleFromCsv</code> mit einem Text aufrufen, der mehrere Zeilen enthält,
      * und prüfen, dass die Namen der zurückgegebenen Personen stimmen.
      */
     @Order(3)
@@ -69,7 +69,7 @@ public class ReadPeopleFromCsvTest {
     }
 
     /**
-     * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
+     * <code>readPeopleFromCsv</code> mit einem Text aufrufen, der mehrere Zeilen enthält,
      * und prüfen, dass die Altersangaben stimmen.
      */
     @Order(4)
@@ -86,7 +86,7 @@ public class ReadPeopleFromCsvTest {
     }
 
     /**
-     * `readPeopleFromCsv` mit einem Text aufrufen, der mehrere Zeilen enthält,
+     * <code>readPeopleFromCsv</code> mit einem Text aufrufen, der mehrere Zeilen enthält,
      * und prüfen, dass die "positiv"-Angaben stimmen.
      */
     @Order(5)
@@ -103,7 +103,7 @@ public class ReadPeopleFromCsvTest {
     }
 
     /**
-     * `readPeopleFromCsv` mit einem Text aufrufen, der nicht-ASCII-Zeichen
+     * <code>readPeopleFromCsv</code> mit einem Text aufrufen, der nicht-ASCII-Zeichen
      * enthält, und prüfen, dass die Namen der zurückgegebenen Personen richtig
      * decodiert werden.
      */
@@ -121,7 +121,7 @@ public class ReadPeopleFromCsvTest {
     }
 
     /**
-     * Prüfen, dass `readPeopleFromCsv` den übergebenen InputStream schliesst.
+     * Prüfen, dass <code>readPeopleFromCsv</code> den übergebenen InputStream schliesst.
      */
     @Order(7)
     @Test
