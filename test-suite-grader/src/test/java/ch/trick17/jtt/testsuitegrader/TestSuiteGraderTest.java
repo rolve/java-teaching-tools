@@ -100,15 +100,12 @@ public class TestSuiteGraderTest {
                            result.mutantResults().stream().anyMatch(r -> !r.passed());
                 case totalTests -> result.mutantResults().stream().allMatch(r -> r.passed());
             });
-
-            assertEquals(1.0, result.refImplementationScore(), 0.001);
             assertEquals(expectedScore, result.mutantScore(), 0.001);
-            assertEquals(expectedScore, result.totalScore(), 0.001);
         }
     }
 
     @Test
-    void suggestions() throws IOException {
+    void refTestDescriptions() throws IOException {
         var refTestSuite = refTestSuite("io-tasks");
         var task = grader.prepareTask(refImplementations("io-tasks"), refTestSuite);
         var desc = task.refTestDescriptions();

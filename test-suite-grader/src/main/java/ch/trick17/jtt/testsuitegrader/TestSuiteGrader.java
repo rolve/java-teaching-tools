@@ -23,11 +23,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Stream;
 
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 
 public class TestSuiteGrader implements Closeable {
@@ -241,27 +242,33 @@ public class TestSuiteGrader implements Closeable {
                 .withCurrent();
         var compileResult = compile(JAVAC, submission.testSuite(), classPath, System.out);
         if (compileResult.errors()) {
-            return new Result(false, false, emptyList(), emptyList(), 0.0, 0.0, 0.0);
+            return new Result(false, false, emptyList(), emptyList(), emptyList(), emptySet(), 0.0);
         } else if (compileResult.output().isEmpty()) {
-            return new Result(true, true, emptyList(), emptyList(), 0.0, 0.0, 0.0);
+            return new Result(true, true, emptyList(), emptyList(), emptyList(), emptySet(), 0.0);
         }
         var testSuite = compileResult.output();
         var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
 
         var refResults = new ArrayList<RefImplementationResult>();
+        List<TestMethod> allTests = null;
+        var incorrectTests = new HashSet<TestMethod>();
         for (var impl : task.refImplementations()) {
             var testResults = testRunner.run(
                     new TestRunner.Task(testClassNames,
                             ClassPath.fromMemory(impl).withMemory(testSuite),
                             ClassPath.fromFiles(dependencies).withCurrent())).testResults();
             if (testResults.isEmpty()) {
-                return new Result(true, true, emptyList(), emptyList(), 1.0, 0.0, 0.0);
+                return new Result(true, true, emptyList(), emptyList(), allTests, incorrectTests, 0.0);
             }
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .map(r -> r.method())
                     .toList();
             refResults.add(new RefImplementationResult(failedTests));
+            allTests = testResults.stream()
+                    .map(TestResult::method)
+                    .toList();
+            incorrectTests.addAll(failedTests);
         }
 
         var mutantResults = new ArrayList<MutantResult>();
@@ -283,22 +290,17 @@ public class TestSuiteGrader implements Closeable {
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .map(TestResult::method)
+                    .filter(not(incorrectTests::contains))
                     .toList();
             mutantResults.add(new MutantResult(mutation, failedTests));
         }
-
-        var survivedRefs = refResults.stream().filter(r -> r.passed()).count();
-        var refScore = (double) survivedRefs / task.refImplementations().size();
 
         var mutantScore = mutantResults.stream()
                 .filter(r -> !r.passed())
                 .mapToDouble(r -> r.mutation().weight())
                 .sum();
 
-        var totalScore = refScore * mutantScore;
-
-        return new Result(true, false, refResults, mutantResults,
-                refScore, mutantScore, totalScore);
+        return new Result(true, false, refResults, mutantResults, allTests, incorrectTests, mutantScore);
     }
 
     private GregorMutater createMutator(List<InMemClassFile> refImpl) {
@@ -355,16 +357,14 @@ public class TestSuiteGrader implements Closeable {
             boolean emptyTestSuite,
             List<RefImplementationResult> refImplementationResults,
             List<MutantResult> mutantResults,
-            double refImplementationScore,
-            double mutantScore,
-            double totalScore) {
+            List<TestMethod> allTests,
+            Set<TestMethod> incorrectTests,
+            double mutantScore) {
 
         public Result {
-            Stream.of(refImplementationScore, mutantScore, totalScore).forEach(score -> {
-                if (score < 0.0 || score > 1.0) {
-                    throw new IllegalArgumentException("invalid score: " + score);
-                }
-            });
+            if (mutantScore < 0.0 || mutantScore > 1.0) {
+                throw new IllegalArgumentException("invalid mutant score: " + mutantScore);
+            }
         }
     }
 }
