@@ -241,9 +241,9 @@ public class TestSuiteGrader implements Closeable {
                 .withCurrent();
         var compileResult = compile(JAVAC, submission.testSuite(), classPath, System.out);
         if (compileResult.errors()) {
-            return new Result(false, false, emptyList(), emptyList(), null, null, null);
+            return new Result(false, false, emptyList(), emptyList(), 0.0, 0.0, 0.0);
         } else if (compileResult.output().isEmpty()) {
-            return new Result(true, true, emptyList(), emptyList(), null, null, null);
+            return new Result(true, true, emptyList(), emptyList(), 0.0, 0.0, 0.0);
         }
         var testSuite = compileResult.output();
         var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
@@ -355,13 +355,13 @@ public class TestSuiteGrader implements Closeable {
             boolean emptyTestSuite,
             List<RefImplementationResult> refImplementationResults,
             List<MutantResult> mutantResults,
-            Double refImplementationScore,
-            Double mutantScore,
-            Double totalScore) {
+            double refImplementationScore,
+            double mutantScore,
+            double totalScore) {
 
         public Result {
             Stream.of(refImplementationScore, mutantScore, totalScore).forEach(score -> {
-                if (score != null && (score < 0.0 || score > 1.0)) {
+                if (score < 0.0 || score > 1.0) {
                     throw new IllegalArgumentException("invalid score: " + score);
                 }
             });
