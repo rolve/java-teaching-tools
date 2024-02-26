@@ -140,8 +140,8 @@ public class ForkedVmClient implements Closeable {
                 } else if (result instanceof ThrownException e) {
                     rethrow(e.exception(), call);
                 }
-            } catch (IOException e) { // includes IOExceptions from the server
-                if (e instanceof JacksonException || tries == CONNECT_TRIES) {
+            } catch (IOException | OutOfMemoryError e) { // includes exceptions from the server
+                if (tries == CONNECT_TRIES) {
                     throw e;
                 } // else try again
             }
@@ -179,7 +179,7 @@ public class ForkedVmClient implements Closeable {
         exception.setStackTrace(trace.toArray(StackTraceElement[]::new));
     }
 
-    private void killForkedVm() {
+    private synchronized void killForkedVm() {
         if (forkedVm != null && forkedVm.isAlive()) {
             forkedVm.destroyForcibly();
         }
