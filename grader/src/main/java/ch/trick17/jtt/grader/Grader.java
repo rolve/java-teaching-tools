@@ -39,7 +39,15 @@ import static java.util.stream.Collectors.toCollection;
 
 public class Grader implements Closeable {
 
-    private final TestRunner testRunner = new TestRunner();
+    private final TestRunner testRunner;
+
+    public Grader() {
+        this(new TestRunner());
+    }
+
+    public Grader(TestRunner testRunner) {
+        this.testRunner = testRunner;
+    }
 
     public Result grade(Task task, Submission subm) throws IOException {
         return grade(task, subm, System.out);

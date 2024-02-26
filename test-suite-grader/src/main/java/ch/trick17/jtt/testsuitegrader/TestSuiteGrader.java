@@ -36,7 +36,15 @@ import static java.util.stream.Collectors.*;
 
 public class TestSuiteGrader implements Closeable {
 
-    TestRunner testRunner = new TestRunner();
+    private final TestRunner testRunner;
+
+    public TestSuiteGrader() {
+        this(new TestRunner());
+    }
+
+    public TestSuiteGrader(TestRunner testRunner) {
+        this.testRunner = testRunner;
+    }
 
     public Task prepareTask(List<List<InMemSource>> refImplementations,
                             List<InMemSource> refTestSuite) throws IOException {
