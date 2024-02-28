@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
 
+import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static java.util.Collections.emptyList;
@@ -256,11 +257,12 @@ public class TestSuiteGrader implements Closeable {
         var classPath = ClassPath.fromMemory(task.refImplementations().get(0))
                 .withFiles(dependencies)
                 .withCurrent();
-        var compileResult = compile(JAVAC, submission.testSuite(), classPath, System.out);
-        if (compileResult.errors()) {
-            return new Result(false, false, emptyList(), emptyList(), emptyList(), emptySet(), 0.0);
-        } else if (compileResult.output().isEmpty()) {
-            return new Result(true, true, emptyList(), emptyList(), emptyList(), emptySet(), 0.0);
+        if (submission.testSuite.isEmpty()) {
+            return new Result(true, false, emptyList(), emptyList(), emptyList(), emptySet(), 0.0);
+        }
+        var compileResult = compile(ECLIPSE, submission.testSuite, classPath, System.out);
+        if (compileResult.errors() && compileResult.output().isEmpty()) {
+            return new Result(false, true, emptyList(), emptyList(), emptyList(), emptySet(), 0.0);
         }
         var testSuite = compileResult.output();
         var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
@@ -318,7 +320,7 @@ public class TestSuiteGrader implements Closeable {
                 .mapToDouble(r -> r.mutation().weight())
                 .sum();
 
-        return new Result(true, false, refResults, mutantResults, allTests, incorrectTests, mutantScore);
+        return new Result(false, false, refResults, mutantResults, allTests, incorrectTests, mutantScore);
     }
 
     private GregorMutater createMutator(List<InMemClassFile> refImpl) {
@@ -371,8 +373,8 @@ public class TestSuiteGrader implements Closeable {
     }
 
     public record Result(
-            boolean compiled,
             boolean emptyTestSuite,
+            boolean compilationFailed,
             List<RefImplementationResult> refImplementationResults,
             List<MutantResult> mutantResults,
             List<TestMethod> allTests,

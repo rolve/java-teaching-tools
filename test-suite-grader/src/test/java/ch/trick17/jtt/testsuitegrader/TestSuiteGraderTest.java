@@ -36,8 +36,8 @@ public class TestSuiteGraderTest {
 
         // the reference test suite should let all reference implementations
         // pass and, by definition, none of the mutants
-        assertTrue(result.compiled());
         assertFalse(result.emptyTestSuite());
+        assertFalse(result.compilationFailed());
         assertTrue(result.refImplementationResults().stream().allMatch(r -> r.passed()));
         assertTrue(result.mutantResults().stream().noneMatch(r -> r.passed()));
     }
