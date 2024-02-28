@@ -40,16 +40,27 @@ import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.r
 public class TestRunner implements Closeable {
 
     private ForkedVmClient forkedVm;
+    private final List<String> vmArgs;
+
+    public TestRunner() {
+        this(emptyList());
+    }
+
+    public TestRunner(List<String> vmArgs) {
+        this.vmArgs = vmArgs;
+    }
 
     public Result run(Task task) throws IOException {
         if (System.getProperties().containsKey("test-runner.noFork")) {
             return doRun(task);
         } else {
-            if (forkedVm == null || !forkedVm.getVmArgs().equals(task.vmArgs())) {
+            var allVmArgs = new ArrayList<>(vmArgs);
+            allVmArgs.addAll(task.vmArgs);
+            if (forkedVm == null || !forkedVm.getVmArgs().equals(allVmArgs)) {
                 if (forkedVm != null) {
                     forkedVm.close();
                 }
-                forkedVm = new ForkedVmClient(task.vmArgs(), List.of(TestRunnerJacksonModule.class));
+                forkedVm = new ForkedVmClient(allVmArgs, List.of(TestRunnerJacksonModule.class));
             }
             return forkedVm.runInForkedVm(TestRunner.class, "doRun",
                     List.of(task), Result.class);

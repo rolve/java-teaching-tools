@@ -5,7 +5,6 @@ import ch.trick17.javaprocesses.util.LineCopier;
 import ch.trick17.javaprocesses.util.LineWriterAdapter;
 import ch.trick17.jtt.testrunner.forkedvm.Result.ReturnedValue;
 import ch.trick17.jtt.testrunner.forkedvm.Result.ThrownException;
-import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
