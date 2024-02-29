@@ -61,7 +61,7 @@ public class IOTasks {
      * <p>
      * Tipp: Verwenden Sie die Scanner-Klasse.
      */
-    public static List<Double> extractNumbers(InputStream in) throws IOException {
+    public static List<Double> extractNumbers(InputStream in) {
         try (var scanner = new Scanner(in, UTF_8)) {
             var numbers = new ArrayList<Double>();
             while (scanner.hasNext()) {
