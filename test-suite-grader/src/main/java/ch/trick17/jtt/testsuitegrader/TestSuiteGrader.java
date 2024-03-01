@@ -29,7 +29,6 @@ import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
 import static java.util.Comparator.comparingInt;
 import static java.util.Map.Entry.comparingByKey;
 import static java.util.function.Predicate.not;
@@ -258,11 +257,11 @@ public class TestSuiteGrader implements Closeable {
                 .withFiles(dependencies)
                 .withCurrent();
         if (submission.testSuite.isEmpty()) {
-            return new Result(true, false, emptyList(), emptyList(), emptyList(), emptySet(), 0.0);
+            return new Result(true, false, emptyList(), emptyList(), emptyList(), 0.0);
         }
         var compileResult = compile(ECLIPSE, submission.testSuite, classPath, System.out);
         if (compileResult.errors() && compileResult.output().isEmpty()) {
-            return new Result(false, true, emptyList(), emptyList(), emptyList(), emptySet(), 0.0);
+            return new Result(false, true, emptyList(), emptyList(), emptyList(), 0.0);
         }
         var testSuite = compileResult.output();
         var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
@@ -276,9 +275,6 @@ public class TestSuiteGrader implements Closeable {
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support, 1,
                     Duration.ofSeconds(2), Duration.ofSeconds(5), null, emptyList());
             var testResults = testRunner.run(testRun).testResults();
-            if (testResults.isEmpty()) {
-                return new Result(true, true, emptyList(), emptyList(), allTests, incorrectTests, 0.0);
-            }
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .map(r -> r.method())
@@ -320,7 +316,7 @@ public class TestSuiteGrader implements Closeable {
                 .mapToDouble(r -> r.mutation().weight())
                 .sum();
 
-        return new Result(false, false, refResults, mutantResults, allTests, incorrectTests, mutantScore);
+        return new Result(false, false, refResults, mutantResults, allTests, mutantScore);
     }
 
     private GregorMutater createMutator(List<InMemClassFile> refImpl) {
@@ -378,13 +374,18 @@ public class TestSuiteGrader implements Closeable {
             List<RefImplementationResult> refImplementationResults,
             List<MutantResult> mutantResults,
             List<TestMethod> allTests,
-            Set<TestMethod> incorrectTests,
             double mutantScore) {
 
         public Result {
             if (mutantScore < 0.0 || mutantScore > 1.0) {
                 throw new IllegalArgumentException("invalid mutant score: " + mutantScore);
             }
+        }
+
+        public Set<TestMethod> incorrectTests() {
+            return refImplementationResults.stream()
+                    .flatMap(r -> r.failedTests().stream())
+                    .collect(toSet());
         }
     }
 }
