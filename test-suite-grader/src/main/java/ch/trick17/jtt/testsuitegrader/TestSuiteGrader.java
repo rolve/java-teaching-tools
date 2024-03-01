@@ -354,9 +354,19 @@ public class TestSuiteGrader implements Closeable {
             }
         }
 
-        public static Submission loadFrom(Path testDir) throws IOException {
-            try (var walk = Files.walk(testDir)) {
+        /**
+         * Loads a submission containing all Java files in the given directory, matching the given
+         * package filter. The filter is a prefix of the package name, e.g. "ch.trick17" to only
+         * include classes in that package and its subpackages. If the filter is null, all classes
+         * are included.
+         */
+        public static Submission loadFrom(Path testDir, String packageFilter) throws IOException {
+            var root = packageFilter == null
+                    ? testDir
+                    : testDir.resolve(packageFilter.replace('.', '/'));
+            try (var walk = Files.walk(root)) {
                 var javaFiles = walk
+                        .filter(Files::isRegularFile)
                         .filter(p -> p.getFileName().toString().endsWith(".java"))
                         .toList();
                 var testSuite = new ArrayList<InMemSource>();
