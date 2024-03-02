@@ -277,13 +277,12 @@ public class TestSuiteGrader implements Closeable {
             var testResults = testRunner.run(testRun).testResults();
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
-                    .map(r -> r.method())
-                    .toList();
+                    .collect(toMap(r -> r.method(), r -> r.exceptions()));
             refResults.add(new RefImplementationResult(failedTests));
             allTests = testResults.stream()
                     .map(TestResult::method)
                     .toList();
-            incorrectTests.addAll(failedTests);
+            incorrectTests.addAll(failedTests.keySet());
         }
 
         var mutantResults = new ArrayList<MutantResult>();
@@ -394,7 +393,7 @@ public class TestSuiteGrader implements Closeable {
 
         public Set<TestMethod> incorrectTests() {
             return refImplementationResults.stream()
-                    .flatMap(r -> r.failedTests().stream())
+                    .flatMap(r -> r.failedTests().keySet().stream())
                     .collect(toSet());
         }
     }
