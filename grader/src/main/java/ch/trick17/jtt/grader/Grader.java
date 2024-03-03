@@ -39,6 +39,12 @@ import static java.util.stream.Collectors.toCollection;
 
 public class Grader implements Closeable {
 
+    private static final Path DEFAULT_SOURCE_DIR = Path.of("src/test/java").toAbsolutePath();
+    private static final int DEFAULT_REPETITIONS = 7;
+    private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
+    private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
+    private static final List<String> DEFAULT_TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
+
     private final TestRunner testRunner;
 
     public Grader() {
@@ -111,12 +117,12 @@ public class Grader implements Closeable {
         var supportCode = ClassPath.fromMemory(testClasses)
                 .withFiles(task.dependencies())
                 .withCurrent();
-        var config = new TestRunner.Task(task.testClassNames(),
+        var testRunnerTask = new TestRunner.Task(task.testClassNames(),
                 ClassPath.fromMemory(classes), supportCode,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permittedCalls(), task.testVmArgs());
 
-        var results = testRunner.run(config).testResults();
+        var results = testRunner.run(testRunnerTask).testResults();
 
         var failMsgs = results.stream()
                 .flatMap(r -> r.exceptions().stream())
@@ -157,12 +163,6 @@ public class Grader implements Closeable {
     }
 
     public static class Task {
-
-        private static final Path DEFAULT_SOURCE_DIR = Path.of("src/test/java").toAbsolutePath();
-        private static final int DEFAULT_REPETITIONS = 7;
-        private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
-        private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
-        private static final List<String> DEFAULT_TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
 
         private final List<InMemSource> testSources;
         private final List<InMemSource> givenSources;

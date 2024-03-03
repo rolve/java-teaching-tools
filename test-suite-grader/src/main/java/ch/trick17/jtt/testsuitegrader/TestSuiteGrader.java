@@ -36,6 +36,11 @@ import static java.util.stream.Collectors.*;
 
 public class TestSuiteGrader implements Closeable {
 
+    private static final int REPETITIONS = 1;
+    private static final Duration REP_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration TEST_TIMEOUT = Duration.ofSeconds(5);
+    private static final List<String> TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
+
     private final TestRunner testRunner;
 
     public TestSuiteGrader() {
@@ -272,8 +277,8 @@ public class TestSuiteGrader implements Closeable {
         for (var impl : task.refImplementations()) {
             var sandboxed = ClassPath.fromMemory(impl).withMemory(testSuite);
             var support = ClassPath.fromFiles(dependencies).withCurrent();
-            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, 1,
-                    Duration.ofSeconds(2), Duration.ofSeconds(5), null, emptyList());
+            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, REPETITIONS,
+                    REP_TIMEOUT, TEST_TIMEOUT, null, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
@@ -299,8 +304,8 @@ public class TestSuiteGrader implements Closeable {
 
             var sandboxed = ClassPath.fromMemory(classes).withMemory(testSuite);
             var support = ClassPath.fromFiles(dependencies).withCurrent();
-            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, 1,
-                    Duration.ofSeconds(2), Duration.ofSeconds(5), null, emptyList());
+            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, REPETITIONS,
+                    REP_TIMEOUT, TEST_TIMEOUT, null, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
