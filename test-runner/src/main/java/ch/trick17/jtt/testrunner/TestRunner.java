@@ -12,6 +12,7 @@ import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
+import org.slf4j.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -29,6 +30,7 @@ import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
 import static ch.trick17.jtt.sandbox.Sandbox.Result.Kind.*;
 import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Double.parseDouble;
+import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyList;
@@ -36,8 +38,11 @@ import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
+import static org.slf4j.LoggerFactory.getLogger;
 
 public class TestRunner implements Closeable {
+
+    private static final Logger logger = getLogger(TestRunner.class);
 
     private ForkedVmClient forkedVm;
     private final List<String> vmArgs;
@@ -60,10 +65,10 @@ public class TestRunner implements Closeable {
                 if (forkedVm != null) {
                     forkedVm.close();
                 }
+                logger.info("Forking test runner VM with args: {}", join(" ", allVmArgs));
                 forkedVm = new ForkedVmClient(allVmArgs, List.of(TestRunnerJacksonModule.class));
             }
-            return forkedVm.runInForkedVm(TestRunner.class, "doRun",
-                    List.of(task), Result.class);
+            return forkedVm.runInForkedVm(TestRunner.class, "doRun", List.of(task), Result.class);
         }
     }
 
