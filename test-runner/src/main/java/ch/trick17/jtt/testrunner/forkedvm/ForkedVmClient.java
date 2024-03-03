@@ -21,6 +21,7 @@ import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Collections.emptyList;
 import static java.util.List.copyOf;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 
 public class ForkedVmClient implements Closeable {
@@ -180,7 +181,12 @@ public class ForkedVmClient implements Closeable {
 
     private synchronized void killForkedVm() {
         if (forkedVm != null && forkedVm.isAlive()) {
-            forkedVm.destroyForcibly();
+            forkedVm.destroy();
+            try {
+                forkedVm.waitFor(1, SECONDS);
+            } catch (InterruptedException e) {
+                forkedVm.destroyForcibly();
+            }
         }
     }
 
