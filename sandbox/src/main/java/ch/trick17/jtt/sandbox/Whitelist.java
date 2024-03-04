@@ -179,6 +179,8 @@ public interface Whitelist {
                 java.io.Closeable.*
                 java.io.InputStream.*
                 java.io.OutputStream.*
+                java.io.ByteArrayInputStream.*
+                java.io.ByteArrayOutputStream.*
                 java.io.PrintStream.print
                 java.io.PrintStream.printf
                 java.io.PrintStream.println
@@ -208,6 +210,60 @@ public interface Whitelist {
                 java.nio.file.Path.equals
                 java.nio.file.Path.hashCode
                 java.nio.file.Path.toString
+                
+                java.time.Clock.*
+                java.time.DateTimeException.*
+                java.time.DayOfWeek.*
+                java.time.Duration.*
+                java.time.Instant.*
+                java.time.InstantSource.*
+                java.time.LocalDate.*
+                java.time.LocalDateTime.*
+                java.time.LocalTime.*
+                java.time.Month.*
+                java.time.MonthDay.*
+                java.time.OffsetDateTime.*
+                java.time.OffsetTime.*
+                java.time.Period.*
+                java.time.Year.*
+                java.time.YearMonth.*
+                java.time.ZonedDateTime.*
+                java.time.ZoneId.*
+                java.time.ZoneOffset.*
+                
+                java.time.format.DateTimeFormatter.*
+                java.time.format.DateTimeFormatterBuilder.*
+                java.time.format.DateTimeParseException.*
+                java.time.format.DateTimeParseException.*
+                java.time.format.DecimalStyle.*
+                java.time.format.FormatStyle.*
+                java.time.format.ResolverStyle.*
+                java.time.format.SignStyle.*
+                java.time.format.TextStyle.*
+                
+                java.time.temporal.ChronoField.*
+                java.time.temporal.ChronoUnit.*
+                java.time.temporal.IsoFields.*
+                java.time.temporal.JulianFields.*
+                java.time.temporal.Temporal.*
+                java.time.temporal.TemporalAccessor.*
+                java.time.temporal.TemporalAdjuster.*
+                java.time.temporal.TemporalAdjusters.*
+                java.time.temporal.TemporalAmount.*
+                java.time.temporal.TemporalField.*
+                java.time.temporal.TemporalQueries.*
+                java.time.temporal.TemporalQuery.*
+                java.time.temporal.TemporalUnit.*
+                java.time.temporal.UnsupportedTemporalTypeException.*
+                java.time.temporal.ValueRange.*
+                java.time.temporal.WeekFields.*
+                
+                java.time.zone.ZoneOffsetTransition.*
+                java.time.zone.ZoneOffsetTransitionRule.*
+                java.time.zone.ZoneOffsetTransitionRule$TimeDefinition.*
+                java.time.zone.ZoneRules.*
+                java.time.zone.ZoneRulesException.*
+                java.time.zone.ZoneRulesProvider.*
                 """;
 
     static Whitelist getDefault() {
