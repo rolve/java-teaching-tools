@@ -16,7 +16,7 @@ public class SimpleWhitelist implements Whitelist {
     public SimpleWhitelist(String whitelistDef) {
         entries = whitelistDef.lines()
                 .map(String::trim)
-                .filter(line -> !line.isEmpty())
+                .filter(line -> !line.isEmpty() && !line.startsWith("#"))
                 .map(line -> {
                     var paramsIndex = line.indexOf('(');
                     var classNameMember = paramsIndex == -1 ? line : line.substring(0, paramsIndex);
