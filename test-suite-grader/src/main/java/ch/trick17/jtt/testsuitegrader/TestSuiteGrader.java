@@ -28,6 +28,9 @@ import java.util.*;
 import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
+import static ch.trick17.jtt.sandbox.Whitelist.DEFAULT_WHITELIST_DEF;
+import static ch.trick17.jtt.testsuitegrader.TestSuiteWhitelists.JUNIT5_DEF;
+import static ch.trick17.jtt.testsuitegrader.TestSuiteWhitelists.SAFE_REFLECTION_DEF;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparingInt;
 import static java.util.Map.Entry.comparingByKey;
@@ -39,6 +42,7 @@ public class TestSuiteGrader implements Closeable {
     private static final int REPETITIONS = 1;
     private static final Duration REP_TIMEOUT = Duration.ofSeconds(2);
     private static final Duration TEST_TIMEOUT = Duration.ofSeconds(5);
+    private static final String WHITELIST = DEFAULT_WHITELIST_DEF + JUNIT5_DEF + SAFE_REFLECTION_DEF;
     private static final List<String> TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
 
     private final TestRunner testRunner;
@@ -278,7 +282,7 @@ public class TestSuiteGrader implements Closeable {
             var sandboxed = ClassPath.fromMemory(impl).withMemory(testSuite);
             var support = ClassPath.fromFiles(dependencies).withCurrent();
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support, REPETITIONS,
-                    REP_TIMEOUT, TEST_TIMEOUT, null, TEST_VM_ARGS);
+                    REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
@@ -305,7 +309,7 @@ public class TestSuiteGrader implements Closeable {
             var sandboxed = ClassPath.fromMemory(classes).withMemory(testSuite);
             var support = ClassPath.fromFiles(dependencies).withCurrent();
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support, REPETITIONS,
-                    REP_TIMEOUT, TEST_TIMEOUT, null, TEST_VM_ARGS);
+                    REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
