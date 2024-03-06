@@ -167,7 +167,7 @@ public class Grader implements Closeable {
         private final List<InMemSource> testSources;
         private final List<InMemSource> givenSources;
 
-        private ch.trick17.jtt.memcompile.Compiler compiler = ECLIPSE;
+        private Compiler compiler = ECLIPSE;
         private int repetitions = DEFAULT_REPETITIONS;
         private Duration repTimeout = DEFAULT_REP_TIMEOUT;
         private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
