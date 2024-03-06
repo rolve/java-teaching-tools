@@ -10,7 +10,6 @@ import ch.trick17.jtt.testrunner.TestRunner;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -27,13 +26,10 @@ import static java.io.File.separatorChar;
 import static java.lang.String.valueOf;
 import static java.lang.String.*;
 import static java.lang.System.getProperty;
-import static java.nio.file.Files.list;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Collections.*;
-import static java.util.Comparator.comparing;
 import static java.util.List.copyOf;
-import static java.util.Objects.requireNonNull;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toCollection;
 
@@ -98,11 +94,18 @@ public class Grader implements Closeable {
                                  List<InMemClassFile> classes,
                                  List<InMemClassFile> testClasses,
                                  PrintStream out) throws IOException {
-        var supportCode = ClassPath.fromMemory(testClasses)
-                .withFiles(task.dependencies())
-                .withCurrent();
+        ClassPath sandboxedCode;
+        ClassPath supportCode;
+        if (task.restrictTests) {
+            sandboxedCode = ClassPath.fromMemory(classes).withMemory(testClasses);
+            supportCode = ClassPath.fromFiles(task.dependencies()).withCurrent();
+        } else {
+            sandboxedCode = ClassPath.fromMemory(classes);
+            supportCode = ClassPath.fromMemory(testClasses)
+                    .withFiles(task.dependencies()).withCurrent();
+        }
         var testRunnerTask = new TestRunner.Task(task.testClassNames(),
-                ClassPath.fromMemory(classes), supportCode,
+                sandboxedCode, supportCode,
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permittedCalls(), task.testVmArgs());
 
@@ -156,6 +159,7 @@ public class Grader implements Closeable {
         private Duration repTimeout = DEFAULT_REP_TIMEOUT;
         private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
         private String permittedCalls = Whitelist.DEFAULT_WHITELIST_DEF;
+        private boolean restrictTests = false;
         private List<Path> dependencies = emptyList();
         private List<String> testVmArgs = DEFAULT_TEST_VM_ARGS;
 
@@ -279,6 +283,15 @@ public class Grader implements Closeable {
         }
 
         /**
+         * Defines whether the whitelist of permitted method/constructor calls applies also
+         * to the tests. The default is <code>false</code>.
+         */
+        public Task restrictTests(boolean restrictTests) {
+            this.restrictTests = restrictTests;
+            return this;
+        }
+
+        /**
          * Sets the given list of paths (to JAR files or directories) as the
          * dependencies that will be added to the class path for compilation and
          * test execution, in addition to the class path of the current JVM.
@@ -354,6 +367,10 @@ public class Grader implements Closeable {
 
         public String permittedCalls() {
             return permittedCalls;
+        }
+
+        public boolean restrictTests() {
+            return restrictTests;
         }
 
         public List<Path> dependencies() {
