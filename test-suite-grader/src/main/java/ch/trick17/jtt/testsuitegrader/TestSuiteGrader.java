@@ -39,10 +39,11 @@ import static java.util.stream.Collectors.*;
 
 public class TestSuiteGrader implements Closeable {
 
+    public static final String WHITELIST = DEFAULT_WHITELIST_DEF + JUNIT5_DEF + SAFE_REFLECTION_DEF;
+
     private static final int REPETITIONS = 1;
     private static final Duration REP_TIMEOUT = Duration.ofSeconds(2);
     private static final Duration TEST_TIMEOUT = Duration.ofSeconds(5);
-    private static final String WHITELIST = DEFAULT_WHITELIST_DEF + JUNIT5_DEF + SAFE_REFLECTION_DEF;
     private static final List<String> TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
 
     private final TestRunner testRunner;
