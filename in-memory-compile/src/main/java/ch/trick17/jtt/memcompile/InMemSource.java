@@ -6,9 +6,11 @@ import com.github.javaparser.ast.CompilationUnit;
 
 import javax.tools.SimpleJavaFileObject;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_17;
@@ -51,11 +53,25 @@ public class InMemSource extends SimpleJavaFileObject {
         return new InMemSource(path, readString(file));
     }
 
-    public static InMemSource fromFileUnchecked(Path file, Path sourceDir) {
-        try {
-            return fromFile(file, sourceDir);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+    /**
+     * Loads all Java files in the given directory (or subdirectories), matching the given package
+     * filter. The filter is a prefix of the package name, e.g. "ch.trick17" to only include classes
+     * in that package and its subpackages. If the filter is null, all classes are included.
+     */
+    public static List<InMemSource> fromDirectory(Path dir, String packageFilter) throws IOException {
+        var root = packageFilter == null
+                ? dir
+                : dir.resolve(packageFilter.replace('.', '/'));
+        try (var walk = Files.walk(root)) {
+            var javaFiles = walk
+                    .filter(Files::isRegularFile)
+                    .filter(p -> p.getFileName().toString().endsWith(".java"))
+                    .toList();
+            var sources = new ArrayList<InMemSource>();
+            for (var file : javaFiles) {
+                sources.add(InMemSource.fromFile(file, dir));
+            }
+            return sources;
         }
     }
 

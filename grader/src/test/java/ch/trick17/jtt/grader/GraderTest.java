@@ -1,7 +1,9 @@
 package ch.trick17.jtt.grader;
 
-import ch.trick17.jtt.grader.Grader.Submission;
+import ch.trick17.jtt.grader.Grader.Task;
+import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.testrunner.TestMethod;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -19,18 +21,25 @@ public class GraderTest {
     static final Path TEST_SRC_DIR = Path.of("tests");
     static final Path SUBM_ROOT = Path.of("test-submissions");
 
-    static final Submission correct = new Submission("correct",
-            SUBM_ROOT.resolve("eclipse-structure/correct/src"));
-    static final Submission failsTest = new Submission("fails-test",
-            SUBM_ROOT.resolve("eclipse-structure/fails-test/src"));
-    static final Submission compileError = new Submission("compile-error",
-            SUBM_ROOT.resolve("eclipse-structure/compile-error/src"));
+    static List<InMemSource> correct;
+    static List<InMemSource> failsTest;
+    static List<InMemSource> compileError;
+    static Grader grader;
 
-    static Grader grader = new Grader();
+    @BeforeAll
+    static void setup() throws IOException {
+        correct = InMemSource.fromDirectory(
+                SUBM_ROOT.resolve("eclipse-structure/correct/src"), null);
+        failsTest = InMemSource.fromDirectory(
+                SUBM_ROOT.resolve("eclipse-structure/fails-test/src"), null);
+        compileError = InMemSource.fromDirectory(
+                SUBM_ROOT.resolve("eclipse-structure/compile-error/src"), null);
+        grader = new Grader();
+    }
 
     @Test
     void results() throws IOException {
-        var task = Grader.Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
+        var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
 
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
@@ -52,7 +61,7 @@ public class GraderTest {
 
     @Test
     void noTests() throws IOException {
-        var task = Grader.Task.fromClassName("NoTests", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("NoTests", TEST_SRC_DIR).compiler(ECLIPSE);
         var result = grader.grade(task, correct);
         assertEquals(emptyList(), result.passedTests());
         assertEquals(emptyList(), result.failedTests());
@@ -60,7 +69,7 @@ public class GraderTest {
 
     @Test
     void nestedTestClasses() throws IOException {
-        var task = Grader.Task.fromClassName("NestedTestClass", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("NestedTestClass", TEST_SRC_DIR).compiler(ECLIPSE);
         var allTests = List.of(
                 new TestMethod("NestedTestClass.MultiplyTest", "multiply1"),
                 new TestMethod("NestedTestClass.MultiplyTest", "multiply2")); // note alphabetical order
@@ -76,7 +85,7 @@ public class GraderTest {
 
     @Test
     void assumptions() throws IOException {
-        var task = Grader.Task.fromClassName("TestWithAssumption", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("TestWithAssumption", TEST_SRC_DIR).compiler(ECLIPSE);
         var result = grader.grade(task, correct);
         assertTrue(result.testResultFor("normal").passed());
         assertFalse(result.testResultFor("failedAssumption").passed());
@@ -84,7 +93,7 @@ public class GraderTest {
 
     @Test
     void disabled() throws IOException {
-        var task = Grader.Task.fromClassName("DisabledTest", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("DisabledTest", TEST_SRC_DIR).compiler(ECLIPSE);
         var result = grader.grade(task, correct);
         assertTrue(result.testResultFor("normal").passed());
         assertTrue(result.testResultFor("disabled").passed());
@@ -94,7 +103,7 @@ public class GraderTest {
 
     @Test
     void score() throws IOException {
-        var task = Grader.Task.fromClassName("TestWithScore", TEST_SRC_DIR)
+        var task = Task.fromClassName("TestWithScore", TEST_SRC_DIR)
                 .compiler(ECLIPSE)
                 .repetitions(20);
 

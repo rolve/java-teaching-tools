@@ -1,8 +1,8 @@
 package ch.trick17.jtt.grader;
 
 import ch.trick17.jtt.grader.Grader.Result;
-import ch.trick17.jtt.grader.Grader.Submission;
 import ch.trick17.jtt.grader.Grader.Task;
+import ch.trick17.jtt.memcompile.InMemSource;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import java.io.*;
@@ -19,11 +19,15 @@ import java.util.function.BiConsumer;
 
 import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
+import static java.nio.file.Files.list;
 import static java.time.LocalDateTime.now;
+import static java.util.Comparator.comparing;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.ForkJoinPool.getCommonPoolParallelism;
 
 public class BatchGrader implements Closeable {
 
+    private static final Path DEFAULT_DIR = Path.of(".");
     public static final Path RESULTS_FILE = Path.of("results.tsv").toAbsolutePath();
 
     private static final DateTimeFormatter LOG_FORMAT =
@@ -36,7 +40,7 @@ public class BatchGrader implements Closeable {
     private final Grader grader = new Grader();
 
     public BatchGrader() {
-        this(Path.of("."), Path.of("."));
+        this(DEFAULT_DIR, DEFAULT_DIR);
     }
 
     public BatchGrader(Path logDir, Path resultsDir) {
@@ -73,13 +77,17 @@ public class BatchGrader implements Closeable {
             var i = new AtomicInteger(0);
 
             BiConsumer<Submission, PrintStream> gradeSubm = (subm, submOut) -> {
-                submOut.println("Grading " + subm.name());
+                submOut.println("Grading " + subm.name);
                 try {
                     for (var task : tasks) {
                         if (tasks.size() > 1) {
                             submOut.println(join(", ", task.testClassNames()));
                         }
-                        var res = grader.grade(task, subm, submOut);
+
+                        var sources = Files.isDirectory(subm.srcDir)
+                                ? InMemSource.fromDirectory(subm.srcDir, null)
+                                : List.<InMemSource>of();
+                        var res = grader.grade(task, sources, submOut);
                         results.get(task).put(subm, res);
                     }
                 } catch (IOException e) {
@@ -116,10 +124,9 @@ public class BatchGrader implements Closeable {
     }
 
     /**
-     * Like a normal try-finally, but with the superior exception handling of a
-     * try-with-resources, i.e., does not suppress exceptions thrown from the
-     * try block. Note that {@link Closeable} is used simply as a functional
-     * interface here (i.e. a Runnable that can throw IOException)
+     * Like a normal try-finally, but with the superior exception handling of a try-with-resources,
+     * i.e., does not suppress exceptions thrown from the try block. Note that {@link Closeable} is
+     * used simply as a functional interface here (i.e. a Runnable that can throw IOException)
      */
     private void tryFinally(Closeable tryBlock, Closeable finallyBlock)
             throws IOException {
@@ -131,5 +138,48 @@ public class BatchGrader implements Closeable {
     @Override
     public void close() {
         grader.close();
+    }
+
+    public record Submission(String name, Path srcDir) {
+
+        public Submission {
+            name = requireNonNull(name);
+            srcDir = srcDir.toAbsolutePath().normalize();
+        }
+
+        /**
+         * Loads multiple submissions from a <code>root</code> directory. Each direct subdirectory
+         * in that directory is considered a submission. The source directory of each submission is
+         * determined by resolving
+         * <code>srcDir</code> (a relative path) against the submission directory.
+         * For example, given the following directory structure:
+         * <pre>
+         * /
+         *     submissions/
+         *         foo/
+         *             src/main/java/
+         *         bar/
+         *             src/main/java/
+         *         baz/
+         *             src/main/java/
+         * </pre>
+         * calling this method with "/submissions" as <code>root</code> and "src/main/java" as
+         * <code>srcDir</code>, this method would return a list containing three submissions, with
+         * names "bar", "baz", and "foo" (submissions are sorted by name) and source directories
+         * "/submissions/bar/src/main/java", "/submissions/baz/src/main/java", and
+         * "/submissions/foo/src/main/java".
+         */
+        public static List<Submission> loadAllFrom(Path root, Path srcDir) throws IOException {
+            if (srcDir.isAbsolute()) {
+                throw new IllegalArgumentException("srcDir must be a relative path");
+            }
+            try (var list = list(root)) {
+                return list
+                        .filter(Files::isDirectory)
+                        .map(dir -> new Submission(dir.getFileName().toString(), dir.resolve(srcDir)))
+                        .sorted(comparing(Submission::name))
+                        .toList();
+            }
+        }
     }
 }

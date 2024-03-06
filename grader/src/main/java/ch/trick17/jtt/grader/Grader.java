@@ -55,13 +55,12 @@ public class Grader implements Closeable {
         this.testRunner = testRunner;
     }
 
-    public Result grade(Task task, Submission subm) throws IOException {
-        return grade(task, subm, System.out);
+    public Result grade(Task task, List<InMemSource> sources) throws IOException {
+        return grade(task, sources, System.out);
     }
 
-    public Result grade(Task task, Submission subm, PrintStream out)
+    public Result grade(Task task, List<InMemSource> sources, PrintStream out)
             throws IOException {
-        var sources = collectSources(subm.srcDir());
         for (var source : task.givenSources()) {
             sources.removeIf(s -> s.getPath().equals(source.getPath()));
             sources.add(source);
@@ -93,21 +92,6 @@ public class Grader implements Closeable {
         }
         return new Result(compileResult.errors(), testCompileResult.errors(),
                 compiled, testResults);
-    }
-
-    private static List<InMemSource> collectSources(Path srcDir) throws IOException {
-        if (!Files.isDirectory(srcDir)) {
-            return emptyList();
-        }
-        var sources = new ArrayList<InMemSource>();
-        try (var javaFiles = Files.walk(srcDir)
-                .filter(Files::isRegularFile)
-                .filter(p -> p.toString().endsWith(".java"))) {
-            for (var file : (Iterable<Path>) javaFiles::iterator) {
-                sources.add(InMemSource.fromFile(file, srcDir));
-            }
-        }
-        return sources;
     }
 
     private List<TestResult> runTests(Task task,
@@ -378,50 +362,6 @@ public class Grader implements Closeable {
 
         public List<String> testVmArgs() {
             return testVmArgs;
-        }
-    }
-
-    public record Submission(String name, Path srcDir) {
-
-        public Submission {
-            name = requireNonNull(name);
-            srcDir = srcDir.toAbsolutePath().normalize();
-        }
-
-        /**
-         * Loads multiple submissions from a <code>root</code> directory. Each
-         * direct subdirectory in that directory is considered a submission. The
-         * source directory of each submission is determined by resolving
-         * <code>srcDir</code> (a relative path) against the submission directory.
-         * For example, given the following directory structure:
-         * <pre>
-         * /
-         *     submissions/
-         *         foo/
-         *             src/main/java/
-         *         bar/
-         *             src/main/java/
-         *         baz/
-         *             src/main/java/
-         * </pre>
-         * calling this method with "/submissions" as <code>root</code> and
-         * "src/main/java" as <code>srcDir</code>, this method would return a list
-         * containing three submissions, with names "bar", "baz", and "foo"
-         * (submissions are sorted by name) and source directories
-         * "/submissions/bar/src/main/java", "/submissions/baz/src/main/java",
-         * and "/submissions/foo/src/main/java".
-         */
-        public static List<Submission> loadAllFrom(Path root, Path srcDir) throws IOException {
-            if (srcDir.isAbsolute()) {
-                throw new IllegalArgumentException("srcDir must be a relative path");
-            }
-            try (var list = list(root)) {
-                return list
-                        .filter(Files::isDirectory)
-                        .map(dir -> new Submission(dir.getFileName().toString(), dir.resolve(srcDir)))
-                        .sorted(comparing(Submission::name))
-                        .toList();
-            }
         }
     }
 

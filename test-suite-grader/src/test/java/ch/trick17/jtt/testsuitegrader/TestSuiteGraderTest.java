@@ -2,7 +2,6 @@ package ch.trick17.jtt.testsuitegrader;
 
 import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.testrunner.TestMethod;
-import ch.trick17.jtt.testsuitegrader.TestSuiteGrader.Submission;
 import ch.trick17.jtt.testsuitegrader.TestSuiteGrader.Task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,7 +31,7 @@ public class TestSuiteGraderTest {
         var refTestSuite = refTestSuite(name);
         var task = grader.prepareTask(refImplementations(name), refTestSuite);
 
-        var result = grader.grade(task, new Submission(refTestSuite));
+        var result = grader.grade(task, refTestSuite);
 
         // the reference test suite should let all reference implementations
         // pass and, by definition, none of the mutants
@@ -91,7 +90,7 @@ public class TestSuiteGraderTest {
             }
 
             var testSuite = List.of(InMemSource.fromString(reducedTestClass));
-            var result = grader.grade(task, new Submission(testSuite));
+            var result = grader.grade(task, testSuite);
 
             assertTrue(result.refImplementationResults().stream().allMatch(r -> r.passed()));
             assertTrue(switch (missingTests) {

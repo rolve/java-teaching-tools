@@ -257,33 +257,34 @@ public class TestSuiteGrader implements Closeable {
         return result;
     }
 
-    public Result grade(Task task, Submission submission) throws IOException {
-        return grade(task, submission, emptyList());
+    public Result grade(Task task, List<InMemSource> testSuite) throws IOException {
+        return grade(task, testSuite, emptyList());
     }
 
-    public Result grade(Task task, Submission submission, List<Path> dependencies) throws IOException {
+    public Result grade(Task task, List<InMemSource> testSuite, List<Path> dependencies) throws IOException {
         var classPath = ClassPath.fromMemory(task.refImplementations().get(0))
                 .withFiles(dependencies)
                 .withCurrent();
-        if (submission.testSuite.isEmpty()) {
+        if (testSuite.isEmpty()) {
             return new Result(true, false, emptyList(), emptyList(), emptyList(), 0.0);
         }
-        var compileResult = compile(ECLIPSE, submission.testSuite, classPath, System.out);
+        var compileResult = compile(ECLIPSE, testSuite, classPath, System.out);
         if (compileResult.errors() && compileResult.output().isEmpty()) {
             return new Result(false, true, emptyList(), emptyList(), emptyList(), 0.0);
         }
-        var testSuite = compileResult.output();
-        var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
+        var compiledSuite = compileResult.output();
+        var testClassNames = compiledSuite.stream().map(f -> f.getClassName()).toList();
 
         var refResults = new ArrayList<RefImplementationResult>();
         List<TestMethod> allTests = null;
         var incorrectTests = new HashSet<TestMethod>();
         for (var impl : task.refImplementations()) {
-            var sandboxed = ClassPath.fromMemory(impl).withMemory(testSuite);
+            var sandboxed = ClassPath.fromMemory(impl).withMemory(compiledSuite);
             var support = ClassPath.fromFiles(dependencies).withCurrent();
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support, REPETITIONS,
                     REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
+            // TODO: collect timeouts, out of mem & illegal ops
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .collect(toMap(r -> r.method(), r -> r.exceptions()));
@@ -306,11 +307,12 @@ public class TestSuiteGrader implements Closeable {
             var classes = new ArrayList<>(refImpl);
             classes.set(classIndex, new InMemClassFile(className, mutated));
 
-            var sandboxed = ClassPath.fromMemory(classes).withMemory(testSuite);
+            var sandboxed = ClassPath.fromMemory(classes).withMemory(compiledSuite);
             var support = ClassPath.fromFiles(dependencies).withCurrent();
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support, REPETITIONS,
                     REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
+            // TODO: collect timeouts, out of mem & illegal ops
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .map(TestResult::method)
@@ -352,37 +354,6 @@ public class TestSuiteGrader implements Closeable {
 
         public List<InMemClassFile> refImplementationFor(Mutation mutation) {
             return refImplementations.get(mutation.refImplementationIndex());
-        }
-    }
-
-    public record Submission(List<InMemSource> testSuite) {
-        public Submission {
-            if (testSuite.isEmpty()) {
-                throw new IllegalArgumentException("empty test suite");
-            }
-        }
-
-        /**
-         * Loads a submission containing all Java files in the given directory, matching the given
-         * package filter. The filter is a prefix of the package name, e.g. "ch.trick17" to only
-         * include classes in that package and its subpackages. If the filter is null, all classes
-         * are included.
-         */
-        public static Submission loadFrom(Path testDir, String packageFilter) throws IOException {
-            var root = packageFilter == null
-                    ? testDir
-                    : testDir.resolve(packageFilter.replace('.', '/'));
-            try (var walk = Files.walk(root)) {
-                var javaFiles = walk
-                        .filter(Files::isRegularFile)
-                        .filter(p -> p.getFileName().toString().endsWith(".java"))
-                        .toList();
-                var testSuite = new ArrayList<InMemSource>();
-                for (var file : javaFiles) {
-                    testSuite.add(InMemSource.fromFile(file, testDir));
-                }
-                return new Submission(testSuite);
-            }
         }
     }
 

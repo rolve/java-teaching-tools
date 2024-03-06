@@ -1,7 +1,7 @@
 package ch.trick17.jtt.grader;
 
+import ch.trick17.jtt.grader.BatchGrader.Submission;
 import ch.trick17.jtt.grader.Grader.Result;
-import ch.trick17.jtt.grader.Grader.Submission;
 import ch.trick17.jtt.grader.Grader.Task;
 
 import java.io.IOException;
