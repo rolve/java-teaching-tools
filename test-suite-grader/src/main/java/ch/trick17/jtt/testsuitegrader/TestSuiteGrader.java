@@ -101,8 +101,9 @@ public class TestSuiteGrader implements Closeable {
             }
             for (var result : refResults) {
                 if (!result.passed()) {
-                    throw new IllegalArgumentException("Reference implementation " + (i + 1)
-                                                       + " failed test " + result.method(), result.exceptions().get(0));
+                    throw new IllegalArgumentException("Reference implementation " + (i + 1) +
+                                                       " failed test " + result.method() + ": " +
+                                                       result.exceptions().get(0));
                 }
             }
 

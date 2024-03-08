@@ -5,7 +5,7 @@ import java.util.List;
 public record TestResult(
         TestMethod method,
         boolean passed,
-        List<Throwable> exceptions,
+        List<ExceptionDescription> exceptions,
         boolean nonDeterm,
         int repsMade,
         boolean incompleteReps,

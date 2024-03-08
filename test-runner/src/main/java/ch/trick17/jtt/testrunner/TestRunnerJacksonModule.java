@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.opentest4j.AssertionFailedError;
-import org.opentest4j.ValueWrapper;
 
 import java.io.IOException;
 
@@ -25,8 +23,6 @@ public class TestRunnerJacksonModule extends SimpleModule {
         context.setMixInAnnotations(Throwable.class, ThrowableMixin.class);
         context.setMixInAnnotations(StackTraceElement.class, StackTraceElementMixin.class);
         context.setMixInAnnotations(ClassNotFoundException.class, ClassNotFoundExceptionMixin.class);
-        context.setMixInAnnotations(AssertionFailedError.class, AssertionFailedErrorMixin.class);
-        context.setMixInAnnotations(ValueWrapper.class, ValueWrapperMixin.class);
     }
 
     @JsonSerialize(using = TestMethodSerializer.class, keyUsing = TestMethodKeySerializer.class)
@@ -87,24 +83,5 @@ public class TestRunnerJacksonModule extends SimpleModule {
         public ClassNotFoundExceptionMixin(
                 @JsonProperty("message") String message,
                 @JsonProperty("cause") Throwable cause) {}
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class AssertionFailedErrorMixin {
-        // see above
-        @JsonCreator
-        public AssertionFailedErrorMixin(
-                @JsonProperty("message") String message,
-                @JsonProperty("cause") Throwable cause) {}
-    }
-
-    @JsonIncludeProperties({"value", "stringRepresentation"})
-    public static class ValueWrapperMixin {
-        @JsonCreator
-        public static ValueWrapperMixin create(
-                @JsonProperty("value") Object o,
-                @JsonProperty("stringRepresentation") String s) {
-            return null;
-        }
     }
 }

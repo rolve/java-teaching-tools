@@ -2,7 +2,6 @@ package ch.trick17.jtt.testrunner.forkedvm;
 
 import ch.trick17.jtt.testrunner.TestRunnerJacksonModule;
 import org.junit.jupiter.api.Test;
-import org.opentest4j.AssertionFailedError;
 
 import java.io.IOException;
 import java.util.List;
@@ -56,16 +55,6 @@ public class ForkedVmClientTest {
         }
     }
 
-    @Test
-    void assertionFailedError() {
-        try (var client = new ForkedVmClient(emptyList(), List.of(TestRunnerJacksonModule.class))) {
-            var e = assertThrows(AssertionFailedError.class, () -> {
-                client.runInForkedVm(TestCode.class, "greeting5", emptyList(), Void.class);
-            });
-            assertEquals("expected: <3> but was: <2>", e.getMessage());
-        }
-    }
-
     public static class TestCode {
         public static String greeting1() {
             return "Hello, World!";
@@ -85,10 +74,6 @@ public class ForkedVmClientTest {
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("'number' is not an int", e);
             }
-        }
-
-        public static void greeting5() {
-            assertEquals(3, 1 + 1);
         }
     }
 

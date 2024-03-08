@@ -16,8 +16,6 @@ import org.slf4j.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.NotSerializableException;
-import java.io.ObjectOutputStream;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +27,6 @@ import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
 import static ch.trick17.jtt.sandbox.Sandbox.Result.Kind.*;
-import static java.io.OutputStream.nullOutputStream;
 import static java.lang.Double.parseDouble;
 import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
@@ -104,7 +101,7 @@ public class TestRunner implements Closeable {
 
                 var passed = false;
                 var failed = false;
-                var exceptions = new ArrayList<Throwable>();
+                var exceptions = new ArrayList<ExceptionDescription>();
                 var repsMade = task.repetitions();
                 var timeout = false;
                 var outOfMemory = false;
@@ -134,7 +131,8 @@ public class TestRunner implements Closeable {
                             passed = true;
                         } else {
                             failed = true;
-                            exceptions.add((Throwable) junitResult.get("exception"));
+                            var exception = (Throwable) junitResult.get("exception");
+                            exceptions.add(ExceptionDescription.of(exception));
                         }
                         if (junitResult.get("score") != null) {
                             scores.add((Double) junitResult.get("score"));
@@ -156,16 +154,6 @@ public class TestRunner implements Closeable {
                         method.getMethodName());
                 methodResults.add(new TestResult(testMethod, passed, exceptions, nonDeterm,
                         repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
-
-                // workaround for NoClassDefFoundError when serializing some
-                // exceptions after the sandbox and the associated class loaders
-                // have been closed:
-                if (!exceptions.isEmpty()) {
-                    try {
-                        var out = new ObjectOutputStream(nullOutputStream());
-                        out.writeObject(exceptions);
-                    } catch (NotSerializableException ignored) {}
-                }
             }
             return new Result(methodResults);
         }
