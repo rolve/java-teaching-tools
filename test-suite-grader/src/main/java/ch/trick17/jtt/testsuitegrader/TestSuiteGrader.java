@@ -290,7 +290,7 @@ public class TestSuiteGrader implements Closeable {
         var compiledSuite = compileResult.output();
         var testClassNames = compiledSuite.stream().map(f -> f.getClassName()).toList();
 
-        var refResults = new ArrayList<RefImplementationResult>();
+        var refResults = new ArrayList<TestResult>();
         List<TestMethod> allTests = null;
         var incorrectTests = new HashSet<TestMethod>();
         for (var impl : task.refImplementations()) {
@@ -299,15 +299,14 @@ public class TestSuiteGrader implements Closeable {
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support, GRADE_REPETITIONS,
                     REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
-            // TODO: collect timeouts, out of mem & illegal ops
-            var failedTests = testResults.stream()
-                    .filter(r -> !r.passed())
-                    .collect(toMap(r -> r.method(), r -> r.exceptions()));
-            refResults.add(new RefImplementationResult(failedTests));
+            refResults.addAll(testResults);
+
             allTests = testResults.stream()
                     .map(TestResult::method)
                     .toList();
-            incorrectTests.addAll(failedTests.keySet());
+            testResults.stream()
+                    .filter(r -> !r.passed())
+                    .forEach(r -> incorrectTests.add(r.method()));
         }
 
         var mutantResults = new ArrayList<MutantResult>();
@@ -327,7 +326,7 @@ public class TestSuiteGrader implements Closeable {
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support, GRADE_REPETITIONS,
                     REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
-            // TODO: collect timeouts, out of mem & illegal ops
+            // TODO: Do we need to collect more info (timeouts, etc.) here as well?
             var failedTests = testResults.stream()
                     .filter(r -> !r.passed())
                     .map(TestResult::method)
@@ -375,7 +374,7 @@ public class TestSuiteGrader implements Closeable {
     public record Result(
             boolean emptyTestSuite,
             boolean compilationFailed,
-            List<RefImplementationResult> refImplementationResults,
+            List<TestResult> refImplementationResults,
             List<MutantResult> mutantResults,
             List<TestMethod> allTests,
             double mutantScore) {
@@ -388,7 +387,8 @@ public class TestSuiteGrader implements Closeable {
 
         public Set<TestMethod> incorrectTests() {
             return refImplementationResults.stream()
-                    .flatMap(r -> r.failedTests().keySet().stream())
+                    .filter(r -> !r.passed())
+                    .map(TestResult::method)
                     .collect(toSet());
         }
     }
