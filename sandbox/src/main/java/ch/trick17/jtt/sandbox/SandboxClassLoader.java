@@ -144,8 +144,7 @@ public class SandboxClassLoader extends InMemClassLoader {
                     !sandboxedClassNames.contains(cls) &&
                     !permittedCalls.methodPermitted(cls, method, paramTypes)) {
                     var params = "(" + join(",", paramTypes) + ")";
-                    m.replace(createThrows(
-                            "Illegal call: " + cls + "." + method + params));
+                    m.replace(createThrows(cls + "." + method + params));
                 }
             } catch (BadBytecode e) {
                 throw new CannotCompileException(e);
@@ -163,8 +162,7 @@ public class SandboxClassLoader extends InMemClassLoader {
                 if (!sandboxedClassNames.contains(cls) &&
                     !permittedCalls.constructorPermitted(cls, paramTypes)) {
                     var params = "(" + join(",", paramTypes) + ")";
-                    e.replace(createThrows(
-                            "Illegal constructor call: new " + cls + params));
+                    e.replace(createThrows("new " + cls + params));
                 }
             } catch (BadBytecode bb) {
                 throw new CannotCompileException(bb);
