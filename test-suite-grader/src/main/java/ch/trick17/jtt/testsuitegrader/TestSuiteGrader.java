@@ -20,7 +20,6 @@ import org.pitest.mutationtest.engine.gregor.config.Mutator;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
@@ -41,7 +40,8 @@ public class TestSuiteGrader implements Closeable {
 
     public static final String WHITELIST = DEFAULT_WHITELIST_DEF + JUNIT5_DEF + SAFE_REFLECTION_DEF;
 
-    private static final int REPETITIONS = 1;
+    private static final int PREPARE_REPETITIONS = 1;
+    private static final int GRADE_REPETITIONS = 1;
     private static final Duration REP_TIMEOUT = Duration.ofSeconds(2);
     private static final Duration TEST_TIMEOUT = Duration.ofSeconds(5);
     private static final List<String> TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
@@ -92,10 +92,11 @@ public class TestSuiteGrader implements Closeable {
                 .toList();
         for (int i = 0; i < compiledImplementations.size(); i++) {
             var refImpl = compiledImplementations.get(i);
-            var refResults = testRunner.run(
-                    new TestRunner.Task(testClassNames,
-                            ClassPath.fromMemory(refImpl).withMemory(compiledSuite),
-                            ClassPath.fromFiles(dependencies).withCurrent())).testResults();
+            var sandboxed = ClassPath.fromMemory(refImpl).withMemory(compiledSuite);
+            var support = ClassPath.fromFiles(dependencies).withCurrent();
+            var testRun = new TestRunner.Task(testClassNames, sandboxed, support,
+                    PREPARE_REPETITIONS, REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
+            var refResults = testRunner.run(testRun).testResults();
             if (i == 0) {
                 refResults.forEach(r -> tests.add(r.method()));
             }
@@ -170,10 +171,22 @@ public class TestSuiteGrader implements Closeable {
         for (int j = 0; j < mutants.size(); j++) {
             var mutant = mutants.get(j);
             try {
-                var mutantResults = testRunner.run(new TestRunner.Task(
-                        testClassNames,
-                        ClassPath.fromMemory(mutant.classes()).withMemory(testSuite),
-                        ClassPath.fromFiles(dependencies).withCurrent())).testResults();
+                var sandboxed = ClassPath.fromMemory(mutant.classes()).withMemory(testSuite);
+                var support = ClassPath.fromFiles(dependencies).withCurrent();
+                var testRun = new TestRunner.Task(testClassNames, sandboxed, support,
+                        PREPARE_REPETITIONS, REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
+                var mutantResults = testRunner.run(testRun).testResults();
+
+                var nonDeterministic = mutantResults.stream()
+                        .filter(r -> r.nonDeterm())
+                        .map(TestResult::method)
+                        .toList();
+                if (!nonDeterministic.isEmpty()) {
+                    System.err.println("  Warning: Mutant " + (j + 1) +
+                                       " produced non-deterministic test results" +
+                                       " (" + mutant.getDescription() + ")");
+                }
+
                 var failedTests = mutantResults.stream()
                         .filter(r -> !r.passed())
                         .map(TestResult::method)
@@ -283,7 +296,7 @@ public class TestSuiteGrader implements Closeable {
         for (var impl : task.refImplementations()) {
             var sandboxed = ClassPath.fromMemory(impl).withMemory(compiledSuite);
             var support = ClassPath.fromFiles(dependencies).withCurrent();
-            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, REPETITIONS,
+            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, GRADE_REPETITIONS,
                     REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
             // TODO: collect timeouts, out of mem & illegal ops
@@ -311,7 +324,7 @@ public class TestSuiteGrader implements Closeable {
 
             var sandboxed = ClassPath.fromMemory(classes).withMemory(compiledSuite);
             var support = ClassPath.fromFiles(dependencies).withCurrent();
-            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, REPETITIONS,
+            var testRun = new TestRunner.Task(testClassNames, sandboxed, support, GRADE_REPETITIONS,
                     REP_TIMEOUT, TEST_TIMEOUT, WHITELIST, TEST_VM_ARGS);
             var testResults = testRunner.run(testRun).testResults();
             // TODO: collect timeouts, out of mem & illegal ops
