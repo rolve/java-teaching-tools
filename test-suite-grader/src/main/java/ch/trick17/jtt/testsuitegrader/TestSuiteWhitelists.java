@@ -3,16 +3,99 @@ package ch.trick17.jtt.testsuitegrader;
 public class TestSuiteWhitelists {
 
     public static final String JUNIT5_DEF = """
-                org.junit.jupiter.api.Assertions.*
-                org.junit.jupiter.api.Assertions.TimeoutFailureFactory.*
-                org.junit.jupiter.api.Assumptions.*
-                
-                org.junit.jupiter.api.function.Executable.*
-                org.junit.jupiter.api.function.ThrowingConsumer.*
-                org.junit.jupiter.api.function.ThrowingSupplier.*
-                
-                org.opentest4j.AssertionFailedError.*
-                """;
+            org.junit.jupiter.api.Assertions.*
+            org.junit.jupiter.api.Assertions.TimeoutFailureFactory.*
+            org.junit.jupiter.api.Assumptions.*
+            
+            org.junit.jupiter.api.function.Executable.*
+            org.junit.jupiter.api.function.ThrowingConsumer.*
+            org.junit.jupiter.api.function.ThrowingSupplier.*
+            
+            org.opentest4j.AssertionFailedError.*
+            """;
+
+    public static final String MOCKITO_DEF = """
+            org.mockito.Mockito.mock
+            org.mockito.Mockito.mockingDetails
+            org.mockito.Mockito.mockConstructionWithAnswer
+            org.mockito.Mockito.mockConstruction
+            org.mockito.Mockito.spy
+            org.mockito.Mockito.when
+            org.mockito.Mockito.verify
+            org.mockito.Mockito.reset
+            org.mockito.Mockito.clearInvocations
+            org.mockito.Mockito.verifyNoMoreInteractions
+            org.mockito.Mockito.verifyZeroInteractions
+            org.mockito.Mockito.verifyNoInteractions
+            org.mockito.Mockito.doThrow
+            org.mockito.Mockito.doCallRealMethod
+            org.mockito.Mockito.doAnswer
+            org.mockito.Mockito.doNothing
+            org.mockito.Mockito.doReturn
+            org.mockito.Mockito.inOrder
+            org.mockito.Mockito.ignoreStubs
+            org.mockito.Mockito.times
+            org.mockito.Mockito.never
+            org.mockito.Mockito.atLeastOnce
+            org.mockito.Mockito.atLeast
+            org.mockito.Mockito.atMostOnce
+            org.mockito.Mockito.atMost
+            org.mockito.Mockito.calls
+            org.mockito.Mockito.only
+            org.mockito.Mockito.withSettings
+            org.mockito.Mockito.description
+            org.mockito.Mockito.lenient
+            
+            org.mockito.ArgumentCaptor.*
+            org.mockito.ArgumentMatcher.*
+            org.mockito.ArgumentMatchers.*
+            org.mockito.MockedConstruction.*
+            org.mockito.MockedConstruction$Context.*
+            org.mockito.MockedConstruction$MockInitializer.*
+            org.mockito.MockingDetails.*
+            org.mockito.MockSettings.*
+            org.mockito.InOrder.*
+            org.mockito.ScopedMock.*
+            
+            org.mockito.mock.MockCreationSettings.*
+            org.mockito.mock.MockName.*
+            org.mockito.mock.SerializableMode.*
+            
+            org.mockito.stubbing.Answer.*
+            org.mockito.stubbing.Answer1.*
+            org.mockito.stubbing.Answer2.*
+            org.mockito.stubbing.Answer3.*
+            org.mockito.stubbing.Answer4.*
+            org.mockito.stubbing.Answer5.*
+            org.mockito.stubbing.Answer6.*
+            org.mockito.stubbing.BaseStubber.*
+            org.mockito.stubbing.LenientStubber.*
+            org.mockito.stubbing.OngoingStubbing.*
+            org.mockito.stubbing.Stubber.*
+            org.mockito.stubbing.Stubbing.*
+            org.mockito.stubbing.ValidableAnswer.*
+            org.mockito.stubbing.VoidAnswer1.*
+            org.mockito.stubbing.VoidAnswer2.*
+            org.mockito.stubbing.VoidAnswer3.*
+            org.mockito.stubbing.VoidAnswer4.*
+            org.mockito.stubbing.VoidAnswer5.*
+            org.mockito.stubbing.VoidAnswer6.*
+            
+            org.mockito.listeners.InvocationListener.*
+            org.mockito.listeners.MethodInvocationReport.*
+            org.mockito.listeners.MockCreationListener.*
+            org.mockito.listeners.MockitoListener.*
+            org.mockito.listeners.StubbingLookupEvent.*
+            org.mockito.listeners.StubbingLookupListener.*
+            org.mockito.listeners.VerificationListener.*
+            org.mockito.listeners.VerificationStartedEvent.*
+            org.mockito.listeners.VerificationStartedListener.*
+            
+            org.mockito.verification.After.*
+            org.mockito.verification.VerificationEvent.*
+            org.mockito.verification.VerificationMode.*
+            org.mockito.verification.VerificationStrategy.*
+            """;
 
     public static final String SAFE_REFLECTION_DEF = """
             java.lang.Class.isInstance
@@ -87,7 +170,7 @@ public class TestSuiteWhitelists {
             java.lang.reflect.AnnotatedElement.*
             java.lang.reflect.Executable.*
             java.lang.reflect.Modifier.*
-                        
+            
             java.lang.reflect.AccessibleObject.isAccessible
             java.lang.reflect.AccessibleObject.canAccess
             java.lang.reflect.AccessibleObject.getAnnotation

@@ -28,8 +28,7 @@ import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static ch.trick17.jtt.sandbox.Whitelist.DEFAULT_WHITELIST_DEF;
-import static ch.trick17.jtt.testsuitegrader.TestSuiteWhitelists.JUNIT5_DEF;
-import static ch.trick17.jtt.testsuitegrader.TestSuiteWhitelists.SAFE_REFLECTION_DEF;
+import static ch.trick17.jtt.testsuitegrader.TestSuiteWhitelists.*;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparingInt;
 import static java.util.Map.Entry.comparingByKey;
@@ -38,7 +37,10 @@ import static java.util.stream.Collectors.*;
 
 public class TestSuiteGrader implements Closeable {
 
-    public static final String WHITELIST = DEFAULT_WHITELIST_DEF + JUNIT5_DEF + SAFE_REFLECTION_DEF;
+    public static final String WHITELIST = DEFAULT_WHITELIST_DEF +
+                                           JUNIT5_DEF +
+                                           MOCKITO_DEF +
+                                           SAFE_REFLECTION_DEF;
 
     private static final int PREPARE_REPETITIONS = 1;
     private static final int GRADE_REPETITIONS = 1;
