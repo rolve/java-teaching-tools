@@ -191,6 +191,33 @@ public interface Whitelist {
                 java.io.BufferedReader.*
                 java.io.BufferedWriter.*
                 
+                java.nio.Buffer.*
+                java.nio.BufferOverflowException.*
+                java.nio.BufferUnderflowException.*
+                java.nio.ByteBuffer.*
+                java.nio.ByteOrder.*
+                java.nio.CharBuffer.*
+                java.nio.DoubleBuffer.*
+                java.nio.FloatBuffer.*
+                java.nio.IntBuffer.*
+                java.nio.InvalidMarkException.*
+                java.nio.LongBuffer.*
+                java.nio.ReadOnlyBufferException.*
+                java.nio.ShortBuffer.*
+                
+                java.nio.charset.CharacterCodingException.*
+                java.nio.charset.Charset.*
+                java.nio.charset.CharsetDecoder.*
+                java.nio.charset.CharsetEncoder.*
+                java.nio.charset.CoderMalfunctionError.*
+                java.nio.charset.CoderResult.*
+                java.nio.charset.CodingErrorAction.*
+                java.nio.charset.IllegalCharsetNameException.*
+                java.nio.charset.MalformedInputException.*
+                java.nio.charset.StandardCharsets.*
+                java.nio.charset.UnmappableCharacterException.*
+                java.nio.charset.UnsupportedCharsetException.*
+                
                 java.nio.file.Path.of
                 java.nio.file.Path.isAbsolute
                 java.nio.file.Path.getRoot
