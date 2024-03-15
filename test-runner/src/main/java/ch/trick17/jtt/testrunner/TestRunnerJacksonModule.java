@@ -38,12 +38,7 @@ public class TestRunnerJacksonModule extends SimpleModule {
 
     public static class TestMethodDeserializer extends JsonDeserializer<TestMethod> {
         public TestMethod deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            var text = p.getText();
-            var lastDot = text.lastIndexOf('.');
-            if (lastDot == -1) {
-                throw new IllegalArgumentException("Invalid test method name (no dot): " + text);
-            }
-            return new TestMethod(text.substring(0, lastDot), text.substring(lastDot + 1));
+            return deserializeTestMethod(p.getText());
         }
     }
 
@@ -56,12 +51,17 @@ public class TestRunnerJacksonModule extends SimpleModule {
 
     public static class TestMethodKeyDeserializer extends KeyDeserializer {
         public TestMethod deserializeKey(String key, DeserializationContext context) {
-            var lastDot = key.lastIndexOf('.');
-            if (lastDot == -1) {
-                throw new IllegalArgumentException("Invalid test method name (no dot): " + key);
-            }
-            return new TestMethod(key.substring(0, lastDot), key.substring(lastDot + 1));
+            return deserializeTestMethod(key);
         }
+    }
+
+    private static TestMethod deserializeTestMethod(String string) {
+        var withoutParams = string.replaceAll("\\(.*\\)", "");
+        var methodDot = withoutParams.lastIndexOf('.');
+        if (methodDot == -1) {
+            throw new IllegalArgumentException("Invalid test method name (no dot): " + string);
+        }
+        return new TestMethod(string.substring(0, methodDot), string.substring(methodDot + 1));
     }
 
     @JsonIncludeProperties({"className", "content"})

@@ -36,7 +36,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 public class TestRunner implements Closeable {
 
-    private static final int MAX_RUNS_PER_VM = 100;
+    private static final int MAX_RUNS_PER_VM = 500;
 
     private static final Logger logger = getLogger(TestRunner.class);
 
