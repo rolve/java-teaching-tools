@@ -1,6 +1,7 @@
 package ch.trick17.jtt.testrunner;
 
 import java.util.List;
+import java.util.Objects;
 
 public record ExceptionDescription(
         String className,
@@ -22,5 +23,19 @@ public record ExceptionDescription(
     @Override
     public String toString() {
         return className + ": " + message;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        // only take className and message into account for now, so only one
+        // exception per class and message is reported in the test results
+        return o instanceof ExceptionDescription other
+               && className.equals(other.className)
+               && Objects.equals(message, other.message);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(className, message);
     }
 }

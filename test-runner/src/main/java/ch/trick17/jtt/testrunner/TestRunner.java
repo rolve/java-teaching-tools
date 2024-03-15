@@ -17,10 +17,7 @@ import org.slf4j.Logger;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
@@ -100,7 +97,7 @@ public class TestRunner implements Closeable {
 
                 var passed = false;
                 var failed = false;
-                var exceptions = new ArrayList<ExceptionDescription>();
+                var exceptions = new LinkedHashSet<ExceptionDescription>();
                 var repsMade = task.repetitions();
                 var timeout = false;
                 var outOfMemory = false;
@@ -156,7 +153,7 @@ public class TestRunner implements Closeable {
                         : "(" + method.getMethodParameterTypes() + ")";
                 var testMethod = new TestMethod(method.getClassName().replace('$', '.'),
                         method.getMethodName() + params);
-                methodResults.add(new TestResult(testMethod, passed, exceptions, nonDeterm,
+                methodResults.add(new TestResult(testMethod, passed, List.copyOf(exceptions), nonDeterm,
                         repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
             }
             return new Result(methodResults);
