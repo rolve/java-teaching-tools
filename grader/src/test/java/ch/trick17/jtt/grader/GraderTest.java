@@ -158,10 +158,6 @@ public class GraderTest {
         assertFalse(result.compileErrors());
         assertFalse(result.testCompileErrors());
         assertFalse(result.testResultFor("add(int)").passed());
-
-        result.testResults().stream()
-                .flatMap(r -> r.exceptions().stream())
-                .forEach(System.out::println);
     }
 
     @Test
@@ -182,5 +178,21 @@ public class GraderTest {
         assertEquals(2, result.testResults().size());
         assertFalse(result.testResultFor("add").passed());
         assertFalse(result.testResultFor("add(int)").passed());
+    }
+
+    @Test
+    void paramsMethodSource() throws IOException {
+        var task = Task.fromClassName("TestWithMethodSource", TEST_SRC_DIR).compiler(ECLIPSE);
+        var result = grader.grade(task, correct);
+        assertTrue(result.compiled());
+        assertFalse(result.compileErrors());
+        assertFalse(result.testCompileErrors());
+        assertTrue(result.testResultFor("add(int, int)").passed());
+
+        result = grader.grade(task, failsTest);
+        assertTrue(result.compiled());
+        assertFalse(result.compileErrors());
+        assertFalse(result.testCompileErrors());
+        assertFalse(result.testResultFor("add(int, int)").passed());
     }
 }
