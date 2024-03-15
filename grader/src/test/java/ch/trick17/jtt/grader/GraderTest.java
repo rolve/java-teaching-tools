@@ -143,4 +143,44 @@ public class GraderTest {
         assertFalse(result.testResultFor("withOrWithoutScore").passed());
         assertTrue(result.testResultFor("withOrWithoutScore").scores().isEmpty());
     }
+
+    @Test
+    void params() throws IOException {
+        var task = Task.fromClassName("TestWithParams", TEST_SRC_DIR).compiler(ECLIPSE);
+        var result = grader.grade(task, correct);
+        assertTrue(result.compiled());
+        assertFalse(result.compileErrors());
+        assertFalse(result.testCompileErrors());
+        assertTrue(result.testResultFor("add(int)").passed());
+
+        result = grader.grade(task, failsTest);
+        assertTrue(result.compiled());
+        assertFalse(result.compileErrors());
+        assertFalse(result.testCompileErrors());
+        assertFalse(result.testResultFor("add(int)").passed());
+
+        result.testResults().stream()
+                .flatMap(r -> r.exceptions().stream())
+                .forEach(System.out::println);
+    }
+
+    @Test
+    void testMethodOverloading() throws IOException {
+        var task = Task.fromClassName("TestWithOverloading", TEST_SRC_DIR).compiler(ECLIPSE);
+        var result = grader.grade(task, correct);
+        assertTrue(result.compiled());
+        assertFalse(result.compileErrors());
+        assertFalse(result.testCompileErrors());
+        assertEquals(2, result.testResults().size());
+        assertTrue(result.testResultFor("add").passed());
+        assertTrue(result.testResultFor("add(int)").passed());
+
+        result = grader.grade(task, failsTest);
+        assertTrue(result.compiled());
+        assertFalse(result.compileErrors());
+        assertFalse(result.testCompileErrors());
+        assertEquals(2, result.testResults().size());
+        assertFalse(result.testResultFor("add").passed());
+        assertFalse(result.testResultFor("add(int)").passed());
+    }
 }

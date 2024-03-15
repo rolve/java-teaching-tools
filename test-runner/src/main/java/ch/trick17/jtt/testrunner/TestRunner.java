@@ -32,7 +32,6 @@ import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyList;
-import static org.junit.platform.engine.TestDescriptor.Type.TEST;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
@@ -127,12 +126,14 @@ public class TestRunner implements Closeable {
                                 result.exception());
                     } else {
                         var junitResult = result.value();
-                        if (junitResult.get("exception") == null) {
+                        var newExceptions = (List<?>) junitResult.get("exceptions");
+                        if (newExceptions.isEmpty()) {
                             passed = true;
                         } else {
                             failed = true;
-                            var exception = (Throwable) junitResult.get("exception");
-                            exceptions.add(ExceptionDescription.of(exception));
+                            for (var e : newExceptions) {
+                                exceptions.add(ExceptionDescription.of((Throwable) e));
+                            }
                         }
                         if (junitResult.get("score") != null) {
                             scores.add((Double) junitResult.get("score"));
@@ -150,8 +151,11 @@ public class TestRunner implements Closeable {
                 passed &= !nonDeterm;
                 var incompleteReps = repsMade < task.repetitions();
 
+                var params = method.getMethodParameterTypes().isEmpty()
+                        ? ""
+                        : "(" + method.getMethodParameterTypes() + ")";
                 var testMethod = new TestMethod(method.getClassName().replace('$', '.'),
-                        method.getMethodName());
+                        method.getMethodName() + params);
                 methodResults.add(new TestResult(testMethod, passed, exceptions, nonDeterm,
                         repsMade, incompleteReps, timeout, outOfMemory, illegalOps, scores));
             }
@@ -182,8 +186,9 @@ public class TestRunner implements Closeable {
                 var testPlan = launcher.discover(classesReq.build());
                 return testPlan.getRoots().stream()
                         .flatMap(id -> testPlan.getDescendants(id).stream())
-                        .filter(id -> id.getType() == TEST)
-                        .map(id -> (MethodSource) id.getSource().orElseThrow())
+                        .flatMap(id -> id.getSource().stream())
+                        .filter(s -> s instanceof MethodSource)
+                        .map(s -> (MethodSource) s)
                         .toList();
             });
         }
@@ -192,21 +197,22 @@ public class TestRunner implements Closeable {
     @SuppressWarnings("unchecked")
     private static Sandbox.Result<Map<String, Object>> runSandboxed(
             MethodSource test, Sandbox sandbox) {
-        var args = List.of(test.getClassName(), test.getMethodName());
+        var args = List.of(test.getClassName(), test.getMethodName(), test.getMethodParameterTypes());
         var result = sandbox.run(Sandboxed.class, "run",
-                List.of(String.class, String.class), args, Map.class);
+                List.of(String.class, String.class, String.class), args, Map.class);
         return (Sandbox.Result<Map<String, Object>>) (Object) result;
     }
 
     public static class Sandboxed {
-        public static Map<String, Object> run(String className, String methodName) {
-            var sel = selectMethod(className, methodName);
+        public static Map<String, Object> run(String className, String methodName, String paramTypes) {
+            var sel = selectMethod(className, methodName, paramTypes);
             var req = request().selectors(sel).build();
             var listener = new TestExecutionListener() {
-                TestExecutionResult result;
+                final List<Throwable> exceptions = new ArrayList<>();
                 Double score;
 
                 public void reportingEntryPublished(TestIdentifier id, ReportEntry entry) {
+                    // TODO: how to handle scores for parameterized tests?
                     entry.getKeyValuePairs().entrySet().stream()
                             .filter(e -> e.getKey().equals(SCORE_KEY))
                             .map(e -> parseDouble(e.getValue()))
@@ -214,28 +220,27 @@ public class TestRunner implements Closeable {
                             .ifPresent(s -> score = s);
                 }
 
-                public void executionFinished(TestIdentifier id, TestExecutionResult res) {
-                    if (id.isTest()) {
-                        result = res;
+                public void executionFinished(TestIdentifier id, TestExecutionResult result) {
+                    // if the test method is parameterized, this is called multiple times
+                    if (id.isTest() && result.getThrowable().isPresent()) {
+                        exceptions.add(result.getThrowable().get());
                     }
                 }
             };
             LauncherFactory.create().execute(req, listener);
 
-            var exception = listener.result == null
-                    ? null // test was skipped
-                    : listener.result.getThrowable().orElse(null);
-
             // since JUnit catches the SecurityException, need to rethrow it
             // for the sandbox to record the illegal operation...
-            if (exception instanceof SecurityException) {
-                throw (SecurityException) exception;
+            for (var e : listener.exceptions) {
+                if (e instanceof SecurityException s) {
+                    throw s;
+                }
             }
 
             // can only transfer classes loaded by the bootstrap class loader
             // across sandbox boundary...
             var result = new HashMap<String, Object>();
-            result.put("exception", exception);
+            result.put("exceptions", listener.exceptions);
             result.put("score", listener.score);
             return result;
         }
