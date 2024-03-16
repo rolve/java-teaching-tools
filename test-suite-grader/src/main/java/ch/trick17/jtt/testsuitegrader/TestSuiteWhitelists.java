@@ -11,6 +11,8 @@ public class TestSuiteWhitelists {
             org.junit.jupiter.api.function.ThrowingConsumer.*
             org.junit.jupiter.api.function.ThrowingSupplier.*
             
+            org.junit.jupiter.params.provider.Arguments.*
+            
             org.opentest4j.AssertionFailedError.*
             """;
 
