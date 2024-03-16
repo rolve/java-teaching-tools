@@ -219,7 +219,7 @@ public class TestRunner implements Closeable {
 
                 public void executionFinished(TestIdentifier id, TestExecutionResult result) {
                     // if the test method is parameterized, this is called multiple times
-                    if (id.isTest() && result.getThrowable().isPresent()) {
+                    if (result.getThrowable().isPresent()) {
                         exceptions.add(result.getThrowable().get());
                     }
                 }
