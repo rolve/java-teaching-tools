@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
-import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
@@ -61,7 +60,7 @@ public class GraderTest {
 
     @Test
     void noTests() throws IOException {
-        var task = Task.fromClassName("NoTests", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("NoTests", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertEquals(emptyList(), result.passedTests());
         assertEquals(emptyList(), result.failedTests());
@@ -69,7 +68,7 @@ public class GraderTest {
 
     @Test
     void nestedTestClasses() throws IOException {
-        var task = Task.fromClassName("NestedTestClass", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("NestedTestClass", TEST_SRC_DIR);
         var allTests = List.of(
                 new TestMethod("NestedTestClass.MultiplyTest", "multiply1"),
                 new TestMethod("NestedTestClass.MultiplyTest", "multiply2")); // note alphabetical order
@@ -85,7 +84,7 @@ public class GraderTest {
 
     @Test
     void assumptions() throws IOException {
-        var task = Task.fromClassName("TestWithAssumption", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("TestWithAssumption", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertTrue(result.testResultFor("normal").passed());
         assertFalse(result.testResultFor("failedAssumption").passed());
@@ -93,7 +92,7 @@ public class GraderTest {
 
     @Test
     void disabled() throws IOException {
-        var task = Task.fromClassName("DisabledTest", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("DisabledTest", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertTrue(result.testResultFor("normal").passed());
         assertTrue(result.testResultFor("disabled").passed());
@@ -103,9 +102,7 @@ public class GraderTest {
 
     @Test
     void score() throws IOException {
-        var task = Task.fromClassName("TestWithScore", TEST_SRC_DIR)
-                .compiler(ECLIPSE)
-                .repetitions(20);
+        var task = Task.fromClassName("TestWithScore", TEST_SRC_DIR).repetitions(20);
 
         // "correct" passes all tests
         var result = grader.grade(task, correct);
@@ -146,7 +143,7 @@ public class GraderTest {
 
     @Test
     void params() throws IOException {
-        var task = Task.fromClassName("TestWithParams", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("TestWithParams", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
         assertFalse(result.compileErrors());
@@ -162,7 +159,7 @@ public class GraderTest {
 
     @Test
     void testMethodOverloading() throws IOException {
-        var task = Task.fromClassName("TestWithOverloading", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("TestWithOverloading", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
         assertFalse(result.compileErrors());
@@ -182,7 +179,7 @@ public class GraderTest {
 
     @Test
     void paramsMethodSource() throws IOException {
-        var task = Task.fromClassName("TestWithMethodSource", TEST_SRC_DIR).compiler(ECLIPSE);
+        var task = Task.fromClassName("TestWithMethodSource", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
         assertFalse(result.compileErrors());
