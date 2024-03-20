@@ -124,6 +124,7 @@ public class TestRunner implements Closeable {
                     } else {
                         var junitResult = result.value();
                         var newExceptions = (List<?>) junitResult.get("exceptions");
+                        var newScores = (List<?>) junitResult.get("scores");
                         if (newExceptions.isEmpty()) {
                             passed = true;
                         } else {
@@ -132,8 +133,10 @@ public class TestRunner implements Closeable {
                                 exceptions.add(ExceptionDescription.of((Throwable) e));
                             }
                         }
-                        if (junitResult.get("score") != null) {
-                            scores.add((Double) junitResult.get("score"));
+                        if (!newScores.isEmpty()) {
+                            for (var score : newScores) {
+                                scores.add((Double) score);
+                            }
                         }
                     }
 
@@ -204,17 +207,16 @@ public class TestRunner implements Closeable {
         public static Map<String, Object> run(String className, String methodName, String paramTypes) {
             var sel = selectMethod(className, methodName, paramTypes);
             var req = request().selectors(sel).build();
-            var listener = new TestExecutionListener() {
-                final List<Throwable> exceptions = new ArrayList<>();
-                Double score;
 
+            var exceptions = new ArrayList<Throwable>();
+            var scores = new ArrayList<Double>();
+            var listener = new TestExecutionListener() {
                 public void reportingEntryPublished(TestIdentifier id, ReportEntry entry) {
-                    // TODO: how to handle scores for parameterized tests?
                     entry.getKeyValuePairs().entrySet().stream()
                             .filter(e -> e.getKey().equals(SCORE_KEY))
                             .map(e -> parseDouble(e.getValue()))
                             .findFirst()
-                            .ifPresent(s -> score = s);
+                            .ifPresent(s -> scores.add(s));
                 }
 
                 public void executionFinished(TestIdentifier id, TestExecutionResult result) {
@@ -228,7 +230,7 @@ public class TestRunner implements Closeable {
 
             // since JUnit catches the SecurityException, need to rethrow it
             // for the sandbox to record the illegal operation...
-            for (var e : listener.exceptions) {
+            for (var e : exceptions) {
                 if (e instanceof SecurityException s) {
                     throw s;
                 }
@@ -237,8 +239,8 @@ public class TestRunner implements Closeable {
             // can only transfer classes loaded by the bootstrap class loader
             // across sandbox boundary...
             var result = new HashMap<String, Object>();
-            result.put("exceptions", listener.exceptions);
-            result.put("score", listener.score);
+            result.put("exceptions", exceptions);
+            result.put("scores", scores);
             return result;
         }
     }
