@@ -99,9 +99,13 @@ public class Sandbox implements Closeable {
                 // only classes with static state have this method
             } catch (NoClassDefFoundError ignored) {
                 // ignore; if this happens, this class cannot be used anyway,
-                // so isolation should not be affected
+                // so isolation should not be affected. May happen if an
+                // exception was thrown in the static initializer of the class.
             } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new AssertionError("Could not re-initialize class " + c, e);
+                // NoClassDefFoundError may be wrapped in an InvocationTargetException
+                if (!(e.getCause() instanceof NoClassDefFoundError)) {
+                    throw new AssertionError("Could not re-initialize class " + c, e);
+                }
             }
         }
 
