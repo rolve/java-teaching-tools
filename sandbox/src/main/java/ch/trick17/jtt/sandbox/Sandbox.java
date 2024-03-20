@@ -92,7 +92,9 @@ public class Sandbox implements Closeable {
         // originally loaded
         for (var c : loader.getSandboxedClasses()) {
             try {
-                c.getMethod(RE_INIT_METHOD).invoke(null);
+                var reInit = c.getMethod(RE_INIT_METHOD);
+                reInit.setAccessible(true);
+                reInit.invoke(null);
             } catch (NoSuchMethodException ignored) {
                 // only classes with static state have this method
             } catch (NoClassDefFoundError ignored) {
