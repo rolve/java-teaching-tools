@@ -7,6 +7,7 @@ import com.github.javaparser.ast.CompilationUnit;
 import javax.tools.SimpleJavaFileObject;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.MalformedInputException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -48,9 +49,13 @@ public class InMemSource extends SimpleJavaFileObject {
         if (!file.startsWith(sourceDir)) {
             throw new IllegalArgumentException("File " + file + " is not in source directory " + sourceDir);
         }
-        var path = sourceDir.relativize(file).toString()
-                .replace(separatorChar, '/');
-        return new InMemSource(path, readString(file));
+        var relative = sourceDir.relativize(file);
+        var normalized = relative.toString().replace(separatorChar, '/');
+        try {
+            return new InMemSource(normalized, readString(file));
+        } catch (MalformedInputException e) {
+            throw new MalformedSourceFileException(e.getInputLength(), relative);
+        }
     }
 
     /**
