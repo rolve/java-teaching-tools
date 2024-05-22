@@ -18,7 +18,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
@@ -36,13 +35,10 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 public class TestRunner implements Closeable {
 
-    private static final int MAX_RUNS_PER_VM = 500;
-
     private static final Logger logger = getLogger(TestRunner.class);
 
     private final List<String> vmArgs;
     private ForkedVmClient forkedVm;
-    private final AtomicInteger runs = new AtomicInteger(0);
 
     public TestRunner() {
         this(emptyList());
@@ -58,16 +54,10 @@ public class TestRunner implements Closeable {
         } else {
             var allVmArgs = new ArrayList<>(vmArgs);
             allVmArgs.addAll(task.vmArgs);
-            // TODO: fix memory leak and get rid of this max runs workaround?
-            if (forkedVm == null
-                    || !forkedVm.getVmArgs().equals(allVmArgs)
-                    || runs.incrementAndGet() > MAX_RUNS_PER_VM) {
-                if (forkedVm != null) {
-                    forkedVm.close();
-                }
+            if (forkedVm == null || !forkedVm.getVmArgs().equals(allVmArgs)) {
+                close();
                 logger.info("Forking test runner VM with args: {}", join(" ", allVmArgs));
                 forkedVm = new ForkedVmClient(allVmArgs, List.of(TestRunnerJacksonModule.class));
-                runs.set(0);
             }
             return forkedVm.runInForkedVm(TestRunner.class, "doRun", List.of(task), Result.class);
         }
