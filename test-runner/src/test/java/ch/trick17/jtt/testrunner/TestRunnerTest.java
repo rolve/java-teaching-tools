@@ -17,66 +17,51 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class TestRunnerTest {
 
+    static final String SIMPLE_TEST = """
+            import org.junit.jupiter.api.Test;
+            import static org.junit.jupiter.api.Assertions.*;
+            
+            class PassingTest {
+                @Test
+                void test() {
+                    assertEquals(2, 1 + 1);
+                }
+            }
+            class FailingTest {
+                @Test
+                void test() {
+                    assertEquals(3, 1 + 1);
+                }
+            }
+            """;
+
     TestRunner runner = new TestRunner();
 
     @Test
     void testAsSupportCode() throws IOException {
-        var tests = compile("""
-                import org.junit.jupiter.api.Test;
-                import static org.junit.jupiter.api.Assertions.*;
-                
-                class PassingTest {
-                    @Test
-                    void test() {
-                        assertEquals(2, 1 + 1);
-                    }
-                }
-                class FailingTest {
-                    @Test
-                    void test() {
-                        assertEquals(3, 1 + 1);
-                    }
-                }
-                """);
+        var test = compile(SIMPLE_TEST);
 
         var result = runner.run(new Task("PassingTest",
-                ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests)));
+                ClassPath.empty(), ClassPath.fromCurrent().withMemory(test)));
         assertEquals(1, result.testResults().size());
         assertTrue(result.testResults().get(0).passed());
 
         result = runner.run(new Task("FailingTest",
-                ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests)));
+                ClassPath.empty(), ClassPath.fromCurrent().withMemory(test)));
         assertEquals(1, result.testResults().size());
         assertFalse(result.testResults().get(0).passed());
     }
 
     @Test
     void testAsSandboxedCode() throws IOException {
-        var tests = compile("""
-                import org.junit.jupiter.api.Test;
-                import static org.junit.jupiter.api.Assertions.*;
-                
-                class PassingTest {
-                    @Test
-                    void test() {
-                        assertEquals(2, 1 + 1);
-                    }
-                }
-                class FailingTest {
-                    @Test
-                    void test() {
-                        assertEquals(3, 1 + 1);
-                    }
-                }
-                """);
-
+        var test = compile(SIMPLE_TEST);
         var result = runner.run(new Task("PassingTest",
-                ClassPath.fromMemory(tests), ClassPath.fromCurrent()));
+                ClassPath.fromMemory(test), ClassPath.fromCurrent()));
         assertEquals(1, result.testResults().size());
         assertTrue(result.testResults().get(0).passed());
 
         result = runner.run(new Task("FailingTest",
-                ClassPath.fromMemory(tests), ClassPath.fromCurrent()));
+                ClassPath.fromMemory(test), ClassPath.fromCurrent()));
         assertEquals(1, result.testResults().size());
         assertFalse(result.testResults().get(0).passed());
     }
