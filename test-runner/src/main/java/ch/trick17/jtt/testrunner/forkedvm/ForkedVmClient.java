@@ -61,25 +61,6 @@ public class ForkedVmClient implements Closeable {
         return vmArgs;
     }
 
-    private synchronized void ensureForkedVmRunning() {
-        if (forkedVm == null || !forkedVm.isAlive()) {
-            try {
-                forkedVm = new JavaProcessBuilder(ForkedVmServer.class, moduleClasses)
-                        .vmArgs("-XX:-OmitStackTraceInFastThrow")
-                        .addVmArgs(vmArgs.toArray(String[]::new))
-                        .autoExit(true)
-                        .start();
-                var copier = new Thread(new LineCopier(forkedVm.getErrorStream(),
-                        new LineWriterAdapter(System.out)));
-                copier.setDaemon(true);
-                copier.start();
-                port = new Scanner(forkedVm.getInputStream()).nextInt();
-            } catch (IOException e) {
-                throw new AssertionError(e);
-            }
-        }
-    }
-
     public <R> R runInForkedVm(Class<?> cls, String methodName,
                                List<?> args, Class<R> returnType) throws IOException {
         var paramTypes = args.stream()
@@ -146,6 +127,25 @@ public class ForkedVmClient implements Closeable {
                 } // else try again
             }
             killForkedVm();
+        }
+    }
+
+    private synchronized void ensureForkedVmRunning() {
+        if (forkedVm == null || !forkedVm.isAlive()) {
+            try {
+                forkedVm = new JavaProcessBuilder(ForkedVmServer.class, moduleClasses)
+                        .vmArgs("-XX:-OmitStackTraceInFastThrow")
+                        .addVmArgs(vmArgs.toArray(String[]::new))
+                        .autoExit(true)
+                        .start();
+                var copier = new Thread(new LineCopier(forkedVm.getErrorStream(),
+                        new LineWriterAdapter(System.out)));
+                copier.setDaemon(true);
+                copier.start();
+                port = new Scanner(forkedVm.getInputStream()).nextInt();
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
         }
     }
 
