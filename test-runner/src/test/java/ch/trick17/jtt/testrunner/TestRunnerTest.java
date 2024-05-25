@@ -131,8 +131,7 @@ public class TestRunnerTest {
                     5, Duration.ofSeconds(10), Duration.ofSeconds(10), null,
                     List.of("-Dfile.encoding=" + encoding)))));
         }
-        for (int i = 0; i < results.size(); i++) {
-            var result = results.get(i);
+        for (var result : results) {
             assertEquals(1, result.get().testResults().size());
             assertTrue(result.get().testResults().get(0).passed(), result.get().toString());
         }

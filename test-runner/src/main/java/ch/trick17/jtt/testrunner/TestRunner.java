@@ -29,6 +29,7 @@ import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
@@ -61,28 +62,32 @@ public class TestRunner implements Closeable {
             // use it. Multiple threads can do this concurrently. But if a new
             // VM needs to be forked, only one thread should do it, and not
             // while the current VM still being used by other threads (we don't
-            // want multiple forked VMs running). So we use a read-write lock
-            // to ensure this.
+            // want multiple forked VMs running). We use a read-write lock to
+            // enforce this.
             var stamp = lock.readLock();
             try {
                 while (forkedVm == null || !forkedVm.getVmArgs().equals(newVmArgs)) {
-                    // try to upgrade to write lock optimistically
-                    var writeStamp = lock.tryConvertToWriteLock(stamp);
-                    if (writeStamp != 0) {
-                        stamp = writeStamp;
+                    // release the read lock and try to acquire the write lock
+                    lock.unlockRead(stamp);
+                    try {
+                        stamp = lock.tryWriteLock(10, MILLISECONDS);
+                    } catch (InterruptedException ignored) {}
+
+                    if (stamp == 0) {
+                        // could not get the write lock, so get the read lock
+                        // again and retry
+                        stamp = lock.readLock();
+                    } else {
+                        // got the write lock, so fork the VM
                         close();
                         logger.info("Forking test runner VM with args: {}", join(" ", newVmArgs));
                         forkedVm = new ForkedVmClient(newVmArgs, List.of(TestRunnerJacksonModule.class));
-                        // downgrade to read lock again
-                        stamp = lock.tryConvertToReadLock(writeStamp);
-                        if (stamp == 0) {
-                            throw new AssertionError("downgrade should always succeed");
-                        }
-                    } else {
-                        // upgrade failed, so wait for read lock to be released
-                        lock.unlockRead(stamp);
-                        stamp = lock.writeLock();
                     }
+                }
+                // in case we have the write lock, downgrade to read lock again
+                stamp = lock.tryConvertToReadLock(stamp);
+                if (stamp == 0) {
+                    throw new AssertionError("downgrade should always succeed");
                 }
                 return forkedVm.runInForkedVm(TestRunner.class, "doRun", List.of(task), Result.class);
             } finally {
