@@ -174,6 +174,21 @@ public interface Whitelist {
                 java.util.regex.Pattern.*
                 java.util.regex.PatternSyntaxException.*
                 
+                java.text.Format.*
+                java.text.Format$Field.*
+                java.text.FieldPosition.*
+                java.text.DateFormat.*
+                java.text.DateFormat$Field.*
+                java.text.DateFormatSymbols.*
+                java.text.SimpleDateFormat.*
+                java.text.MessageFormat.*
+                java.text.MessageFormat$Field.*
+                java.text.NumberFormat.*
+                java.text.NumberFormat$Field.*
+                java.text.ChoiceFormat.*
+                java.text.DecimalFormat.*
+                java.text.DecimalFormatSymbols.*
+                
                 java.io.IOException.*
                 java.io.UncheckedIOException.*
                 java.io.Closeable.*
