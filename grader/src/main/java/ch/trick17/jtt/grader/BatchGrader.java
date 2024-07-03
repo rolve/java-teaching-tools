@@ -90,8 +90,8 @@ public class BatchGrader implements Closeable {
                         var res = grader.grade(task, sources, submOut);
                         results.get(task).put(subm, res);
                     }
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
+                } catch (Throwable t) {
+                    throw new RuntimeException("while grading " + subm.name, t);
                 }
                 submOut.printf("Graded %d/%d, total time: %d s\n\n",
                         i.incrementAndGet(), submissions.size(),
