@@ -337,10 +337,19 @@ public class TestSuiteGrader implements Closeable {
             mutantResults.add(new MutantResult(mutation, failedTests));
         }
 
-        var mutantScore = mutantResults.stream()
+        var killedMutantResults = mutantResults.stream()
                 .filter(r -> !r.passed())
-                .mapToDouble(r -> r.mutation().weight())
-                .sum();
+                .toList();
+        double mutantScore;
+        if (killedMutantResults.size() == mutantResults.size()) {
+            // special case to ensure mutant score is 100% and not something
+            // like 99.99999999999999%, which could be rounded down to 99%
+            mutantScore = 1.0;
+        } else {
+            mutantScore = killedMutantResults.stream()
+                    .mapToDouble(r -> r.mutation().weight())
+                    .sum();
+        }
 
         return new Result(false, false, refResults, mutantResults, allTests, mutantScore);
     }
