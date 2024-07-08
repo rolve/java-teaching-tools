@@ -273,6 +273,11 @@ public interface Whitelist {
                 java.time.ZoneId.*
                 java.time.ZoneOffset.*
                 
+                java.time.chrono.Chronology.*
+                java.time.chrono.Era.*
+                java.time.chrono.IsoChronology.*
+                java.time.chrono.IsoEra.*
+                
                 java.time.format.DateTimeFormatter.*
                 java.time.format.DateTimeFormatterBuilder.*
                 java.time.format.DateTimeParseException.*
