@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.pitest.bytecode.analysis.ClassTree;
 import org.pitest.classinfo.ClassByteArraySource;
 import org.pitest.classinfo.ClassName;
+import org.pitest.classpath.ClassloaderByteArraySource;
 import org.pitest.mutationtest.build.intercept.equivalent.EquivalentReturnMutationFilter;
 import org.pitest.mutationtest.engine.gregor.GregorMutater;
 import org.pitest.mutationtest.engine.gregor.config.Mutator;
@@ -355,6 +356,7 @@ public class TestSuiteGrader implements Closeable {
     }
 
     private GregorMutater createMutator(List<InMemClassFile> refImpl) {
+        var fallbackSource = ClassloaderByteArraySource.fromContext();
         ClassByteArraySource source = className -> {
             for (var file : refImpl) {
                 // Pitest is inconsistent with slashes and dots, so check both
@@ -362,7 +364,7 @@ public class TestSuiteGrader implements Closeable {
                     return Optional.of(file.getContent());
                 }
             }
-            return Optional.empty();
+            return fallbackSource.getBytes(className);
         };
         return new GregorMutater(source, m -> true, Mutator.all());
     }
