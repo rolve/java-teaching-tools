@@ -171,8 +171,8 @@ public class TestSuiteGrader implements Closeable {
                                                       List<Path> dependencies) throws IOException {
         var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
         var killed = new HashMap<Mutant, List<TestMethod>>();
-        for (int j = 0; j < mutants.size(); j++) {
-            var mutant = mutants.get(j);
+        for (int i = 0; i < mutants.size(); i++) {
+            var mutant = mutants.get(i);
             try {
                 var sandboxed = ClassPath.fromMemory(mutant.classes()).withMemory(testSuite);
                 var support = ClassPath.fromFiles(dependencies).withCurrent();
@@ -185,7 +185,7 @@ public class TestSuiteGrader implements Closeable {
                         .map(TestResult::method)
                         .toList();
                 if (!nonDeterministic.isEmpty()) {
-                    System.err.println("  Warning: Mutant " + (j + 1) +
+                    System.err.println("  Warning: Mutant " + (i + 1) +
                                        " produced non-deterministic test results" +
                                        " (" + mutant.getDescription() + ")");
                 }
@@ -195,14 +195,14 @@ public class TestSuiteGrader implements Closeable {
                         .map(TestResult::method)
                         .toList();
                 if (failedTests.isEmpty()) {
-                    System.err.println("  Warning: Mutant " + (j + 1) +
+                    System.err.println("  Warning: Mutant " + (i + 1) +
                                        " survived reference test suite" +
                                        " (" + mutant.getDescription() + ")");
                 } else {
                     killed.put(mutant, failedTests);
                 }
             } catch (TestRunException e) {
-                System.err.println("  Warning: Mutant " + (j + 1) +
+                System.err.println("  Warning: Mutant " + (i + 1) +
                                    " could not be tested against reference test suite" +
                                    " (" + mutant.getDescription() + ")");
                 e.printStackTrace();
