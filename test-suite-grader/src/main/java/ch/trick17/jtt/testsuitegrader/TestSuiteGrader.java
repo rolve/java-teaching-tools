@@ -183,18 +183,24 @@ public class TestSuiteGrader implements Closeable {
                 var nonDeterministic = mutantResults.stream()
                         .filter(r -> r.nonDeterm())
                         .map(TestResult::method)
-                        .toList();
-                if (!nonDeterministic.isEmpty()) {
-                    System.err.println("  Warning: Mutant " + (i + 1) +
-                                       " produced non-deterministic test results" +
-                                       " (" + mutant.getDescription() + ")");
-                }
-
+                        .findAny().isPresent();
+                var verifyError = mutantResults.stream()
+                        .map(TestResult::exceptions)
+                        .flatMap(List::stream)
+                        .anyMatch(e -> e.className().equals("java.lang.VerifyError"));
                 var failedTests = mutantResults.stream()
                         .filter(r -> !r.passed())
                         .map(TestResult::method)
                         .toList();
-                if (failedTests.isEmpty()) {
+                if (nonDeterministic) {
+                    System.err.println("  Warning: Mutant " + (i + 1) +
+                                       " produced non-deterministic test results" +
+                                       " (" + mutant.getDescription() + ")");
+                } else if (verifyError) {
+                    System.err.println("  Warning: Mutant " + (i + 1) +
+                                       " produced a VerifyError" +
+                                       " (" + mutant.getDescription() + ")");
+                } else if (failedTests.isEmpty()) {
                     System.err.println("  Warning: Mutant " + (i + 1) +
                                        " survived reference test suite" +
                                        " (" + mutant.getDescription() + ")");
