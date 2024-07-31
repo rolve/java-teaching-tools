@@ -88,8 +88,9 @@ public class Sandbox implements Closeable {
     public <T> Result<T> run(String className, String methodName,
                              List<Class<?>> paramTypes, List<?> args,
                              Class<T> resultType) {
-        // re-initialize sandboxed classes, in the same order they were
-        // originally loaded
+        // Re-initialize sandboxed classes, in the same order they were
+        // originally loaded. The first time the sandbox is used, no classes
+        // have been loaded yet, so this loop terminates immediately.
         for (var c : loader.getSandboxedClasses()) {
             try {
                 var reInit = c.getMethod(RE_INIT_METHOD);
