@@ -79,7 +79,7 @@ public class TestSuiteGrader implements Closeable {
             compiledImplementations.add(implResult.output());
         }
 
-        classPath = classPath.withMemory(compiledImplementations.get(0)).withCurrent();
+        classPath = classPath.withMemory(compiledImplementations.getFirst()).withCurrent();
         var refTestSuiteResult = compile(JAVAC, refTestSuite, classPath, System.out);
         if (refTestSuiteResult.errors()) {
             throw new IllegalArgumentException("Could not compile reference test suite against sample implementation");
@@ -107,7 +107,7 @@ public class TestSuiteGrader implements Closeable {
                 if (!result.passed()) {
                     throw new IllegalArgumentException("Reference implementation " + (i + 1) +
                                                        " failed test " + result.method() + ": " +
-                                                       result.exceptions().get(0));
+                                                       result.exceptions().getFirst());
                 }
             }
 
@@ -229,7 +229,7 @@ public class TestSuiteGrader implements Closeable {
         // from weak to strong; the difficulty group of a mutant is then the
         // *first* (weakest) test that kills it.
         var grouped = mutants.entrySet().stream()
-                .collect(groupingBy(e -> e.getValue().get(0), mapping(Map.Entry::getKey, toList())));
+                .collect(groupingBy(e -> e.getValue().getFirst(), mapping(Map.Entry::getKey, toList())));
         boolean first = true;
         for (var test : tests) {
             var kills = grouped.getOrDefault(test, emptyList()).size();
@@ -286,7 +286,7 @@ public class TestSuiteGrader implements Closeable {
     }
 
     public Result grade(Task task, List<InMemSource> testSuite, List<Path> dependencies) throws IOException {
-        var classPath = ClassPath.fromMemory(task.refImplementations().get(0))
+        var classPath = ClassPath.fromMemory(task.refImplementations().getFirst())
                 .withFiles(dependencies)
                 .withCurrent();
         if (testSuite.isEmpty()) {

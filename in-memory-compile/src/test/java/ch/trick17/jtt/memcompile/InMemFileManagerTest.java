@@ -32,7 +32,7 @@ public class InMemFileManagerTest {
                 .collect(joining("\n")));
         assertEquals(0, diagnostics.getDiagnostics().size());
         assertEquals(1, manager.getOutput().size());
-        assertEquals("HelloWorld", manager.getOutput().get(0).getClassName());
+        assertEquals("HelloWorld", manager.getOutput().getFirst().getClassName());
     }
 
     @ParameterizedTest
@@ -99,14 +99,17 @@ public class InMemFileManagerTest {
     @EnumSource(Compiler.class)
     void compileWithFileClassPath(Compiler compiler) {
         var sources = List.of(InMemSource.fromString("""
-                import static java.util.Collections.emptyList;
+                import java.io.IOException;
                 import ch.trick17.jtt.memcompile.ClassPath;
                 import ch.trick17.jtt.memcompile.InMemFileManager;
-                                
+                
+                import static java.util.Collections.emptyList;
+                
                 public class InMemoryFileManagerClient {
-                    public static void main(String[] args) {
-                        var manager = new InMemFileManager(emptyList(), ClassPath.empty());
-                        System.out.println(manager.getOutput().size());
+                    public static void main(String[] args) throws IOException {
+                        try (var manager = new InMemFileManager(emptyList(), ClassPath.empty())) {
+                            System.out.println(manager.getOutput().size());
+                        }
                     }
                 }
                 """));
@@ -171,5 +174,30 @@ public class InMemFileManagerTest {
         var task = compiler.create().getTask(nullWriter(), manager, diagnostics,
                 null, null, sources);
         return task.call();
+    }
+
+    @ParameterizedTest
+    @EnumSource(Compiler.class)
+    void compileJava21Features(Compiler compiler) {
+        var sources = List.of(InMemSource.fromString("""
+                public class HelloWorld {
+                    public void foo(Stuff stuff) {
+                        System.out.println(switch (stuff) {
+                            case Thing(var name) -> name;
+                            case OtherThing(var id) -> id;
+                        });
+                    }
+                    public sealed interface Stuff {}
+                    public record Thing(String name) implements Stuff {}
+                    public record OtherThing(int id) implements Stuff {}
+                }
+                """));
+        var manager = new InMemFileManager(sources, ClassPath.empty());
+        var success = compile(manager, sources, compiler);
+        assertTrue(success, diagnostics.getDiagnostics().stream()
+                .map(d -> d.getMessage(ROOT))
+                .collect(joining("\n")));
+        assertEquals(0, diagnostics.getDiagnostics().size());
+        assertEquals(4, manager.getOutput().size());
     }
 }
