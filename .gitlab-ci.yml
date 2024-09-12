@@ -1,4 +1,4 @@
-image: maven:3-openjdk-17
+image: maven:3.9-eclipse-temurin-21
 
 variables:
   MVN_REPO: $CI_PROJECT_DIR/maven-repo
