@@ -52,6 +52,7 @@ public interface Whitelist {
                 java.util.Arrays.*
                 java.util.Collections.*
                 java.util.Comparator.*
+                java.util.StringTokenizer.*
                 
                 java.util.Collection.*
                 java.util.Iterator.*
