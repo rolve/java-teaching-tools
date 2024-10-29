@@ -30,6 +30,7 @@ public interface Whitelist {
                 java.lang.RuntimeException.*
                 java.lang.ArithmeticException.*
                 java.lang.ArrayIndexOutOfBoundsException.*
+                java.lang.AssertionError.*
                 java.lang.IllegalArgumentException.*
                 java.lang.IllegalStateException.*
                 java.lang.IndexOutOfBoundsException.*
@@ -46,6 +47,8 @@ public interface Whitelist {
                 java.lang.System.nanoTime
                 
                 java.lang.Thread.interrupted
+                
+                java.lang.Class.desiredAssertionStatus
                 
                 java.util.Objects.*
                 java.util.Random.*

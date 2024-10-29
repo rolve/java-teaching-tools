@@ -6,9 +6,23 @@
     <parent>
         <artifactId>java-teaching-tools</artifactId>
         <groupId>ch.trick17.jtt</groupId>
-        <version>3.1.1-SNAPSHOT</version>
+        <version>3.1.2-SNAPSHOT</version>
     </parent>
     <artifactId>sandbox</artifactId>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- not sure why the following is needed; according to docs, assertions
+                         should be enabled by default -->
+                    <argLine>-ea</argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencies>
         <dependency>

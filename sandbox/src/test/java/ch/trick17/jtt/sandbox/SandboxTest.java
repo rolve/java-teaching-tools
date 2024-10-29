@@ -26,6 +26,7 @@ import static ch.trick17.jtt.memcompile.InMemCompilation.compile;
 import static ch.trick17.jtt.sandbox.InputMode.CLOSED;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.*;
+import static ch.trick17.jtt.sandbox.Sandbox.Result.Kind.EXCEPTION;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,6 +34,8 @@ public class SandboxTest {
 
     // Many features are tested indirectly in GraderTest, not here
 
+    private static final PrintStream originalOut = System.out;
+    private static final PrintStream originalErr = System.err;
     private static ByteArrayInputStream inSupplier;
     private static ByteArrayOutputStream outRecorder;
     private static ByteArrayOutputStream errRecorder;
@@ -199,7 +202,7 @@ public class SandboxTest {
                 .build();
         var result = sandbox.run(Input.class, "run",
                 emptyList(), emptyList(), String.class);
-        assertEquals(Kind.EXCEPTION, result.kind());
+        assertEquals(EXCEPTION, result.kind());
         assertEquals(IOException.class, result.exception().getClass());
     }
 
@@ -300,52 +303,6 @@ public class SandboxTest {
         assertEquals(Kind.NORMAL, result.kind());
     }
 
-    @Test
-    void restrictionsForbidden() throws IOException {
-        var sandbox = new Sandbox(code(), ClassPath.empty());
-        var result = sandbox.run(IO.class, "run",
-                emptyList(), emptyList(), Void.class);
-        assertEquals(Kind.ILLEGAL_OPERATION, result.kind());
-        assertEquals(SecurityException.class, result.exception().getClass());
-        assertTrue(result.exception().getMessage().contains("java.util.Scanner(java.nio.file.Path)"));
-    }
-
-    @Test
-    void restrictionsTryCatchReturn() throws IOException {
-        var sandbox = new Sandbox(code(), ClassPath.empty());
-        var result = sandbox.run(TryCatchReturn.class, "run",
-                emptyList(), emptyList(), Void.class);
-        assertEquals(Kind.ILLEGAL_OPERATION, result.kind(), result.exception().toString());
-        assertEquals(SecurityException.class, result.exception().getClass());
-        assertTrue(result.exception().getMessage().contains("java.nio.file.Files.list"));
-    }
-
-    @Test
-    void customRestrictions() throws IOException {
-        var permitted = Whitelist.parse(Whitelist.DEFAULT_WHITELIST_DEF
-                                        + "java.util.Scanner.<init>(java.nio.file.Path)");
-        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
-                .permittedCalls(permitted)
-                .build();
-        var result = sandbox.run(IO.class, "run",
-                emptyList(), emptyList(), Void.class);
-        assertEquals(Kind.EXCEPTION, result.kind());
-        assertEquals(NoSuchFileException.class, result.exception().getClass());
-        assertTrue(result.exception().getMessage().contains("test.txt"));
-    }
-
-    @Test
-    void noRestrictions() throws IOException {
-        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
-                .permittedCalls(null)
-                .build();
-        var result = sandbox.run(IO.class, "run",
-                emptyList(), emptyList(), Void.class);
-        assertEquals(Kind.EXCEPTION, result.kind());
-        assertEquals(NoSuchFileException.class, result.exception().getClass());
-        assertTrue(result.exception().getMessage().contains("test.txt"));
-    }
-
     public static class Whitelisted {
         public static void run() {
             // all of the following are permitted by the default whitelist,
@@ -359,12 +316,32 @@ public class SandboxTest {
         }
     }
 
+    @Test
+    void restrictionsForbidden() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(IO.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.ILLEGAL_OPERATION, result.kind());
+        assertEquals(SecurityException.class, result.exception().getClass());
+        assertTrue(result.exception().getMessage().contains("java.util.Scanner(java.nio.file.Path)"));
+    }
+
     public static class IO {
         public static void run() throws IOException {
             // this constructor is forbidden, as it allows reading from a file:
             var scanner = new Scanner(Path.of("test.txt"));
             System.out.println(scanner.next());
         }
+    }
+
+    @Test
+    void restrictionsTryCatchReturn() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(TryCatchReturn.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.ILLEGAL_OPERATION, result.kind(), result.exception().toString());
+        assertEquals(SecurityException.class, result.exception().getClass());
+        assertTrue(result.exception().getMessage().contains("java.nio.file.Files.list"));
     }
 
     public static class TryCatchReturn {
@@ -378,6 +355,56 @@ public class SandboxTest {
                 return 0;
             }
         }
+    }
+
+    @Test
+    void customRestrictions() throws IOException {
+        var permitted = Whitelist.parse(Whitelist.DEFAULT_WHITELIST_DEF
+                                        + "java.util.Scanner.<init>(java.nio.file.Path)");
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .permittedCalls(permitted)
+                .build();
+        var result = sandbox.run(IO.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(EXCEPTION, result.kind());
+        assertEquals(NoSuchFileException.class, result.exception().getClass());
+        assertTrue(result.exception().getMessage().contains("test.txt"));
+    }
+
+    @Test
+    void noRestrictions() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .permittedCalls(null)
+                .build();
+        var result = sandbox.run(IO.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(EXCEPTION, result.kind());
+        assertEquals(NoSuchFileException.class, result.exception().getClass());
+        assertTrue(result.exception().getMessage().contains("test.txt"));
+    }
+
+    @Test
+    void restrictionsAssertKeyword() throws IOException {
+        // needs to be executed with assertions enabled (-ea)
+        var compiled = compile(ECLIPSE, List.of(InMemSource.fromString("""
+                public class Asserter {
+                    public static void assertSomething() {
+                        System.out.println(Asserter.class.desiredAssertionStatus());
+                        assert false : "oops";
+                    }
+                }
+                """)), ClassPath.empty(), System.out).output();
+
+        var sandbox = new Sandbox.Builder(ClassPath.fromMemory(compiled), ClassPath.empty())
+                .timeout(Duration.ofSeconds(1))
+                .stdOutMode(RECORD)
+                .build();
+        var result = sandbox.run("Asserter", "assertSomething",
+                emptyList(), emptyList(), void.class);
+        originalOut.println(result.stdOut());
+        assertEquals(EXCEPTION, result.kind());
+        assertInstanceOf(AssertionError.class, result.exception());
+        assertEquals("oops", result.exception().getMessage());
     }
 
     @Test
