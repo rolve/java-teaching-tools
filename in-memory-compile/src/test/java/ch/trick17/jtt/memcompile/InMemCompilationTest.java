@@ -1,14 +1,19 @@
 package ch.trick17.jtt.memcompile;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
+import static ch.trick17.jtt.memcompile.ClassPath.fromMemory;
+import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static ch.trick17.jtt.memcompile.Compiler.JAVAC;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class InMemCompilationTest {
@@ -105,7 +110,7 @@ public class InMemCompilationTest {
                 }
                 """));
         result = InMemCompilation.compile(compiler, sources,
-                ClassPath.fromMemory(result.output()), System.out);
+                fromMemory(result.output()), System.out);
         assertFalse(result.errors());
         assertEquals(1, result.output().size());
     }
@@ -138,5 +143,79 @@ public class InMemCompilationTest {
         assertTrue(result.errors());
         var diagnostics = diagnosticsOut.toString();
         assertTrue(diagnostics.contains(";"), diagnostics);
+    }
+
+    @Test
+    void partialCompilation() throws Exception {
+        var sources = List.of(InMemSource.fromString("""
+                public class Partial {
+                    public static int foo() {
+                        return 42;
+                    }
+                    public static int bar() {
+                        // compile error: missing return
+                    }
+                }
+                """));
+        var result = InMemCompilation.compile(ECLIPSE, sources,
+                ClassPath.empty(), System.out);
+
+        // class was still compiled and can be loaded and partially used
+        assertEquals(1, result.output().size());
+        try (var loader = new InMemClassLoader(fromMemory(result.output()),
+                getClass().getClassLoader())) {
+            var partial = loader.loadClass("Partial");
+            var foo = partial.getMethod("foo").invoke(null);
+            assertEquals(42, foo);
+
+            // but invoking bar throws an Error
+            var e = assertThrows(InvocationTargetException.class, () -> {
+                partial.getMethod("bar").invoke(null);
+            });
+            assertInstanceOf(Error.class, e.getCause());
+            assertTrue(e.getCause().getMessage().contains("Unresolved compilation problem"));
+        }
+    }
+
+    @Test
+    void partialCompilationAnonymousClass() throws Exception {
+        // Compile errors in lambda expressions prevent partial compilation.
+        // Test that the workaround with anonymous classes works.
+
+        var sources = List.of(InMemSource.fromString("""
+                import java.util.List;
+                import java.util.function.Consumer;
+                
+                public class Partial {
+                    public static int foo() {
+                        return 42;
+                    }
+                    public static void bar() {
+                        List.of(1, 2, 3).forEach(new Consumer<>() {
+                            public void accept(Integer i) {
+                                baz(); // compile error: baz() is not defined
+                            }
+                        });
+                    }
+                }
+                """));
+        var result = InMemCompilation.compile(ECLIPSE, sources,
+                ClassPath.empty(), System.out);
+
+        // class was still compiled and can be loaded and partially used
+        assertNotEquals(emptyList(), result.output());
+        try (var loader = new InMemClassLoader(fromMemory(result.output()),
+                getClass().getClassLoader())) {
+            var partial = loader.loadClass("Partial");
+            var foo = partial.getMethod("foo").invoke(null);
+            assertEquals(42, foo);
+
+            // but invoking bar throws an Error
+            var e = assertThrows(InvocationTargetException.class, () -> {
+                partial.getMethod("bar").invoke(null);
+            });
+            assertInstanceOf(Error.class, e.getCause());
+            assertTrue(e.getCause().getMessage().contains("Unresolved compilation problem"));
+        }
     }
 }
