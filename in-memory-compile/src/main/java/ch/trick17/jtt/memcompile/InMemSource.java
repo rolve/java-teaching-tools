@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_17;
+import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_21;
 import static com.github.javaparser.ast.Modifier.Keyword.PUBLIC;
 import static java.io.File.separatorChar;
 import static java.nio.file.Files.readString;
@@ -24,7 +24,7 @@ import static javax.tools.JavaFileObject.Kind.SOURCE;
 public class InMemSource extends SimpleJavaFileObject {
 
     private static final ParserConfiguration PARSER_CONFIG = new ParserConfiguration()
-            .setLanguageLevel(JAVA_17)
+            .setLanguageLevel(JAVA_21)
             .setIgnoreAnnotationsWhenAttributingComments(true);
 
     private static final ThreadLocal<JavaParser> parser =
