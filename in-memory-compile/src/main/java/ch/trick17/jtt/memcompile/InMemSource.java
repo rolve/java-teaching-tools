@@ -23,13 +23,16 @@ import static javax.tools.JavaFileObject.Kind.SOURCE;
 
 public class InMemSource extends SimpleJavaFileObject {
 
-    private static final JavaParser parser = new JavaParser(new ParserConfiguration()
+    private static final ParserConfiguration PARSER_CONFIG = new ParserConfiguration()
             .setLanguageLevel(JAVA_17)
-            .setIgnoreAnnotationsWhenAttributingComments(true));
+            .setIgnoreAnnotationsWhenAttributingComments(true);
+
+    private static final ThreadLocal<JavaParser> parser =
+            ThreadLocal.withInitial(() -> new JavaParser(PARSER_CONFIG));
 
     public static InMemSource fromString(String source) {
         source = source.replace("\r\n", "\n");
-        var parseResult = parser.parse(source);
+        var parseResult = parser.get().parse(source);
         if (parseResult.getResult().isEmpty()) {
             var problems = parseResult.getProblems().stream()
                     .map(Object::toString)
@@ -110,7 +113,7 @@ public class InMemSource extends SimpleJavaFileObject {
 
     public CompilationUnit getParsed() {
         if (parsed == null) { // race condition is ok
-            parsed = parser.parse(content).getResult().orElseThrow();
+            parsed = parser.get().parse(content).getResult().orElseThrow();
         }
         return parsed;
     }
