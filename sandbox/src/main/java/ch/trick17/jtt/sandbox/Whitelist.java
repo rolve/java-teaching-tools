@@ -16,6 +16,7 @@ public interface Whitelist {
                 java.lang.Boolean.*
                 java.lang.Character.*
                 
+                java.lang.CharSequence.*
                 java.lang.String.*
                 java.lang.StringBuilder.*
                 java.lang.Math.*
