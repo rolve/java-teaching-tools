@@ -124,9 +124,10 @@ public class BatchGrader implements Closeable {
     }
 
     /**
-     * Like a normal try-finally, but with the superior exception handling of a try-with-resources,
-     * i.e., does not suppress exceptions thrown from the try block. Note that {@link Closeable} is
-     * used simply as a functional interface here (i.e. a Runnable that can throw IOException)
+     * Like a normal try-finally, but with the superior exception handling of a
+     * try-with-resources, i.e., does not suppress exceptions thrown from the
+     * try block. Note that {@link Closeable} is used simply as a functional
+     * interface here (i.e. a Runnable that can throw IOException)
      */
     private void tryFinally(Closeable tryBlock, Closeable finallyBlock)
             throws IOException {
@@ -148,10 +149,21 @@ public class BatchGrader implements Closeable {
         }
 
         /**
-         * Loads multiple submissions from a <code>root</code> directory. Each direct subdirectory
-         * in that directory is considered a submission. The source directory of each submission is
-         * determined by resolving
-         * <code>srcDir</code> (a relative path) against the submission directory.
+         * Loads multiple submissions from a <code>root</code> directory, as
+         * described in {@link Submission#loadAllFrom(Path, Path, boolean)}.
+         * Hidden directories (i.e., directories whose name starts with a dot)
+         * are ignored.
+         */
+        public static List<Submission> loadAllFrom(Path root, Path srcDir) throws IOException {
+            return loadAllFrom(root, srcDir, true);
+        }
+
+        /**
+         * Loads multiple submissions from a <code>root</code> directory. Each
+         * direct subdirectory in that directory is considered a submission. The
+         * source directory of each submission is determined by resolving
+         * <code>srcDir</code> (a relative path) against the submission
+         * directory.
          * For example, given the following directory structure:
          * <pre>
          * /
@@ -163,19 +175,27 @@ public class BatchGrader implements Closeable {
          *         baz/
          *             src/main/java/
          * </pre>
-         * calling this method with "/submissions" as <code>root</code> and "src/main/java" as
-         * <code>srcDir</code>, this method would return a list containing three submissions, with
-         * names "bar", "baz", and "foo" (submissions are sorted by name) and source directories
-         * "/submissions/bar/src/main/java", "/submissions/baz/src/main/java", and
+         * calling this method with "/submissions" as <code>root</code> and
+         * "src/main/java" as
+         * <code>srcDir</code>, this method would return a list containing three
+         * submissions, with
+         * names "bar", "baz", and "foo" (submissions are sorted by name) and
+         * source directories "/submissions/bar/src/main/java",
+         * "/submissions/baz/src/main/java", and
          * "/submissions/foo/src/main/java".
+         * <p>
+         * If <code>ignoreHidden</code> is <code>true</code>, hidden directories
+         * (i.e., directories whose name starts with a dot) are ignored.
          */
-        public static List<Submission> loadAllFrom(Path root, Path srcDir) throws IOException {
+        public static List<Submission> loadAllFrom(Path root, Path srcDir,
+                                                   boolean ignoreHidden) throws IOException {
             if (srcDir.isAbsolute()) {
                 throw new IllegalArgumentException("srcDir must be a relative path");
             }
             try (var list = list(root)) {
                 return list
                         .filter(Files::isDirectory)
+                        .filter(dir -> (!ignoreHidden || !dir.getFileName().toString().startsWith(".")))
                         .map(dir -> new Submission(dir.getFileName().toString(), dir.resolve(srcDir)))
                         .sorted(comparing(Submission::name))
                         .toList();
