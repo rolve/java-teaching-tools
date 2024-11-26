@@ -286,25 +286,31 @@ public class SandboxClassLoader extends InMemClassLoader {
         }
     }
 
+    /**
+     * Adds a static re-initialization method to the given class, which first
+     * assigns the default value to all mutable static fields and then runs a
+     * copy of the class initializer code. For this to work, all static fields
+     * that are final are modified to be non-final. In addition, the valueOf
+     * method for enums is replaced to work around an enum constant cache.
+     */
     private void makeReInitializable(CtClass cls) throws NotFoundException, CannotCompileException {
         var mutableStaticFields = stream(cls.getDeclaredFields())
                 .filter(f -> isStatic(f.getModifiers()) && isMutable(f))
-                .collect(toCollection(ArrayList::new));
+                .toList();
         if (mutableStaticFields.isEmpty()) {
             return;
         }
 
-        // make fields non-final, if possible
-        var finalFields = mutableStaticFields.stream()
-                .filter(f -> isFinal(f.getModifiers()))
+        var finalStaticFields = stream(cls.getDeclaredFields())
+                .filter(f -> isStatic(f.getModifiers()) && isFinal(f.getModifiers()))
                 .toList();
-        if (!finalFields.isEmpty()) {
+        if (!finalStaticFields.isEmpty()) {
             if (cls.isInterface()) {
                 // fields in interfaces cannot be non-final, the JVM will check this
                 throw new CannotCompileException("Cannot guarantee isolation due to mutable " +
                                                  "static fields in interface " + cls.getName());
             } else {
-                for (var field : finalFields) {
+                for (var field : finalStaticFields) {
                     field.setModifiers(field.getModifiers() & ~FINAL);
                 }
             }

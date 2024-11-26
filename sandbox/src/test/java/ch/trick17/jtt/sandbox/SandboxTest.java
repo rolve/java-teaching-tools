@@ -100,17 +100,33 @@ public class SandboxTest {
     }
 
     @Test
-    void isolationFinalStaticField() throws IOException {
+    void isolationMutableFinalStaticField() throws IOException {
         var sandbox = new Sandbox(code(), ClassPath.empty());
-        var result = sandbox.run(WithFinalStaticField.class, "increment",
+        var result = sandbox.run(WithMutableFinalStaticField.class, "increment",
                 emptyList(), emptyList(), Integer.class);
         assertEquals(0, result.value());
 
-        result = sandbox.run(WithFinalStaticField.class, "increment",
+        result = sandbox.run(WithMutableFinalStaticField.class, "increment",
                 emptyList(), emptyList(), Integer.class);
         assertEquals(0, result.value());
 
-        result = sandbox.run(WithFinalStaticField.class, "increment",
+        result = sandbox.run(WithMutableFinalStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+    }
+
+    @Test
+    void isolationMutableAndImmutableStaticField() throws IOException {
+        var sandbox = new Sandbox(code(), ClassPath.empty());
+        var result = sandbox.run(WithMutableAndImmutableStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+
+        result = sandbox.run(WithMutableAndImmutableStaticField.class, "increment",
+                emptyList(), emptyList(), Integer.class);
+        assertEquals(0, result.value());
+
+        result = sandbox.run(WithMutableAndImmutableStaticField.class, "increment",
                 emptyList(), emptyList(), Integer.class);
         assertEquals(0, result.value());
     }
@@ -128,13 +144,12 @@ public class SandboxTest {
     }
 
     public static class WithStaticFields {
-        private static int count = 0;
+        private static int count = 1;
         private static String s = "";
 
         public static String hello() {
+            s += "Hello, " + count + "!\n";
             count++;
-            var line = "Hello, " + count + "!\n";
-            s += line;
             return s;
         }
 
@@ -155,11 +170,27 @@ public class SandboxTest {
         }
     }
 
-    public static class WithFinalStaticField {
+    public static class WithMutableFinalStaticField {
         private static final int[] count = {0};
 
         public static int increment() {
             return count[0]++;
+        }
+    }
+
+    public static class WithMutableAndImmutableStaticField {
+        private static final int i; // must be made non-final to allow the copy
+                                    // of the <clinit> code to reset it
+        private static int count;
+
+        static {
+            i = 42; // assign here to ensure the presence of <clinit>
+        }
+
+        public static int increment() {
+            var prev = count;
+            count += i;
+            return prev;
         }
     }
 
@@ -384,10 +415,14 @@ public class SandboxTest {
     }
 
     @Test
-    void restrictionsAssertKeyword() throws IOException {
+    void assertKeyword() throws IOException {
         // needs to be executed with assertions enabled (-ea)
         var compiled = compile(ECLIPSE, List.of(InMemSource.fromString("""
                 public class Asserter {
+                    static int i;
+                    static {
+                        i = 0; // force creation of <clinit> method
+                    }
                     public static void assertSomething() {
                         System.out.println(Asserter.class.desiredAssertionStatus());
                         assert false : "oops";
@@ -399,12 +434,16 @@ public class SandboxTest {
                 .timeout(Duration.ofSeconds(1))
                 .stdOutMode(RECORD)
                 .build();
-        var result = sandbox.run("Asserter", "assertSomething",
-                emptyList(), emptyList(), void.class);
-        originalOut.println(result.stdOut());
-        assertEquals(EXCEPTION, result.kind());
-        assertInstanceOf(AssertionError.class, result.exception());
-        assertEquals("oops", result.exception().getMessage());
+
+        // run twice to trigger re-initialization
+        for (int i = 1; i <= 2; i++) {
+            var result = sandbox.run("Asserter", "assertSomething",
+                    emptyList(), emptyList(), void.class);
+            originalOut.println(result.stdOut());
+            assertEquals(EXCEPTION, result.kind());
+            assertInstanceOf(AssertionError.class, result.exception());
+            assertEquals("oops", result.exception().getMessage());
+        }
     }
 
     @Test
