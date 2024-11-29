@@ -390,6 +390,39 @@ public class BatchGraderTest {
     }
 
     @Test
+    void testWithReflection() throws IOException {
+        var task = Task.fromClassName("TestWithReflection", TEST_SRC_DIR);
+        var submissions = WITH_ECLIPSE_STRUCTURE.stream()
+                .filter(s -> List.of("correct", "wrong-signature").contains(s.name()))
+                .toList();
+        grader.grade(task, submissions);
+        var expected = withTabs("""
+                Name             compiled  functionality  signature
+                correct          1         1              1
+                wrong-signature  1         1              0
+                """);
+        assertEquals(expected, readString(RESULTS_FILE));
+    }
+
+    @Test
+    void testWithOutputRecording() throws IOException {
+        var task = Task.fromClassName("TestWithOutputRecording", TEST_SRC_DIR);
+        var submissions = WITH_ECLIPSE_STRUCTURE.stream()
+                .filter(s -> List.of("prints-to-sysout", "prints-to-sysout-wrong").contains(s.name()))
+                .toList();
+        // only works reliably without parallel grading, as System.out is shared
+        try (BatchGrader grader = new BatchGrader(null, Path.of("."), 1)) {
+            grader.grade(task, submissions);
+        }
+        var expected = withTabs("""
+                    Name                    compiled  addNonZero  addZero
+                    prints-to-sysout        1         1           1
+                    prints-to-sysout-wrong  1         0           1
+                    """);
+        assertEquals(expected, readString(RESULTS_FILE));
+    }
+
+    @Test
     void defaultMethodOrder() throws IOException {
         // without any method order annotations, tests are ordered by display name
         var task = Task.fromClassName("TestWithDisplayNames", TEST_SRC_DIR).compiler(ECLIPSE);
