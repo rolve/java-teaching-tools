@@ -14,7 +14,7 @@ public class TestWithOutputRecording {
     @BeforeEach
     void setup() {
         originalOut = System.out;
-        System.setOut(new PrintStream(out, true));
+        System.setOut(new PrintStream(out));
     }
 
     @AfterEach
