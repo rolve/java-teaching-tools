@@ -201,9 +201,17 @@ public interface Whitelist {
                 java.io.OutputStream.*
                 java.io.ByteArrayInputStream.*
                 java.io.ByteArrayOutputStream.*
+                java.io.PrintStream.append
+                java.io.PrintStream.charset
+                java.io.PrintStream.checkError
+                java.io.PrintStream.close
+                java.io.PrintStream.flush
+                java.io.PrintStream.format
                 java.io.PrintStream.print
                 java.io.PrintStream.printf
                 java.io.PrintStream.println
+                java.io.PrintStream.write
+                java.io.PrintStream.writeBytes
                 java.io.Reader.*
                 java.io.Writer.*
                 java.io.InputStreamReader.*
