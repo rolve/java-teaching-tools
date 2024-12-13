@@ -115,7 +115,8 @@ public class Grader implements Closeable {
                 .flatMap(r -> r.exceptions().stream())
                 .map(e -> format("%s: %s", e.className(),
                         valueOf(e.message()).replaceAll("\\s+", " ")))
-                .filter(msg -> !msg.startsWith("java.lang.Error: Unresolved compilation problems:"))
+                .filter(msg -> !msg.startsWith("java.lang.Error: Unresolved compilation problem"))
+                .distinct()
                 .toList();
         if (!failMsgs.isEmpty()) {
             out.println("Tests failed for the following reasons:");
