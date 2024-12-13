@@ -30,7 +30,7 @@ public class InMemCompilationTest {
                 """));
         var result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), System.out);
-        assertFalse(result.errors());
+        assertEquals(emptyList(), result.errors());
         assertEquals(1, result.output().size());
         assertEquals("HelloWorld", result.output().get(0).getClassName());
     }
@@ -48,7 +48,7 @@ public class InMemCompilationTest {
                 """));
         var result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), System.out);
-        assertFalse(result.errors());
+        assertEquals(emptyList(), result.errors());
         assertEquals(1, result.output().size());
         assertEquals("foo.bar.HelloWorld", result.output().get(0).getClassName());
     }
@@ -77,7 +77,7 @@ public class InMemCompilationTest {
                 """));
         var result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), System.out);
-        assertFalse(result.errors());
+        assertEquals(emptyList(), result.errors());
         assertEquals(2, result.output().size());
     }
 
@@ -95,7 +95,7 @@ public class InMemCompilationTest {
                 """));
         var result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), System.out);
-        assertFalse(result.errors());
+        assertEquals(emptyList(), result.errors());
         assertEquals(1, result.output().size());
 
         sources = List.of(InMemSource.fromString("""
@@ -111,7 +111,7 @@ public class InMemCompilationTest {
                 """));
         result = InMemCompilation.compile(compiler, sources,
                 fromMemory(result.output()), System.out);
-        assertFalse(result.errors());
+        assertEquals(emptyList(), result.errors());
         assertEquals(1, result.output().size());
     }
 
@@ -128,7 +128,7 @@ public class InMemCompilationTest {
         var diagnosticsOut = new ByteArrayOutputStream();
         var result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), new PrintStream(diagnosticsOut));
-        assertFalse(result.errors());
+        assertEquals(emptyList(), result.errors());
         assertEquals("", diagnosticsOut.toString());
 
         sources = List.of(new InMemSource("HelloWorld.java", """
@@ -140,7 +140,7 @@ public class InMemCompilationTest {
                 """));
         result = InMemCompilation.compile(compiler, sources,
                 ClassPath.empty(), new PrintStream(diagnosticsOut));
-        assertTrue(result.errors());
+        assertNotEquals(emptyList(), result.errors());
         var diagnostics = diagnosticsOut.toString();
         assertTrue(diagnostics.contains(";"), diagnostics);
     }

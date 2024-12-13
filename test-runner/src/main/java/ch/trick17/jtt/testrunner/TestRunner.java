@@ -120,7 +120,7 @@ public class TestRunner implements Closeable {
 
                 var passed = false;
                 var failed = false;
-                var exceptions = new LinkedHashSet<ExceptionDescription>();
+                var exceptions = new LinkedHashSet<ExceptionDescription>(); // eliminate duplicates but keep order
                 var repsMade = task.repetitions();
                 var timeout = false;
                 var outOfMemory = false;

@@ -38,12 +38,12 @@ public class InMemCompilation {
                 out.println("Compile errors:");
                 errors.forEach(e -> out.print(e.indent(2))); // indent includes \n
             }
-            return new Result(!errors.isEmpty(), fileManager.getOutput());
+            return new Result(errors, fileManager.getOutput());
         }
     }
 
     public record Result(
-            boolean errors,
+            List<String> errors,
             List<InMemClassFile> output) {
     }
 }

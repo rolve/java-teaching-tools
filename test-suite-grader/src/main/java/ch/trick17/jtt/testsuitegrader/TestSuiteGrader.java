@@ -71,7 +71,7 @@ public class TestSuiteGrader implements Closeable {
         var compiledImplementations = new ArrayList<List<InMemClassFile>>();
         for (int i = 0; i < refImplementations.size(); i++) {
             var implResult = compile(JAVAC, refImplementations.get(i), classPath, System.out);
-            if (implResult.errors()) {
+            if (!implResult.errors().isEmpty()) {
                 throw new IllegalArgumentException("Could not compile reference implementation " + (i + 1));
             } else if (implResult.output().isEmpty()) {
                 throw new IllegalArgumentException("Empty reference implementation " + (i + 1));
@@ -81,7 +81,7 @@ public class TestSuiteGrader implements Closeable {
 
         classPath = classPath.withMemory(compiledImplementations.getFirst()).withCurrent();
         var refTestSuiteResult = compile(JAVAC, refTestSuite, classPath, System.out);
-        if (refTestSuiteResult.errors()) {
+        if (!refTestSuiteResult.errors().isEmpty()) {
             throw new IllegalArgumentException("Could not compile reference test suite against sample implementation");
         } else if (refTestSuiteResult.output().isEmpty()) {
             throw new IllegalArgumentException("Empty reference test suite");
@@ -293,7 +293,7 @@ public class TestSuiteGrader implements Closeable {
             return new Result(true, false, emptyList(), emptyList(), emptyList(), 0.0);
         }
         var compileResult = compile(ECLIPSE, testSuite, classPath, System.out);
-        if (compileResult.errors() && compileResult.output().isEmpty()) {
+        if (!compileResult.errors().isEmpty() && compileResult.output().isEmpty()) {
             return new Result(false, true, emptyList(), emptyList(), emptyList(), 0.0);
         }
         var compiledSuite = compileResult.output();

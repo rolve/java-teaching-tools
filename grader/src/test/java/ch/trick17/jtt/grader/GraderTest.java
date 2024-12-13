@@ -42,19 +42,19 @@ public class GraderTest {
 
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
-        assertFalse(result.compileErrors());
+        assertEquals(emptyList(), result.compileErrors());
         assertTrue(result.testResults().get(0).passed());
         assertTrue(result.testResults().get(1).passed());
 
         result = grader.grade(task, failsTest);
         assertTrue(result.compiled());
-        assertFalse(result.compileErrors());
+        assertEquals(emptyList(), result.compileErrors());
         assertTrue(result.testResults().get(0).passed());
         assertFalse(result.testResults().get(1).passed());
 
         result = grader.grade(task, compileError);
         assertFalse(result.compiled());
-        assertTrue(result.compileErrors());
+        assertNotEquals(emptyList(), result.compileErrors());
         assertNull(result.testResults());
     }
 
@@ -146,14 +146,14 @@ public class GraderTest {
         var task = Task.fromClassName("TestWithParams", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
-        assertFalse(result.compileErrors());
-        assertFalse(result.testCompileErrors());
+        assertEquals(emptyList(), result.compileErrors());
+        assertEquals(emptyList(), result.testCompileErrors());
         assertTrue(result.testResultFor("add(int)").passed());
 
         result = grader.grade(task, failsTest);
         assertTrue(result.compiled());
-        assertFalse(result.compileErrors());
-        assertFalse(result.testCompileErrors());
+        assertEquals(emptyList(), result.compileErrors());
+        assertEquals(emptyList(), result.testCompileErrors());
         assertFalse(result.testResultFor("add(int)").passed());
     }
 
@@ -162,16 +162,16 @@ public class GraderTest {
         var task = Task.fromClassName("TestWithOverloading", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
-        assertFalse(result.compileErrors());
-        assertFalse(result.testCompileErrors());
+        assertEquals(emptyList(), result.compileErrors());
+        assertEquals(emptyList(), result.testCompileErrors());
         assertEquals(2, result.testResults().size());
         assertTrue(result.testResultFor("add").passed());
         assertTrue(result.testResultFor("add(int)").passed());
 
         result = grader.grade(task, failsTest);
         assertTrue(result.compiled());
-        assertFalse(result.compileErrors());
-        assertFalse(result.testCompileErrors());
+        assertEquals(emptyList(), result.compileErrors());
+        assertEquals(emptyList(), result.testCompileErrors());
         assertEquals(2, result.testResults().size());
         assertFalse(result.testResultFor("add").passed());
         assertFalse(result.testResultFor("add(int)").passed());
@@ -182,14 +182,14 @@ public class GraderTest {
         var task = Task.fromClassName("TestWithMethodSource", TEST_SRC_DIR);
         var result = grader.grade(task, correct);
         assertTrue(result.compiled());
-        assertFalse(result.compileErrors());
-        assertFalse(result.testCompileErrors());
+        assertEquals(emptyList(), result.compileErrors());
+        assertEquals(emptyList(), result.testCompileErrors());
         assertTrue(result.testResultFor("add(int, int)").passed());
 
         result = grader.grade(task, failsTest);
         assertTrue(result.compiled());
-        assertFalse(result.compileErrors());
-        assertFalse(result.testCompileErrors());
+        assertEquals(emptyList(), result.compileErrors());
+        assertEquals(emptyList(), result.testCompileErrors());
         assertFalse(result.testResultFor("add(int, int)").passed());
     }
 }

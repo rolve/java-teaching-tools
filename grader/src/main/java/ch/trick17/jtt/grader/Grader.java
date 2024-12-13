@@ -65,7 +65,7 @@ public class Grader implements Closeable {
         // compile submission
         InMemCompilation.Result compileResult;
         if (sources.isEmpty()) {
-            compileResult = new InMemCompilation.Result(false, emptyList());
+            compileResult = new InMemCompilation.Result(emptyList(), emptyList());
         } else {
             compileResult = InMemCompilation.compile(task.compiler(), sources,
                     ClassPath.fromFiles(task.dependencies()), out);
@@ -383,15 +383,15 @@ public class Grader implements Closeable {
     }
 
     public record Result(
-            boolean compileErrors,
-            boolean testCompileErrors,
+            List<String> compileErrors,
+            List<String> testCompileErrors,
             boolean compiled,
             List<TestResult> testResults) {
 
         public List<Property> properties() {
             var withNull = Stream.of(
-                    compileErrors ? COMPILE_ERRORS : null,
-                    testCompileErrors ? TEST_COMPILE_ERRORS : null,
+                    !compileErrors.isEmpty() ? COMPILE_ERRORS : null,
+                    !testCompileErrors.isEmpty() ? TEST_COMPILE_ERRORS : null,
                     compiled ? COMPILED : null,
                     anyMatch(TestResult::nonDeterm) ? NONDETERMINISTIC : null,
                     anyMatch(TestResult::timeout) ? TIMEOUT : null,
