@@ -7,13 +7,9 @@ package ch.trick17.jtt.testrunner;
  */
 public record TestMethod(
         String className,
-        String name) implements Comparable<TestMethod> {
+        String name) {
 
     public String toString() {
         return className + "." + name;
-    }
-
-    public int compareTo(TestMethod o) {
-        return toString().compareTo(o.toString());
     }
 }
