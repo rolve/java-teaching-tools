@@ -229,7 +229,11 @@ public class TestRunner implements Closeable {
     public static class Sandboxed {
         public static Map<String, Object> run(String className, String methodName, String paramTypes) {
             var sel = selectMethod(className, methodName, paramTypes);
-            var req = request().selectors(sel).build();
+            // disable stack trace pruning, to have more robust results, e.g.,
+            // to simplif more aggressive pruning later
+            var req = request()
+                    .configurationParameter("junit.platform.stacktrace.pruning.enabled", "false")
+                    .selectors(sel).build();
 
             var exceptions = new ArrayList<Throwable>();
             var scores = new ArrayList<Double>();
