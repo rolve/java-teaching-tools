@@ -410,5 +410,10 @@ public class TestSuiteGrader implements Closeable {
                     .map(TestResult::method)
                     .collect(toSet());
         }
+
+        public Result with(List<TestResult> refImplementationResults) {
+            return new Result(emptyTestSuite, compilationFailed, refImplementationResults,
+                              mutantResults, allTests, mutantScore);
+        }
     }
 }

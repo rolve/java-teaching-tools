@@ -448,5 +448,9 @@ public class Grader implements Closeable {
                     .findFirst()
                     .orElseThrow();
         }
+
+        public Result with(List<TestResult> testResults) {
+            return new Result(compileErrors, testCompileErrors, compiled, testResults);
+        }
     }
 }

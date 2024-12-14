@@ -38,4 +38,9 @@ public record ExceptionDescription(
     public int hashCode() {
         return Objects.hash(className, message);
     }
+
+    public ExceptionDescription with(String message, ExceptionDescription cause,
+                                     List<StackTraceElement> stackTrace) {
+        return new ExceptionDescription(className, message, cause, stackTrace);
+    }
 }
