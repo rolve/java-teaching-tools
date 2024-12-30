@@ -28,11 +28,10 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        var result = InMemCompilation.compile(compiler, sources,
-                ClassPath.empty(), System.out);
+        var result = InMemCompilation.compile(compiler, sources, ClassPath.empty());
         assertEquals(emptyList(), result.errors());
         assertEquals(1, result.output().size());
-        assertEquals("HelloWorld", result.output().get(0).getClassName());
+        assertEquals("HelloWorld", result.output().getFirst().getClassName());
     }
 
     @ParameterizedTest
@@ -46,11 +45,10 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        var result = InMemCompilation.compile(compiler, sources,
-                ClassPath.empty(), System.out);
+        var result = InMemCompilation.compile(compiler, sources, ClassPath.empty());
         assertEquals(emptyList(), result.errors());
         assertEquals(1, result.output().size());
-        assertEquals("foo.bar.HelloWorld", result.output().get(0).getClassName());
+        assertEquals("foo.bar.HelloWorld", result.output().getFirst().getClassName());
     }
 
     @ParameterizedTest
@@ -75,8 +73,7 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        var result = InMemCompilation.compile(compiler, sources,
-                ClassPath.empty(), System.out);
+        var result = InMemCompilation.compile(compiler, sources, ClassPath.empty());
         assertEquals(emptyList(), result.errors());
         assertEquals(2, result.output().size());
     }
@@ -93,8 +90,7 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        var result = InMemCompilation.compile(compiler, sources,
-                ClassPath.empty(), System.out);
+        var result = InMemCompilation.compile(compiler, sources, ClassPath.empty());
         assertEquals(emptyList(), result.errors());
         assertEquals(1, result.output().size());
 
@@ -109,15 +105,14 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        result = InMemCompilation.compile(compiler, sources,
-                fromMemory(result.output()), System.out);
+        result = InMemCompilation.compile(compiler, sources, fromMemory(result.output()));
         assertEquals(emptyList(), result.errors());
         assertEquals(1, result.output().size());
     }
 
     @ParameterizedTest
     @EnumSource(Compiler.class)
-    void diagnosticsOut(Compiler compiler) throws IOException {
+    void compileErrors(Compiler compiler) throws IOException {
         var sources = List.of(InMemSource.fromString("""
                 public class HelloWorld {
                     public static void main(String[] args) {
@@ -126,10 +121,8 @@ public class InMemCompilationTest {
                 }
                 """));
         var diagnosticsOut = new ByteArrayOutputStream();
-        var result = InMemCompilation.compile(compiler, sources,
-                ClassPath.empty(), new PrintStream(diagnosticsOut));
+        var result = InMemCompilation.compile(compiler, sources, ClassPath.empty());
         assertEquals(emptyList(), result.errors());
-        assertEquals("", diagnosticsOut.toString());
 
         sources = List.of(new InMemSource("HelloWorld.java", """
                 public class HelloWorld {
@@ -138,11 +131,10 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        result = InMemCompilation.compile(compiler, sources,
-                ClassPath.empty(), new PrintStream(diagnosticsOut));
-        assertNotEquals(emptyList(), result.errors());
-        var diagnostics = diagnosticsOut.toString();
-        assertTrue(diagnostics.contains(";"), diagnostics);
+        result = InMemCompilation.compile(compiler, sources, ClassPath.empty());
+        assertEquals(1, result.errors().size());
+        var error = result.errors().getFirst();
+        assertTrue(error.contains(";"), error);
     }
 
     @Test
@@ -157,8 +149,7 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        var result = InMemCompilation.compile(ECLIPSE, sources,
-                ClassPath.empty(), System.out);
+        var result = InMemCompilation.compile(ECLIPSE, sources, ClassPath.empty());
 
         // class was still compiled and can be loaded and partially used
         assertEquals(1, result.output().size());
@@ -199,8 +190,7 @@ public class InMemCompilationTest {
                     }
                 }
                 """));
-        var result = InMemCompilation.compile(ECLIPSE, sources,
-                ClassPath.empty(), System.out);
+        var result = InMemCompilation.compile(ECLIPSE, sources, ClassPath.empty());
 
         // class was still compiled and can be loaded and partially used
         assertNotEquals(emptyList(), result.output());

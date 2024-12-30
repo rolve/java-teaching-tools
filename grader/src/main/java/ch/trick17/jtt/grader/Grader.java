@@ -1,6 +1,5 @@
 package ch.trick17.jtt.grader;
 
-import ch.trick17.jtt.memcompile.Compiler;
 import ch.trick17.jtt.memcompile.*;
 import ch.trick17.jtt.sandbox.Whitelist;
 import ch.trick17.jtt.testrunner.TestMethod;
@@ -9,7 +8,6 @@ import ch.trick17.jtt.testrunner.TestRunner;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -23,8 +21,6 @@ import static ch.trick17.jtt.grader.Property.*;
 import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
 import static java.io.File.pathSeparator;
 import static java.io.File.separatorChar;
-import static java.lang.String.valueOf;
-import static java.lang.String.*;
 import static java.lang.System.getProperty;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
@@ -51,11 +47,7 @@ public class Grader implements Closeable {
         this.testRunner = testRunner;
     }
 
-    public Result grade(Task task, List<InMemSource> sources) throws IOException {
-        return grade(task, sources, System.out);
-    }
-
-    public Result grade(Task task, List<InMemSource> sources, PrintStream out)
+    public Result grade(Task task, List<InMemSource> sources)
             throws IOException {
         for (var source : task.givenSources()) {
             sources.removeIf(s -> s.getPath().equals(source.getPath()));
@@ -68,7 +60,7 @@ public class Grader implements Closeable {
             compileResult = new InMemCompilation.Result(emptyList(), emptyList());
         } else {
             compileResult = InMemCompilation.compile(task.compiler(), sources,
-                    ClassPath.fromFiles(task.dependencies()), out);
+                    ClassPath.fromFiles(task.dependencies()));
         }
 
         // compile tests
@@ -77,14 +69,14 @@ public class Grader implements Closeable {
                 .collect(toCollection(ArrayList::new));
         fileClassPath.addAll(task.dependencies());
         var testCompileResult = InMemCompilation.compile(task.compiler(),
-                task.testSources(), new ClassPath(compileResult.output(), fileClassPath), out);
+                task.testSources(), new ClassPath(compileResult.output(), fileClassPath));
 
         // run tests
         var compiled = !testCompileResult.output().isEmpty();
         List<TestResult> testResults = null;
         if (compiled) {
             testResults = runTests(task, compileResult.output(),
-                    testCompileResult.output(), out);
+                    testCompileResult.output());
         }
         return new Result(compileResult.errors(), testCompileResult.errors(),
                 compiled, testResults);
@@ -92,8 +84,7 @@ public class Grader implements Closeable {
 
     private List<TestResult> runTests(Task task,
                                  List<InMemClassFile> classes,
-                                 List<InMemClassFile> testClasses,
-                                 PrintStream out) throws IOException {
+                                 List<InMemClassFile> testClasses) throws IOException {
         ClassPath sandboxedCode;
         ClassPath supportCode;
         if (task.restrictTests) {
@@ -109,39 +100,7 @@ public class Grader implements Closeable {
                 task.repetitions(), task.repTimeout(), task.testTimeout(),
                 task.permittedCalls(), task.testVmArgs());
 
-        var results = testRunner.run(testRunnerTask).testResults();
-
-        var failMsgs = results.stream()
-                .flatMap(r -> r.exceptions().stream())
-                .map(e -> format("%s: %s", e.className(),
-                        valueOf(e.message()).replaceAll("\\s+", " ")))
-                .filter(msg -> !msg.startsWith("java.lang.Error: Unresolved compilation problem"))
-                .distinct()
-                .toList();
-        if (!failMsgs.isEmpty()) {
-            out.println("Tests failed for the following reasons:");
-            failMsgs.forEach(msg -> out.print(msg.indent(2))); // indent includes \n
-        }
-
-        for (var res : results) {
-            if (res.nonDeterm()) {
-                out.println("Non-determinism in " + res.method());
-            }
-            if (res.incompleteReps()) {
-                out.println("Only " + res.repsMade() + " repetitions made in " + res.method());
-            }
-            if (res.timeout()) {
-                out.println("Timeout in " + res.method());
-            }
-            if (res.outOfMemory()) {
-                out.println("Out of memory in " + res.method());
-            }
-            if (!res.illegalOps().isEmpty()) {
-                out.println("Illegal operation(s) in " + res.method() + ": " +
-                            join(", ", res.illegalOps()));
-            }
-        }
-        return results;
+        return testRunner.run(testRunnerTask).testResults();
     }
 
     @Override

@@ -15,8 +15,7 @@ public class InMemCompilation {
 
     public static Result compile(Compiler compiler,
                                  List<InMemSource> sources,
-                                 ClassPath classPath,
-                                 PrintStream out) throws IOException {
+                                 ClassPath classPath) throws IOException {
         try (var fileManager = new InMemFileManager(sources, classPath)) {
             var javaCompiler = compiler.create();
             var collector = new DiagnosticCollector<>();
@@ -34,10 +33,6 @@ public class InMemCompilation {
                     .map(d -> d.getMessage(ROOT))
                     .distinct()
                     .toList();
-            if (!errors.isEmpty()) {
-                out.println("Compile errors:");
-                errors.forEach(e -> out.print(e.indent(2))); // indent includes \n
-            }
             return new Result(errors, fileManager.getOutput());
         }
     }

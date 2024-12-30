@@ -13,7 +13,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
-import static ch.trick17.jtt.grader.BatchGrader.RESULTS_FILE;
 import static ch.trick17.jtt.grader.GraderTest.SUBM_ROOT;
 import static ch.trick17.jtt.grader.GraderTest.TEST_SRC_DIR;
 import static ch.trick17.jtt.memcompile.Compiler.ECLIPSE;
@@ -23,6 +22,8 @@ import static java.nio.file.Files.readString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BatchGraderTest {
+
+    static final Path RESULTS_FILE = Path.of("results.tsv");
 
     static final List<Submission> WITH_ECLIPSE_STRUCTURE;
     static final List<Submission> WITH_MVN_STRUCTURE;
@@ -52,7 +53,7 @@ public class BatchGraderTest {
             fails-test     1         0               0                    1     0
             """);
 
-    static BatchGrader grader = new BatchGrader(null, Path.of("."));
+    static BatchGrader grader = new BatchGrader(null, RESULTS_FILE);
 
     @Test
     void eclipseStructureEclipseCompiler() throws IOException {
@@ -411,7 +412,7 @@ public class BatchGraderTest {
                 .filter(s -> List.of("prints-to-sysout", "prints-to-sysout-wrong").contains(s.name()))
                 .toList();
         // only works reliably without parallel grading, as System.out is shared
-        try (BatchGrader grader = new BatchGrader(null, Path.of("."), 1)) {
+        try (BatchGrader grader = new BatchGrader(null, RESULTS_FILE, 1)) {
             grader.grade(task, submissions);
         }
         var expected = withTabs("""

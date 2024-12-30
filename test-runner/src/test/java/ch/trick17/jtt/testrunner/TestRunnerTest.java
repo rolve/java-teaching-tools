@@ -140,6 +140,6 @@ public class TestRunnerTest {
     private static List<InMemClassFile> compile(String tests) throws IOException {
         return InMemCompilation.compile(JAVAC,
                 List.of(InMemSource.fromString(tests)),
-                ClassPath.fromCurrent(), System.out).output();
+                ClassPath.fromCurrent()).output();
     }
 }

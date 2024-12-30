@@ -16,14 +16,14 @@ import static java.util.EnumSet.noneOf;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.*;
 
-public class TsvWriter {
+public class TsvResultWriter {
 
-    public static void write(Map<Task, Map<Submission, Result>> results, Path path)
+    public static void write(Map<Task, Map<Submission, Result>> results, Path file)
             throws IOException {
         var single = results.size() == 1;
         var columnGroups = results.values().stream()
                 .collect(toMap(identity(), map -> columns(map.values())));
-        try (var out = newBufferedWriter(path)) {
+        try (var out = newBufferedWriter(file)) {
             // Header
             out.append("Name");
             if (!single) { // two-row header

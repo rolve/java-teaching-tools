@@ -18,6 +18,7 @@ import org.pitest.classpath.ClassloaderByteArraySource;
 import org.pitest.mutationtest.build.intercept.equivalent.EquivalentReturnMutationFilter;
 import org.pitest.mutationtest.engine.gregor.GregorMutater;
 import org.pitest.mutationtest.engine.gregor.config.Mutator;
+import org.slf4j.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -35,6 +36,7 @@ import static java.util.Comparator.comparingInt;
 import static java.util.Map.Entry.comparingByKey;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
+import static org.slf4j.LoggerFactory.getLogger;
 
 public class TestSuiteGrader implements Closeable {
 
@@ -48,6 +50,8 @@ public class TestSuiteGrader implements Closeable {
     private static final Duration REP_TIMEOUT = Duration.ofSeconds(2);
     private static final Duration TEST_TIMEOUT = Duration.ofSeconds(5);
     private static final List<String> TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
+
+    private static final Logger logger = getLogger(TestSuiteGrader.class);
 
     private final TestRunner testRunner;
 
@@ -67,10 +71,14 @@ public class TestSuiteGrader implements Closeable {
     public Task prepareTask(List<List<InMemSource>> refImplementations,
                             List<InMemSource> refTestSuite,
                             List<Path> dependencies) throws IOException {
+        var refTestSuiteString = refTestSuite.stream()
+                .map(s -> s.getPath().replaceAll(".*/", ""))
+                .collect(joining(", "));
+        logger.info("Preparing task for reference test suite: {}", refTestSuiteString);
         var classPath = ClassPath.fromFiles(dependencies);
         var compiledImplementations = new ArrayList<List<InMemClassFile>>();
         for (int i = 0; i < refImplementations.size(); i++) {
-            var implResult = compile(JAVAC, refImplementations.get(i), classPath, System.out);
+            var implResult = compile(JAVAC, refImplementations.get(i), classPath);
             if (!implResult.errors().isEmpty()) {
                 throw new IllegalArgumentException("Could not compile reference implementation " + (i + 1));
             } else if (implResult.output().isEmpty()) {
@@ -80,7 +88,7 @@ public class TestSuiteGrader implements Closeable {
         }
 
         classPath = classPath.withMemory(compiledImplementations.getFirst()).withCurrent();
-        var refTestSuiteResult = compile(JAVAC, refTestSuite, classPath, System.out);
+        var refTestSuiteResult = compile(JAVAC, refTestSuite, classPath);
         if (!refTestSuiteResult.errors().isEmpty()) {
             throw new IllegalArgumentException("Could not compile reference test suite against sample implementation");
         } else if (refTestSuiteResult.output().isEmpty()) {
@@ -112,12 +120,12 @@ public class TestSuiteGrader implements Closeable {
             }
 
             var mutants = generateMutants(refImpl, i);
-            System.out.println("Generated " + mutants.size() + " mutants" +
-                               " for reference implementation " + (i + 1));
+            logger.info("Generated {} mutants for reference implementation {}",
+                    mutants.size(), i + 1);
             var killed = killMutants(mutants, compiledSuite, dependencies);
             killedMutants.putAll(killed);
         }
-        System.out.println(killedMutants.size() + " mutants were killed by test suite\n");
+        logger.info("{} mutants were killed by test suite", killedMutants.size());
 
         var weights = computeWeights(tests, killedMutants);
 
@@ -139,6 +147,8 @@ public class TestSuiteGrader implements Closeable {
         var ordered = descriptions.entrySet().stream()
                 .sorted(comparingByKey(comparingInt(m -> tests.indexOf(m))))
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
+
+        logger.info("Finished preparing task for reference test suite: {}", refTestSuiteString);
         return new Task(compiledImplementations, mutations, ordered);
     }
 
@@ -171,8 +181,7 @@ public class TestSuiteGrader implements Closeable {
                                                       List<Path> dependencies) throws IOException {
         var testClassNames = testSuite.stream().map(f -> f.getClassName()).toList();
         var killed = new HashMap<Mutant, List<TestMethod>>();
-        for (int i = 0; i < mutants.size(); i++) {
-            var mutant = mutants.get(i);
+        for (var mutant : mutants) {
             try {
                 var sandboxed = ClassPath.fromMemory(mutant.classes()).withMemory(testSuite);
                 var support = ClassPath.fromFiles(dependencies).withCurrent();
@@ -193,25 +202,20 @@ public class TestSuiteGrader implements Closeable {
                         .map(TestResult::method)
                         .toList();
                 if (nonDeterministic) {
-                    System.err.println("  Warning: Mutant " + (i + 1) +
-                                       " produced non-deterministic test results" +
-                                       " (" + mutant.getDescription() + ")");
+                    logger.warn("Mutant produced non-deterministic test results: {}",
+                            mutant.getDescription());
                 } else if (verifyError) {
-                    System.err.println("  Warning: Mutant " + (i + 1) +
-                                       " produced a VerifyError" +
-                                       " (" + mutant.getDescription() + ")");
+                    logger.warn("Mutant produced a VerifyError: {}",
+                            mutant.getDescription());
                 } else if (failedTests.isEmpty()) {
-                    System.err.println("  Warning: Mutant " + (i + 1) +
-                                       " survived reference test suite" +
-                                       " (" + mutant.getDescription() + ")");
+                    logger.warn("Mutant survived reference test suite: {}",
+                            mutant.getDescription());
                 } else {
                     killed.put(mutant, failedTests);
                 }
             } catch (TestRunException e) {
-                System.err.println("  Warning: Mutant " + (i + 1) +
-                                   " could not be tested against reference test suite" +
-                                   " (" + mutant.getDescription() + ")");
-                e.printStackTrace();
+                logger.warn("Mutant could not be tested against reference test suite: {}",
+                        mutant.getDescription(), e);
             }
         }
         return killed;
@@ -234,9 +238,8 @@ public class TestSuiteGrader implements Closeable {
         for (var test : tests) {
             var kills = grouped.getOrDefault(test, emptyList()).size();
             var percentage = 100 * kills / mutants.size();
-            System.out.println(kills + " (" + percentage + "%) " +
-                               (!first ? " more" : "") +
-                               " mutants killed by " + test);
+            logger.info("{} ({}%){} mutants killed by {}", kills,
+                    percentage, !first ? " more" : "", test);
             first = false;
         }
 
@@ -292,7 +295,7 @@ public class TestSuiteGrader implements Closeable {
         if (testSuite.isEmpty()) {
             return new Result(true, false, emptyList(), emptyList(), emptyList(), 0.0);
         }
-        var compileResult = compile(ECLIPSE, testSuite, classPath, System.out);
+        var compileResult = compile(ECLIPSE, testSuite, classPath);
         if (!compileResult.errors().isEmpty() && compileResult.output().isEmpty()) {
             return new Result(false, true, emptyList(), emptyList(), emptyList(), 0.0);
         }
@@ -319,7 +322,8 @@ public class TestSuiteGrader implements Closeable {
         }
 
         var mutantResults = new ArrayList<MutantResult>();
-        for (var mutation : task.mutations()) {
+        for (int i = 0; i < task.mutations().size(); i++) {
+            var mutation = task.mutations().get(i);
             var refImpl = task.refImplementationFor(mutation);
             var mutater = createMutator(refImpl);
             var mutated = mutater.getMutation(mutation.identifier()).getBytes();

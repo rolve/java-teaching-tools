@@ -428,7 +428,7 @@ public class SandboxTest {
                         assert false : "oops";
                     }
                 }
-                """)), ClassPath.empty(), System.out).output();
+                """)), ClassPath.empty()).output();
 
         var sandbox = new Sandbox.Builder(ClassPath.fromMemory(compiled), ClassPath.empty())
                 .timeout(Duration.ofSeconds(1))
@@ -603,7 +603,7 @@ public class SandboxTest {
                         }
                     }
                 }
-                """)), ClassPath.empty(), System.out).output();
+                """)), ClassPath.empty()).output();
 
         var sandbox = new Sandbox.Builder(ClassPath.fromMemory(compiled),
                 ClassPath.empty()) .timeout(Duration.ofMillis(500))
