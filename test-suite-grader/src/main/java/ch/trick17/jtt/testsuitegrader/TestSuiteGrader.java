@@ -40,6 +40,9 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 public class TestSuiteGrader implements Closeable {
 
+    // When grading untrusted test suites, we sandbox not only the
+    // implementation code, but the test code as well, hence the need for a
+    // more permissive whitelist than the default one.
     public static final String WHITELIST = DEFAULT_WHITELIST_DEF +
                                            JUNIT5_DEF +
                                            MOCKITO_DEF +

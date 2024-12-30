@@ -38,15 +38,34 @@ public class BatchGrader implements Closeable {
 
     private final Grader grader = new Grader();
 
+    /**
+     * Create a new batch grader that writes the report to a file named
+     * "grader_report_<i>timestamp</i>.txt" and the results to a file named
+     * "grader_results_<i>timestamp</i>.tsv", where <i>timestamp</i> is the
+     * current date and time in the format "yyyy-MM-dd_HH-mm-ss". The number of
+     * threads used for grading is equal to the number of logical processors.
+     */
     public BatchGrader() {
         this(Path.of("grader_report_" + now().format(TIME_FORMAT) + ".txt"),
                 Path.of("grader_results_" + now().format(TIME_FORMAT) + ".tsv"));
     }
 
+    /**
+     * Create a new batch grader that writes the report to a file with the given
+     * path and the results to a file with the given path. If either path is
+     * <code>null</code>, the corresponding output is not written. The number of
+     * worker threads is equal to the number of logical processors.
+     */
     public BatchGrader(Path reportFile, Path resultsFile) {
         this(reportFile, resultsFile, getCommonPoolParallelism());
     }
 
+    /**
+     * Create a new batch grader with the given number of worker threads that
+     * writes the report to a file with the given path and the results to a file
+     * with the given path. If either path is <code>null</code>, the
+     * corresponding output is not written.
+     */
     public BatchGrader(Path reportFile, Path resultsFile, int parallelism) {
         if (parallelism <= 0) {
             throw new IllegalArgumentException("parallelism must be positive");
@@ -56,10 +75,20 @@ public class BatchGrader implements Closeable {
         this.parallelism = parallelism;
     }
 
+    /**
+     * Performs the given grading task for all given submissions.
+     *
+     * @see Submission#loadAllFrom(Path, Path)
+     */
     public void grade(Task task, List<Submission> submissions) throws IOException {
         grade(List.of(task), submissions);
     }
 
+    /**
+     * Performs the all the given grading task for all given submissions.
+     *
+     * @see Submission#loadAllFrom(Path, Path)
+     */
     public void grade(List<Task> tasks, List<Submission> submissions) throws IOException {
         var results = new LinkedHashMap<Task, Map<Submission, Result>>();
         tasks.forEach(t -> results.put(t, new ConcurrentHashMap<>()));
