@@ -33,7 +33,6 @@ import static ch.trick17.jtt.sandbox.Whitelist.DEFAULT_WHITELIST_DEF;
 import static ch.trick17.jtt.testsuitegrader.TestSuiteWhitelists.*;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparingInt;
-import static java.util.Map.Entry.comparingByKey;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.*;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -147,9 +146,9 @@ public class TestSuiteGrader implements Closeable {
         var descriptions = testDescriptions(refTestSuite);
         // order descriptions according to the order of the tests in the reference suite,
         // assumed to be roughly from weak to strong
-        var ordered = descriptions.entrySet().stream()
-                .sorted(comparingByKey(comparingInt(m -> tests.indexOf(m))))
-                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
+        var ordered = descriptions.stream()
+                .sorted(comparingInt(d -> tests.indexOf(d.method)))
+                .toList();
 
         logger.info("Finished preparing task for reference test suite: {}", refTestSuiteString);
         return new Task(compiledImplementations, mutations, ordered);
@@ -262,8 +261,8 @@ public class TestSuiteGrader implements Closeable {
         return weights;
     }
 
-    private Map<TestMethod, String> testDescriptions(List<InMemSource> testSuite) {
-        var result = new HashMap<TestMethod, String>();
+    private List<TestDescription> testDescriptions(List<InMemSource> testSuite) {
+        var result = new ArrayList<TestDescription>();
         for (var src : testSuite) {
             for (var comment : src.getParsed().getAllComments()) {
                 if (comment instanceof JavadocComment javadoc &&
@@ -279,7 +278,8 @@ public class TestSuiteGrader implements Closeable {
                         var description = javadoc.parse().toText()
                                 .replaceAll("(\r?\n)+$", "")
                                 .replaceAll("(\r?\n)+", " ");
-                        result.put(new TestMethod(className.get(), methodName), description);
+                        result.add(new TestDescription(
+                                new TestMethod(className.get(), methodName), description));
                     }
                 }
             }
@@ -390,12 +390,14 @@ public class TestSuiteGrader implements Closeable {
     public record Task(
             List<List<InMemClassFile>> refImplementations,
             List<Mutation> mutations,
-            LinkedHashMap<TestMethod, String> refTestDescriptions) {
+            List<TestDescription> refTestDescriptions) {
 
         public List<InMemClassFile> refImplementationFor(Mutation mutation) {
             return refImplementations.get(mutation.refImplementationIndex());
         }
     }
+
+    public record TestDescription(TestMethod method, String description) {}
 
     public record Result(
             boolean emptyTestSuite,

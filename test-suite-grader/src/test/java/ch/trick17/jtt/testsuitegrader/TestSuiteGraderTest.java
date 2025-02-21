@@ -3,6 +3,7 @@ package ch.trick17.jtt.testsuitegrader;
 import ch.trick17.jtt.memcompile.InMemSource;
 import ch.trick17.jtt.testrunner.TestMethod;
 import ch.trick17.jtt.testsuitegrader.TestSuiteGrader.Task;
+import ch.trick17.jtt.testsuitegrader.TestSuiteGrader.TestDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -94,10 +95,13 @@ public class TestSuiteGraderTest {
 
             assertTrue(result.refImplementationResults().stream().allMatch(r -> r.passed()));
             assertTrue(switch (missingTests) {
-                case 0 -> result.mutantResults().stream().noneMatch(r -> r.passed());
-                default -> result.mutantResults().stream().anyMatch(r -> r.passed()) &&
-                           result.mutantResults().stream().anyMatch(r -> !r.passed());
-                case totalTests -> result.mutantResults().stream().allMatch(r -> r.passed());
+                case 0 ->
+                        result.mutantResults().stream().noneMatch(r -> r.passed());
+                default ->
+                        result.mutantResults().stream().anyMatch(r -> r.passed()) &&
+                        result.mutantResults().stream().anyMatch(r -> !r.passed());
+                case totalTests ->
+                        result.mutantResults().stream().allMatch(r -> r.passed());
             });
             assertEquals(expectedScore, result.mutantScore(), 0.001);
         }
@@ -109,17 +113,24 @@ public class TestSuiteGraderTest {
         var task = grader.prepareTask(refImplementations("io-tasks"), refTestSuite);
         var desc = task.refTestDescriptions();
 
-        assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testZero")),
-                "<code>firstNonEmptyLines</code> mit <code>n = 0</code> aufrufen und prüfen, dass eine leere " +
-                "Liste zurückgegeben wird.");
-        assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testOne")),
-                "<code>firstNonEmptyLines</code> mit <code>n = 1</code> aufrufen und prüfen, dass die erste " +
-                "(nicht-leere) Zeile zurückgegeben wird.");
-        assertEquals(desc.get(new TestMethod("io.FirstNonEmptyLinesTest", "testEncoding")),
-                "<code>firstNonEmptyLines</code> mit einem Text aufrufen, der Nicht-ASCII-Zeichen " +
-                "enthält, und prüfen, dass die Zeichen korrekt decodiert werden.");
-        assertEquals(desc.get(new TestMethod("io.WritePowersOfTwoTest", "testClose")),
-                "Prüfen, dass <code>writePowersOfTwo</code> den übergebenen OutputStream schliesst.");
+        var expected = List.of(
+                new TestDescription(new TestMethod("io.FirstNonEmptyLinesTest", "testZero"),
+                        "<code>firstNonEmptyLines</code> mit <code>n = 0</code> aufrufen und prüfen, dass eine leere " +
+                        "Liste zurückgegeben wird."),
+                new TestDescription(new TestMethod("io.FirstNonEmptyLinesTest", "testOne"),
+                        "<code>firstNonEmptyLines</code> mit <code>n = 1</code> aufrufen und prüfen, dass die erste " +
+                        "(nicht-leere) Zeile zurückgegeben wird."),
+                new TestDescription(new TestMethod("io.FirstNonEmptyLinesTest", "testBasic"),
+                        "<code>firstNonEmptyLines</code> mit verschiedenen <code>n</code> aufrufen und prüfen, dass " +
+                        "entsprechend viele (nicht-leere) Zeilen zurückgegeben werden."),
+                new TestDescription(new TestMethod("io.FirstNonEmptyLinesTest", "testEmptyLines"),
+                        "<code>firstNonEmptyLines</code> mit einem Text aufrufen, der leere Zeilen enthält, und " +
+                        "prüfen, dass die leeren Zeilen ignoriert werden."));
+        assertEquals(expected, desc.subList(0, 4));
+
+        assertTrue(desc.contains(new TestDescription(
+                new TestMethod("io.WritePowersOfTwoTest", "testClose"),
+                "Prüfen, dass <code>writePowersOfTwo</code> den übergebenen OutputStream schliesst.")));
     }
 
     @Test
