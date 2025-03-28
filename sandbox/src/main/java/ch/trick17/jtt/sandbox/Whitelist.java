@@ -49,7 +49,39 @@ public interface Whitelist {
                 
                 java.lang.Thread.interrupted
                 
+                java.lang.Class.toGenericString
+                java.lang.Class.isInstance
+                java.lang.Class.isAssignableFrom
+                java.lang.Class.isInterface
+                java.lang.Class.isArray
+                java.lang.Class.isPrimitive
+                java.lang.Class.isAnnotation
+                java.lang.Class.isSynthetic
+                java.lang.Class.getName
+                java.lang.Class.getSuperclass
+                java.lang.Class.getPackageName
+                java.lang.Class.getInterfaces
+                java.lang.Class.getComponentType
+                java.lang.Class.getModifiers
+                java.lang.Class.getDeclaringClass
+                java.lang.Class.getEnclosingClass
+                java.lang.Class.getSimpleName
+                java.lang.Class.getTypeName
+                java.lang.Class.getCanonicalName
+                java.lang.Class.isAnonymousClass
+                java.lang.Class.isLocalClass
+                java.lang.Class.isMemberClass
                 java.lang.Class.desiredAssertionStatus
+                java.lang.Class.isEnum
+                java.lang.Class.isRecord
+                java.lang.Class.cast
+                java.lang.Class.asSubclass
+                java.lang.Class.descriptorString
+                java.lang.Class.componentType
+                java.lang.Class.arrayType
+                java.lang.Class.isHidden
+                java.lang.Class.getPermittedSubclasses
+                java.lang.Class.isSealed
                 
                 java.util.Objects.*
                 java.util.Random.*
