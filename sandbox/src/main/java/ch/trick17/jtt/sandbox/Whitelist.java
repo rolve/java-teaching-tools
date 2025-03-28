@@ -156,6 +156,18 @@ public interface Whitelist {
                 java.util.concurrent.ConcurrentMap.*
                 java.util.concurrent.ConcurrentHashMap.*
                 
+                java.util.concurrent.atomic.AtomicBoolean.*
+                java.util.concurrent.atomic.AtomicInteger.*
+                java.util.concurrent.atomic.AtomicIntegerArray.*
+                java.util.concurrent.atomic.AtomicLong.*
+                java.util.concurrent.atomic.AtomicLongArray.*
+                java.util.concurrent.atomic.AtomicReference.*
+                java.util.concurrent.atomic.AtomicReferenceArray.*
+                java.util.concurrent.atomic.DoubleAccumulator.*
+                java.util.concurrent.atomic.DoubleAdder.*
+                java.util.concurrent.atomic.LongAccumulator.*
+                java.util.concurrent.atomic.LongAdder.*
+                
                 java.util.function.BiConsumer.*
                 java.util.function.BiFunction.*
                 java.util.function.BinaryOperator.*
