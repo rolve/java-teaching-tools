@@ -84,8 +84,8 @@ public class Grader implements Closeable {
     }
 
     private List<TestResult> runTests(Task task,
-                                 List<InMemClassFile> classes,
-                                 List<InMemClassFile> testClasses) throws IOException {
+                                      List<InMemClassFile> classes,
+                                      List<InMemClassFile> testClasses) throws IOException {
         ClassPath sandboxedCode;
         ClassPath supportCode;
         if (task.restrictTests) {
