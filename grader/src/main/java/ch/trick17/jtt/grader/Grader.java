@@ -36,6 +36,9 @@ public class Grader implements Closeable {
     private static final int DEFAULT_REPETITIONS = 7;
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
+    private static final String DEFAULT_PERMITTED_CALLS = Whitelist.DEFAULT_WHITELIST_DEF;
+    private static final boolean DEFAULT_RESTRICT_TESTS = false;
+    private static final List<Path> DEFAULT_DEPENDENCIES = emptyList();
     private static final List<String> DEFAULT_TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
 
     private final TestRunner testRunner;
@@ -118,9 +121,9 @@ public class Grader implements Closeable {
         private int repetitions = DEFAULT_REPETITIONS;
         private Duration repTimeout = DEFAULT_REP_TIMEOUT;
         private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
-        private String permittedCalls = Whitelist.DEFAULT_WHITELIST_DEF;
-        private boolean restrictTests = false;
-        private List<Path> dependencies = emptyList();
+        private String permittedCalls = DEFAULT_PERMITTED_CALLS;
+        private boolean restrictTests = DEFAULT_RESTRICT_TESTS;
+        private List<Path> dependencies = DEFAULT_DEPENDENCIES;
         private List<String> testVmArgs = DEFAULT_TEST_VM_ARGS;
 
         public static Task fromString(String testClassCode) {
