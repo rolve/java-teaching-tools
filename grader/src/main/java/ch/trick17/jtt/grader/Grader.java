@@ -39,7 +39,7 @@ public class Grader implements Closeable {
     private static final String DEFAULT_PERMITTED_CALLS = Whitelist.DEFAULT_WHITELIST_DEF;
     private static final boolean DEFAULT_RESTRICT_TESTS = false;
     private static final List<Path> DEFAULT_DEPENDENCIES = emptyList();
-    private static final List<String> DEFAULT_TEST_VM_ARGS = List.of("-Dfile.encoding=UTF8");
+    private static final List<String> DEFAULT_TEST_VM_ARGS = emptyList();
 
     private final TestRunner testRunner;
 
@@ -276,10 +276,8 @@ public class Grader implements Closeable {
         /**
          * Sets the VM arguments that are used to start the JVM(s) in which the
          * tests are executed (in addition to predefined arguments such as the
-         * classpath, which is equal to the one of this VM). The default is
-         * "-Dfile.encoding=UTF8", so to enforce a different (or again the same)
-         * encoding, a respective argument should be included when using this
-         * method.
+         * classpath, which is equal to the one of this VM). The default is an
+         * empty list.
          */
         public Task testVmArgs(String... testVmArgs) {
             return testVmArgs(asList(testVmArgs));
@@ -288,10 +286,8 @@ public class Grader implements Closeable {
         /**
          * Sets the VM arguments that are used to start the JVM(s) in which the
          * tests are executed (in addition to predefined arguments such as the
-         * classpath, which is equal to the one of this VM). The default is
-         * "-Dfile.encoding=UTF8", so to enforce a different (or again the same)
-         * encoding, a respective argument should be included when using this
-         * method.
+         * classpath, which is equal to the one of this VM). The default is an
+         * empty list.
          */
         public Task testVmArgs(List<String> testVmArgs) {
             this.testVmArgs = copyOf(testVmArgs);
