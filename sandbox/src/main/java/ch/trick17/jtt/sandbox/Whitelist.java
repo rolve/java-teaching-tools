@@ -105,6 +105,7 @@ public interface Whitelist {
                 java.util.HashMap.*
                 java.util.LinkedHashMap.*
                 java.util.TreeMap.*
+                java.util.NoSuchElementException.*
                 
                 java.util.Optional.*
                 java.util.OptionalInt.*
