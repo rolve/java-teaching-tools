@@ -32,6 +32,7 @@ import static java.util.stream.Collectors.toCollection;
 public class Grader implements Closeable {
 
     private static final Path DEFAULT_SOURCE_DIR = Path.of("src/test/java").toAbsolutePath();
+    private static final Compiler DEFAULT_COMPILER = ECLIPSE;
     private static final int DEFAULT_REPETITIONS = 7;
     private static final Duration DEFAULT_REP_TIMEOUT = Duration.ofSeconds(6);
     private static final Duration DEFAULT_TEST_TIMEOUT = Duration.ofSeconds(10);
@@ -113,7 +114,7 @@ public class Grader implements Closeable {
         private final List<InMemSource> testSources;
         private final List<InMemSource> givenSources;
 
-        private Compiler compiler = ECLIPSE;
+        private Compiler compiler = DEFAULT_COMPILER;
         private int repetitions = DEFAULT_REPETITIONS;
         private Duration repTimeout = DEFAULT_REP_TIMEOUT;
         private Duration testTimeout = DEFAULT_TEST_TIMEOUT;
@@ -179,9 +180,9 @@ public class Grader implements Closeable {
         }
 
         /**
-         * Sets to compiler to use. The default is {@link ch.trick17.jtt.memcompile.Compiler#ECLIPSE}
+         * Sets to compiler to use. The default is {@link Compiler#ECLIPSE}
          */
-        public Task compiler(ch.trick17.jtt.memcompile.Compiler compiler) {
+        public Task compiler(Compiler compiler) {
             this.compiler = compiler;
             return this;
         }
