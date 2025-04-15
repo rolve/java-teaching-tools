@@ -23,6 +23,7 @@ public class GraderTest {
     static List<InMemSource> correct;
     static List<InMemSource> failsTest;
     static List<InMemSource> compileError;
+    static List<InMemSource> missingClass;
     static Grader grader;
 
     @BeforeAll
@@ -33,6 +34,8 @@ public class GraderTest {
                 SUBM_ROOT.resolve("eclipse-structure/fails-test/src"), null);
         compileError = InMemSource.fromDirectory(
                 SUBM_ROOT.resolve("eclipse-structure/compile-error/src"), null);
+        missingClass = InMemSource.fromDirectory(
+                SUBM_ROOT.resolve("eclipse-structure/missing-class/src"), null);
         grader = new Grader();
     }
 
@@ -191,5 +194,23 @@ public class GraderTest {
         assertEquals(emptyList(), result.compileErrors());
         assertEquals(emptyList(), result.testCompileErrors());
         assertFalse(result.testResultFor("add(int, int)").passed());
+    }
+
+    @Test
+    void testWithLambda() throws IOException {
+        var task = Task.fromClassName("TestWithLambda", TEST_SRC_DIR);
+        var result = grader.grade(task, correct);
+        assertTrue(result.compiled());
+        assertEquals(emptyList(), result.compileErrors());
+        assertEquals(emptyList(), result.testCompileErrors());
+        assertTrue(result.testResultFor("add").passed());
+        assertTrue(result.testResultFor("multiply").passed());
+
+        result = grader.grade(task, missingClass);
+        assertTrue(result.compiled());
+        assertEquals(emptyList(), result.compileErrors());
+        assertNotEquals(emptyList(), result.testCompileErrors());
+        assertFalse(result.testResultFor("add").passed());
+        assertTrue(result.testResultFor("multiply").passed()); // should be unaffected
     }
 }

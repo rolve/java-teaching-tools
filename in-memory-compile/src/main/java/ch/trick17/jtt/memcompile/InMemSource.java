@@ -30,6 +30,10 @@ public class InMemSource extends SimpleJavaFileObject {
     private static final ThreadLocal<JavaParser> parser =
             ThreadLocal.withInitial(() -> new JavaParser(PARSER_CONFIG));
 
+    public static JavaParser getParser() {
+        return parser.get();
+    }
+
     public static InMemSource fromString(String source) {
         source = source.replace("\r\n", "\n");
         var parseResult = parser.get().parse(source);
