@@ -9,6 +9,8 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+import com.github.javaparser.printer.DefaultPrettyPrinter;
+import com.github.javaparser.printer.Printer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.slf4j.Logger;
@@ -54,6 +56,7 @@ public class Grader implements Closeable {
     private static final Logger log = LoggerFactory.getLogger(Grader.class);
 
     private final TestRunner testRunner;
+    private final Printer printer = new DefaultPrettyPrinter();
 
     public Grader() {
         this(new TestRunner());
@@ -135,24 +138,25 @@ public class Grader implements Closeable {
                 var hasLambda = method.stream().anyMatch(n -> n instanceof LambdaExpr);
                 if (hasTestAnnotation && hasLambda) {
                     var exceptions = method.getThrownExceptions().stream()
-                            .map(Node::toString)
+                            .map(printer::print)
                             .collect(joining(", "));
                     if (!exceptions.isEmpty()) {
                         exceptions = "throws " + exceptions;
                     }
+                    var body = printer.print(method.getBody().orElseThrow());
                     var newBody = InMemSource.getParser().parseBlock("""
                             {
                                 new ch.trick17.jtt.grader.ThrowingRunnable<>() {
                                     public void run() %s %s
                                 }.run();
                             }
-                            """.formatted(exceptions, method.getBody().get()));
+                            """.formatted(exceptions, body));
                     method.setBody(newBody.getResult().orElseThrow());
                 }
             }
         }, null);
 
-        var content = unit.toString();
+        var content = printer.print(unit);
         log.debug("Wrapped test code:\n\n{}", content);
         return new InMemSource(source.getPath(), content, unit);
     }
