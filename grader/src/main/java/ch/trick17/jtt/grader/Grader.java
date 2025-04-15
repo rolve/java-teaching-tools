@@ -7,6 +7,7 @@ import ch.trick17.jtt.testrunner.TestResult;
 import ch.trick17.jtt.testrunner.TestRunner;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -131,7 +132,8 @@ public class Grader implements Closeable {
                 var hasTestAnnotation =
                         method.isAnnotationPresent(Test.class) ||
                         method.isAnnotationPresent(ParameterizedTest.class);
-                if (hasTestAnnotation && method.getBody().isPresent()) {
+                var hasLambda = method.stream().anyMatch(n -> n instanceof LambdaExpr);
+                if (hasTestAnnotation && hasLambda) {
                     var exceptions = method.getThrownExceptions().stream()
                             .map(Node::toString)
                             .collect(joining(", "));
@@ -261,10 +263,10 @@ public class Grader implements Closeable {
         }
 
         /**
-         * Defines whether tests are made more robust against compile errors in
-         * the same test class. The default is <code>true</code>. The enhanced
-         * robustness is achieved by wrapping the code in each test method like
-         * this:
+         * Defines whether tests with lambda expressions are made more robust
+         * against compile errors in the same test class. The default is
+         * <code>true</code>. The enhanced robustness is achieved by wrapping
+         * test method code with lambdas like this:
          * <pre>
          * new ThrowingRunnable<>() {
          *     public void run() throws [...] {

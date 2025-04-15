@@ -44,4 +44,15 @@ public class TestWithLambda {
         int a = 3;
         assertDoesNotThrow(() -> Multiply.multiply(a, b));
     }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2})
+    void nonFinalParams(int b) {
+        int a = 3;
+        b += 1; // this does not work when test code is wrapped in a class
+        assertEquals(a * b, Multiply.multiply(a, b));
+    }
+
+    // TODO: Test methods that are parameterized, modify a parameter (like
+    //  above), *and* contain a lambda expression don't work yet...
 }
