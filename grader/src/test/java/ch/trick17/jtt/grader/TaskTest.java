@@ -21,7 +21,7 @@ public class TaskTest {
 
         var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
-        assertEquals(code, testClasses.get(0).getContent());
+        assertEquals(code, testClasses.getFirst().getContent());
     }
 
     @Test
@@ -33,7 +33,7 @@ public class TaskTest {
 
         var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
-        assertEquals(code, testClasses.get(0).getContent());
+        assertEquals(code, testClasses.getFirst().getContent());
     }
 
     @Test
@@ -45,7 +45,7 @@ public class TaskTest {
 
         var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
-        assertEquals(code, testClasses.get(0).getContent());
+        assertEquals(code, testClasses.getFirst().getContent());
     }
 
     @Test
@@ -57,7 +57,7 @@ public class TaskTest {
 
         var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
-        assertEquals(code, testClasses.get(0).getContent());
+        assertEquals(code, testClasses.getFirst().getContent());
     }
 
     @Test
@@ -65,6 +65,6 @@ public class TaskTest {
         var task = Grader.Task.fromString("public class SillyTest {}");
         var testClasses = task.testSources();
         assertEquals(1, testClasses.size());
-        assertEquals("public class SillyTest {}", testClasses.get(0).getContent());
+        assertEquals("public class SillyTest {}", testClasses.getFirst().getContent());
     }
 }

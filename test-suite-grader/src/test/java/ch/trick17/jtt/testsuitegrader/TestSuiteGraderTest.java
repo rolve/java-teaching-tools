@@ -75,7 +75,7 @@ public class TestSuiteGraderTest {
             // test in the suite kills mutants not killed by earlier tests)
             var expectedScore = (totalTests - missingTests) / (double) totalTests;
 
-            var testClass = refTestSuite.get(0).getContent();
+            var testClass = refTestSuite.getFirst().getContent();
             var matcher = testPattern.matcher(testClass);
             var matches = new ArrayList<MatchResult>();
             while (matcher.find()) {

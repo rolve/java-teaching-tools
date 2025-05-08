@@ -49,12 +49,12 @@ public class TestRunnerTest {
         var result = runner.run(new Task("PassingTest",
                 ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests)));
         assertEquals(1, result.testResults().size());
-        assertTrue(result.testResults().get(0).passed());
+        assertTrue(result.testResults().getFirst().passed());
 
         result = runner.run(new Task("FailingTest",
                 ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests)));
         assertEquals(1, result.testResults().size());
-        assertFalse(result.testResults().get(0).passed());
+        assertFalse(result.testResults().getFirst().passed());
     }
 
     @Test
@@ -63,12 +63,12 @@ public class TestRunnerTest {
         var result = runner.run(new Task("PassingTest",
                 ClassPath.fromMemory(tests), ClassPath.fromCurrent()));
         assertEquals(1, result.testResults().size());
-        assertTrue(result.testResults().get(0).passed());
+        assertTrue(result.testResults().getFirst().passed());
 
         result = runner.run(new Task("FailingTest",
                 ClassPath.fromMemory(tests), ClassPath.fromCurrent()));
         assertEquals(1, result.testResults().size());
-        assertFalse(result.testResults().get(0).passed());
+        assertFalse(result.testResults().getFirst().passed());
     }
 
     @Test
@@ -98,42 +98,44 @@ public class TestRunnerTest {
                 ClassPath.fromMemory(test), ClassPath.fromCurrent(), 3,
                 Duration.ofSeconds(1), Duration.ofSeconds(1), null, emptyList()));
         assertEquals(1, result.testResults().size());
-        assertTrue(result.testResults().get(0).passed());
+        assertTrue(result.testResults().getFirst().passed());
     }
 
     @Test
     void multithreading() throws IOException, InterruptedException, ExecutionException {
         var tests = compile(SIMPLE_TESTS);
 
-        var executor = Executors.newFixedThreadPool(10);
-        var results = new ArrayList<Future<Result>>();
-        for (int i = 1; i <= 10; i++) {
-            results.add(executor.submit(() -> runner.run(new Task(List.of("PassingTest"),
-                    ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests),
-                    5, Duration.ofSeconds(5), Duration.ofSeconds(10), null))));
-        }
-        for (var result : results) {
-            assertEquals(1, result.get().testResults().size());
-            assertTrue(result.get().testResults().get(0).passed());
+        try (var executor = Executors.newFixedThreadPool(10)) {
+            var results = new ArrayList<Future<Result>>();
+            for (int i = 1; i <= 10; i++) {
+                results.add(executor.submit(() -> runner.run(new Task(List.of("PassingTest"),
+                        ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests),
+                        5, Duration.ofSeconds(5), Duration.ofSeconds(10), null))));
+            }
+            for (var result : results) {
+                assertEquals(1, result.get().testResults().size());
+                assertTrue(result.get().testResults().getFirst().passed());
+            }
         }
     }
 
     @Test
     void multithreadingVmArgs() throws IOException, InterruptedException, ExecutionException {
         var tests = compile(SIMPLE_TESTS);
-        var executor = Executors.newFixedThreadPool(50);
-        var results = new ArrayList<Future<Result>>();
-        for (int i = 1; i <= 50; i++) {
-            // every 5th test uses different VM args, so a new VM is started
-            var encoding = i % 5 == 0 ? "ISO-8859-1" : "UTF8";
-            results.add(executor.submit(() -> runner.run(new Task(List.of("PassingTest"),
-                    ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests),
-                    5, Duration.ofSeconds(10), Duration.ofSeconds(10), null,
-                    List.of("-Dfile.encoding=" + encoding)))));
-        }
-        for (var result : results) {
-            assertEquals(1, result.get().testResults().size());
-            assertTrue(result.get().testResults().get(0).passed(), result.get().toString());
+        try (var executor = Executors.newFixedThreadPool(50)) {
+            var results = new ArrayList<Future<Result>>();
+            for (int i = 1; i <= 50; i++) {
+                // every 5th test uses different VM args, so a new VM is started
+                var encoding = i % 5 == 0 ? "ISO-8859-1" : "UTF8";
+                results.add(executor.submit(() -> runner.run(new Task(List.of("PassingTest"),
+                        ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests),
+                        5, Duration.ofSeconds(10), Duration.ofSeconds(10), null,
+                        List.of("-Dfile.encoding=" + encoding)))));
+            }
+            for (var result : results) {
+                assertEquals(1, result.get().testResults().size());
+                assertTrue(result.get().testResults().getFirst().passed(), result.get().toString());
+            }
         }
     }
 

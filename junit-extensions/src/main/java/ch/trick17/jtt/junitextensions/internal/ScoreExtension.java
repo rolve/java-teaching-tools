@@ -31,7 +31,7 @@ public class ScoreExtension implements AfterEachCallback {
             logger.warning("multiple @Score fields found");
         }
 
-        var score = (Double) scoreFields.get(0).get(instance);
+        var score = (Double) scoreFields.getFirst().get(instance);
         if (score != null) {
             context.publishReportEntry(SCORE_KEY, score.toString());
         }
