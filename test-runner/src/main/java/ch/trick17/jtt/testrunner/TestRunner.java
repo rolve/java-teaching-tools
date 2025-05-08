@@ -291,9 +291,15 @@ public class TestRunner implements Closeable {
         public Task(List<String> testClassNames,
                     ClassPath sandboxedCode,
                     ClassPath supportCode) {
-            this(testClassNames, sandboxedCode, supportCode,
-                    1, Duration.ofSeconds(1), Duration.ofSeconds(1),
-                    null, emptyList());
+            this(testClassNames, sandboxedCode, supportCode, 1,
+                    Duration.ofSeconds(1), Duration.ofSeconds(1), null);
+        }
+
+        public Task(List<String> testClassNames, ClassPath sandboxedCode,
+                    ClassPath supportCode, int repetitions, Duration repTimeout,
+                    Duration testTimeout, String permittedCalls) {
+            this(testClassNames, sandboxedCode, supportCode, repetitions,
+                    repTimeout, testTimeout, permittedCalls, emptyList());
         }
     }
 

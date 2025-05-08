@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ch.trick17.jtt</groupId>
     <artifactId>java-teaching-tools</artifactId>
-    <version>4.5.1-SNAPSHOT</version>
+    <version>4.5.2-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Java Teaching Tools</name>
 

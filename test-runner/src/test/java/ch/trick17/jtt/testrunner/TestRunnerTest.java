@@ -110,7 +110,7 @@ public class TestRunnerTest {
         for (int i = 1; i <= 10; i++) {
             results.add(executor.submit(() -> runner.run(new Task(List.of("PassingTest"),
                     ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests),
-                    5, Duration.ofSeconds(5), Duration.ofSeconds(10), null, emptyList()))));
+                    5, Duration.ofSeconds(5), Duration.ofSeconds(10), null))));
         }
         for (var result : results) {
             assertEquals(1, result.get().testResults().size());
