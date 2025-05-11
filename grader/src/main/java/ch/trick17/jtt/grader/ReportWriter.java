@@ -80,7 +80,7 @@ public class ReportWriter {
                     formatted.append(indent(3)).append(testResult.method().toString())
                             .append(": ").append(join(", ", properties)).append('\n');
                     for (var exception : testResult.exceptions()) {
-                        formatted.append(indent(INDENT_SIZE)).append(exception.className()).append(": ")
+                        formatted.append(indent(4)).append(exception.className()).append(": ")
                                 .append(formatMsg(exception)).append('\n');
                     }
                 }
