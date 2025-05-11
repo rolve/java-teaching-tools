@@ -80,7 +80,11 @@ public class TestRunner implements Closeable {
                     } else {
                         // got the write lock, so fork the VM
                         close();
-                        logger.info("Forking test runner VM with args: {}", join(" ", newVmArgs));
+                        if (newVmArgs.isEmpty()) {
+                            logger.info("Forking test runner VM");
+                        } else {
+                            logger.info("Forking test runner VM with args: {}", join(" ", newVmArgs));
+                        }
                         forkedVm = new ForkedVmClient(newVmArgs, List.of(TestRunnerJacksonModule.class));
                     }
                 }
