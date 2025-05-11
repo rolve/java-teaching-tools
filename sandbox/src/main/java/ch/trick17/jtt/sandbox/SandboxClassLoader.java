@@ -22,9 +22,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static java.lang.String.join;
+import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
-import static java.util.stream.Collectors.toCollection;
 import static javassist.CtClass.booleanType;
 import static javassist.CtClass.voidType;
 import static javassist.Modifier.*;
@@ -36,6 +36,7 @@ public class SandboxClassLoader extends InMemClassLoader {
     // use method name with special chars to avoid name clashes
     public static final String RE_INIT_METHOD = "{reInit}";
 
+    private final long creationTime = currentTimeMillis();
     private final ClassPool pool = new ClassPool(false);
     private final Whitelist permittedCalls;
     private final boolean makeInterruptible;
@@ -103,7 +104,8 @@ public class SandboxClassLoader extends InMemClassLoader {
             var bytecode = cls.toBytecode();
 
             if (System.getProperties().containsKey("sandbox.dumpInstrumented")) {
-                var file = Path.of("sandbox-dump/" + name.replace('.', '/') + ".class");
+                var file = Path.of("sandbox-dump/" + creationTime + "/" +
+                        name.replace('.', '/') + ".class");
                 Files.createDirectories(file.getParent());
                 Files.write(file, bytecode);
             }
