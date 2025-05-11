@@ -24,6 +24,7 @@ import static ch.trick17.jtt.junitextensions.internal.ScoreExtension.SCORE_KEY;
 import static ch.trick17.jtt.sandbox.InputMode.EMPTY;
 import static ch.trick17.jtt.sandbox.OutputMode.DISCARD;
 import static ch.trick17.jtt.sandbox.Sandbox.Result.Kind.*;
+import static ch.trick17.jtt.sandbox.Whitelist.DEFAULT_WHITELIST_DEF;
 import static java.lang.Double.parseDouble;
 import static java.lang.String.join;
 import static java.lang.System.currentTimeMillis;
@@ -106,6 +107,10 @@ public class TestRunner implements Closeable {
             forkedVm.close();
         }
     }
+
+    /*
+     * Everything below runs in the forked VM (unless configured otherwise).
+     */
 
     private static Result doRun(Task task) throws IOException {
         try (var sandbox = new Sandbox.Builder(task.sandboxedCode(), task.supportCode())
@@ -234,7 +239,7 @@ public class TestRunner implements Closeable {
         public static Map<String, Object> run(String className, String methodName, String paramTypes) {
             var sel = selectMethod(className, methodName, paramTypes);
             // disable stack trace pruning, to have more robust results, e.g.,
-            // to simplif more aggressive pruning later
+            // to simplify more aggressive pruning later
             var req = request()
                     .configurationParameter("junit.platform.stacktrace.pruning.enabled", "false")
                     .selectors(sel).build();
@@ -289,14 +294,16 @@ public class TestRunner implements Closeable {
         public Task(String testClassName,
                     ClassPath sandboxedCode,
                     ClassPath supportCode) {
-            this(List.of(testClassName), sandboxedCode, supportCode);
+            this(testClassName, sandboxedCode, supportCode, 1,
+                    Duration.ofSeconds(1), Duration.ofSeconds(1),
+                    DEFAULT_WHITELIST_DEF);
         }
 
-        public Task(List<String> testClassNames,
-                    ClassPath sandboxedCode,
-                    ClassPath supportCode) {
-            this(testClassNames, sandboxedCode, supportCode, 1,
-                    Duration.ofSeconds(1), Duration.ofSeconds(1), null);
+        public Task(String testClassName, ClassPath sandboxedCode,
+                    ClassPath supportCode, int repetitions, Duration repTimeout,
+                    Duration testTimeout, String permittedCalls) {
+            this(List.of(testClassName), sandboxedCode, supportCode, repetitions,
+                    repTimeout, testTimeout, permittedCalls);
         }
 
         public Task(List<String> testClassNames, ClassPath sandboxedCode,

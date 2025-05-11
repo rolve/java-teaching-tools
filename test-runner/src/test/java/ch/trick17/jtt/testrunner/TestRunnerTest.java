@@ -61,12 +61,16 @@ public class TestRunnerTest {
     void testAsSandboxedCode() throws IOException {
         var tests = compile(SIMPLE_TESTS);
         var result = runner.run(new Task("PassingTest",
-                ClassPath.fromMemory(tests), ClassPath.fromCurrent()));
+                ClassPath.fromMemory(tests), ClassPath.fromCurrent(),
+                1, Duration.ofSeconds(1), Duration.ofSeconds(1),
+                "org.junit.jupiter.api.Assertions.*")); // whitelist assertions
         assertEquals(1, result.testResults().size());
         assertTrue(result.testResults().getFirst().passed());
 
         result = runner.run(new Task("FailingTest",
-                ClassPath.fromMemory(tests), ClassPath.fromCurrent()));
+                ClassPath.fromMemory(tests), ClassPath.fromCurrent(),
+                1, Duration.ofSeconds(1), Duration.ofSeconds(1),
+                "org.junit.jupiter.api.Assertions.*"));
         assertEquals(1, result.testResults().size());
         assertFalse(result.testResults().getFirst().passed());
     }
@@ -96,7 +100,8 @@ public class TestRunnerTest {
 
         var result = runner.run(new Task(List.of("SomeTest"),
                 ClassPath.fromMemory(test), ClassPath.fromCurrent(), 3,
-                Duration.ofSeconds(1), Duration.ofSeconds(1), null, emptyList()));
+                Duration.ofSeconds(1), Duration.ofSeconds(1),
+                "org.junit.jupiter.api.Assertions.*"));
         assertEquals(1, result.testResults().size());
         assertTrue(result.testResults().getFirst().passed());
     }
@@ -110,7 +115,8 @@ public class TestRunnerTest {
             for (int i = 1; i <= 10; i++) {
                 results.add(executor.submit(() -> runner.run(new Task(List.of("PassingTest"),
                         ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests),
-                        5, Duration.ofSeconds(5), Duration.ofSeconds(10), null))));
+                        5, Duration.ofSeconds(5), Duration.ofSeconds(10),
+                        "org.junit.jupiter.api.Assertions.*"))));
             }
             for (var result : results) {
                 assertEquals(1, result.get().testResults().size());
@@ -129,7 +135,8 @@ public class TestRunnerTest {
                 var encoding = i % 5 == 0 ? "ISO-8859-1" : "UTF8";
                 results.add(executor.submit(() -> runner.run(new Task(List.of("PassingTest"),
                         ClassPath.empty(), ClassPath.fromCurrent().withMemory(tests),
-                        5, Duration.ofSeconds(10), Duration.ofSeconds(10), null,
+                        5, Duration.ofSeconds(10), Duration.ofSeconds(10),
+                        "org.junit.jupiter.api.Assertions.*",
                         List.of("-Dfile.encoding=" + encoding)))));
             }
             for (var result : results) {
