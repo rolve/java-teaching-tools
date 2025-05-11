@@ -104,6 +104,7 @@ public class SandboxClassLoader extends InMemClassLoader {
 
             if (System.getProperties().containsKey("sandbox.dumpInstrumented")) {
                 var file = Path.of("sandbox-dump/" + name.replace('.', '/') + ".class");
+                Files.createDirectories(file.getParent());
                 Files.write(file, bytecode);
             }
 
