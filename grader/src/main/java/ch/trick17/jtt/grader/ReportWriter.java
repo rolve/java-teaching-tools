@@ -4,10 +4,12 @@ import ch.trick17.jtt.grader.BatchGrader.Submission;
 import ch.trick17.jtt.grader.Grader.Result;
 import ch.trick17.jtt.grader.Grader.Task;
 import ch.trick17.jtt.testrunner.ExceptionDescription;
+import ch.trick17.jtt.testrunner.TestResult;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.join;
@@ -26,67 +28,64 @@ public class ReportWriter {
                 .toList();
         try (var out = newBufferedWriter(file)) {
             for (var subm : submissions) {
-                var report = new StringBuilder();
+                out.append(subm.name()).append('\n');
                 for (var task : results.keySet()) {
-                    var result = format(results.get(task).get(subm));
-                    if (!result.isEmpty()) {
-                        report.append(indent(1)).append(join(", ", task.testClassNames())).append("\n");
-                        report.append(result);
-                    }
+                    var classes = join(", ", task.testClassNames());
+                    out.append(indent(1)).append(classes).append('\n');
+                    format(results.get(task).get(subm), 2, out);
                 }
-                if (!report.isEmpty()) {
-                    out.append(subm.name()).append('\n');
-                    out.append(report);
-                    out.append('\n');
-                }
+                out.append('\n');
             }
         }
     }
 
-    private static CharSequence format(Result result) {
-        var formatted = new StringBuilder();
+    public static void format(Result result, int indent,
+                              Appendable out) throws IOException {
         if (!result.compileErrors().isEmpty()) {
-            formatted.append(indent(2)).append("Compile errors:").append('\n');
+            out.append(indent(indent)).append("Compile errors:").append('\n');
             for (var error : result.compileErrors()) {
-                formatted.append(indent(3)).append(error).append('\n');
+                out.append(indent(indent + 1)).append(error).append('\n');
             }
         }
         if (!result.testCompileErrors().isEmpty()) {
-            formatted.append(indent(2)).append("Compile errors in tests:").append('\n');
+            out.append(indent(indent)).append("Compile errors in tests:").append('\n');
             for (var error : result.testCompileErrors()) {
-                formatted.append(indent(3)).append(error).append('\n');
+                out.append(indent(indent + 1)).append(error).append('\n');
             }
         }
-        if (!result.failedTests().isEmpty()) {
-            formatted.append(indent(2)).append("Failed tests:").append('\n');
-            for (var testResult : result.testResults()) {
-                if (!testResult.passed()) {
-                    var properties = new ArrayList<String>();
-                    if (testResult.nonDeterm()) {
-                        properties.add("non-deterministic");
-                    }
-                    if (testResult.incompleteReps()) {
-                        properties.add("incomplete repetitions (" + testResult.repsMade() + ")");
-                    }
-                    if (testResult.timeout()) {
-                        properties.add("timeout");
-                    }
-                    if (testResult.outOfMemory()) {
-                        properties.add("out of memory");
-                    }
-                    if (!testResult.illegalOps().isEmpty()) {
-                        properties.add("illegal operations (" + join(", ", testResult.illegalOps()) + ")");
-                    }
-                    formatted.append(indent(3)).append(testResult.method().toString())
-                            .append(": ").append(join(", ", properties)).append('\n');
-                    for (var exception : testResult.exceptions()) {
-                        formatted.append(indent(4)).append(exception.className()).append(": ")
-                                .append(formatMsg(exception)).append('\n');
-                    }
-                }
+        formatTestResults(result.testResults(), indent, out);
+    }
+
+    public static void formatTestResults(List<TestResult> testResults, int indent,
+                                         Appendable out) throws IOException {
+        for (var testResult : testResults) {
+            var properties = new ArrayList<String>();
+            if (testResult.nonDeterm()) {
+                properties.add("non-deterministic");
+            }
+            if (testResult.incompleteReps()) {
+                properties.add("incomplete repetitions (" + testResult.repsMade() + ")");
+            }
+            if (testResult.timeout()) {
+                properties.add("timeout");
+            }
+            if (testResult.outOfMemory()) {
+                properties.add("out of memory");
+            }
+            if (!testResult.illegalOps().isEmpty()) {
+                properties.add("illegal operations (" + join(", ", testResult.illegalOps()) + ")");
+            }
+            out.append(indent(indent)).append(testResult.passed() ? '✅' : '❌')
+                    .append(' ').append(testResult.method().toString());
+            if (!testResult.passed()) {
+                out.append(": ").append(join(", ", properties));
+            }
+            out.append('\n');
+            for (var exception : testResult.exceptions()) {
+                out.append(indent(indent + 1)).append(exception.className()).append(": ")
+                        .append(formatMsg(exception)).append('\n');
             }
         }
-        return formatted;
     }
 
     private static String formatMsg(ExceptionDescription exception) {
