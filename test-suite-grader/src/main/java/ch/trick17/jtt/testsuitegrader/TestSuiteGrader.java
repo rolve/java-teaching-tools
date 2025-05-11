@@ -88,7 +88,9 @@ public class TestSuiteGrader implements Closeable {
             compiledImplementations.add(implResult.output());
         }
 
-        classPath = classPath.withMemory(compiledImplementations.getFirst()).withCurrent();
+        classPath = classPath.withMemory(compiledImplementations.getFirst())
+                .withCurrent(); // JUnit, Mockito, etc.
+        // TODO: Use only dependencies that are actually needed, not whole current classpath
         var refTestSuiteResult = compile(JAVAC, refTestSuite, classPath);
         if (!refTestSuiteResult.errors().isEmpty()) {
             throw new IllegalArgumentException("Could not compile reference test suite against sample implementation");
@@ -105,7 +107,7 @@ public class TestSuiteGrader implements Closeable {
         for (int i = 0; i < compiledImplementations.size(); i++) {
             var refImpl = compiledImplementations.get(i);
             var sandboxed = ClassPath.fromMemory(refImpl).withMemory(compiledSuite);
-            var support = ClassPath.fromFiles(dependencies).withCurrent();
+            var support = ClassPath.fromFiles(dependencies);
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support,
                     PREPARE_REPETITIONS, REP_TIMEOUT, TEST_TIMEOUT, WHITELIST);
             var refResults = testRunner.run(testRun).testResults();
@@ -185,7 +187,7 @@ public class TestSuiteGrader implements Closeable {
         for (var mutant : mutants) {
             try {
                 var sandboxed = ClassPath.fromMemory(mutant.classes()).withMemory(testSuite);
-                var support = ClassPath.fromFiles(dependencies).withCurrent();
+                var support = ClassPath.fromFiles(dependencies);
                 var testRun = new TestRunner.Task(testClassNames, sandboxed, support,
                         PREPARE_REPETITIONS, REP_TIMEOUT, TEST_TIMEOUT, WHITELIST);
                 var mutantResults = testRunner.run(testRun).testResults();
@@ -293,7 +295,8 @@ public class TestSuiteGrader implements Closeable {
     public Result grade(Task task, List<InMemSource> testSuite, List<Path> dependencies) throws IOException {
         var classPath = ClassPath.fromMemory(task.refImplementations().getFirst())
                 .withFiles(dependencies)
-                .withCurrent();
+                .withCurrent(); // JUnit, Mockito, etc.
+        // TODO: Use only dependencies that are actually needed, not whole current classpath
         if (testSuite.isEmpty()) {
             return new Result(true, false, emptyList(), emptyList(), emptyList(), 0.0);
         }
@@ -309,7 +312,7 @@ public class TestSuiteGrader implements Closeable {
         var incorrectTests = new HashSet<TestMethod>();
         for (var impl : task.refImplementations()) {
             var sandboxed = ClassPath.fromMemory(impl).withMemory(compiledSuite);
-            var support = ClassPath.fromFiles(dependencies).withCurrent();
+            var support = ClassPath.fromFiles(dependencies);
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support, GRADE_REPETITIONS,
                     REP_TIMEOUT, TEST_TIMEOUT, WHITELIST);
             var testResults = testRunner.run(testRun).testResults();
@@ -337,7 +340,7 @@ public class TestSuiteGrader implements Closeable {
             classes.set(classIndex, new InMemClassFile(className, mutated));
 
             var sandboxed = ClassPath.fromMemory(classes).withMemory(compiledSuite);
-            var support = ClassPath.fromFiles(dependencies).withCurrent();
+            var support = ClassPath.fromFiles(dependencies);
             var testRun = new TestRunner.Task(testClassNames, sandboxed, support,
                     GRADE_REPETITIONS, REP_TIMEOUT, TEST_TIMEOUT, WHITELIST);
             var testResults = testRunner.run(testRun).testResults();

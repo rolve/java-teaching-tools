@@ -5,7 +5,6 @@ import ch.trick17.jtt.sandbox.Whitelist;
 import ch.trick17.jtt.testrunner.TestMethod;
 import ch.trick17.jtt.testrunner.TestResult;
 import ch.trick17.jtt.testrunner.TestRunner;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
@@ -168,11 +167,11 @@ public class Grader implements Closeable {
         ClassPath supportCode;
         if (task.restrictTests) {
             sandboxedCode = ClassPath.fromMemory(classes).withMemory(testClasses);
-            supportCode = ClassPath.fromFiles(task.dependencies()).withCurrent();
+            supportCode = ClassPath.fromFiles(task.dependencies());
         } else {
             sandboxedCode = ClassPath.fromMemory(classes);
             supportCode = ClassPath.fromMemory(testClasses)
-                    .withFiles(task.dependencies()).withCurrent();
+                    .withFiles(task.dependencies());
         }
         var testRunnerTask = new TestRunner.Task(task.testClassNames(),
                 sandboxedCode, supportCode,

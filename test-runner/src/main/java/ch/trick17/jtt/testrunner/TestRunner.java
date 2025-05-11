@@ -113,7 +113,11 @@ public class TestRunner implements Closeable {
      */
 
     private static Result doRun(Task task) throws IOException {
-        try (var sandbox = new Sandbox.Builder(task.sandboxedCode(), task.supportCode())
+        // we need some of the currently loaded classes in the sandbox, so
+        // add the current class path to the support code
+        // TODO: Use only the minimal set needed instead of the whole class path
+        var supportCode = task.supportCode().with(ClassPath.fromCurrent());
+        try (var sandbox = new Sandbox.Builder(task.sandboxedCode(), supportCode)
                 .permittedCalls(task.permittedCalls() != null
                         ? Whitelist.parse(task.permittedCalls())
                         : null)
