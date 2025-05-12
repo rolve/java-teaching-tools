@@ -234,11 +234,18 @@ public class SandboxClassLoader extends InMemClassLoader {
                                             Deque<Block> stack, Set<Block> result) {
         visited.add(block);
         stack.push(block);
+        var successors = new ArrayList<Block>();
         for (int i = 0; i < block.exits(); i++) {
-            var exit = block.exit(i);
-            if (!visited.contains(exit)) {
-                collectBlocksWithBackEdges(exit, visited, stack, result);
-            } else if (stack.contains(exit)) {
+            successors.add(block.exit(i));
+        }
+        for (var catcher : block.catchers()) {
+            successors.add(catcher.block());
+        }
+
+        for (var successor : successors) {
+            if (!visited.contains(successor)) {
+                collectBlocksWithBackEdges(successor, visited, stack, result);
+            } else if (stack.contains(successor)) {
                 result.add(block);
             }
         }

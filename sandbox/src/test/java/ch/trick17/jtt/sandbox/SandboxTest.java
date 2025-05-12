@@ -506,6 +506,16 @@ public class SandboxTest {
         assertEquals(Kind.TIMEOUT, result.kind());
     }
 
+    @Test
+    void recursionPlusLoop() throws IOException {
+        var sandbox = new Sandbox.Builder(code(), ClassPath.empty())
+                .timeout(Duration.ofMillis(500))
+                .build();
+        var result = sandbox.run(RecursionPlusLoop.class, "run",
+                emptyList(), emptyList(), Void.class);
+        assertEquals(Kind.TIMEOUT, result.kind());
+    }
+
     public static class NormalLoop {
         public static void run() {
             int counter = 0;
@@ -564,6 +574,18 @@ public class SandboxTest {
                     while (true);
                 } catch (InterruptedException e) {
                     // happily ignore
+                }
+            }
+        }
+    }
+
+    public static class RecursionPlusLoop {
+        public static void run() {
+            while (true) {
+                try {
+                    run();
+                } catch (StackOverflowError e) {
+                    // continue
                 }
             }
         }
