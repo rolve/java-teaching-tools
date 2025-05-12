@@ -254,7 +254,7 @@ public class SandboxClassLoader extends InMemClassLoader {
         compiler.recordParams(behavior.getParameterTypes(), isStatic(behavior.getModifiers()));
         compiler.setMaxLocals(codeAttribute.getMaxLocals());
         compiler.compileStmnt("""
-                if (Thread.interrupted()) {
+                if (Thread.currentThread().isInterrupted()) {
                     throw new InterruptedException();
                 }
                 """);
