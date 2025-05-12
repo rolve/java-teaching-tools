@@ -121,11 +121,11 @@ public class SandboxClassLoader extends InMemClassLoader {
     private void instrument(CtClass cls) throws Exception {
         for (var behavior : cls.getDeclaredBehaviors()) {
             if (!behavior.isEmpty()) {
-                if (makeInterruptible) {
-                    makeInterruptible(behavior);
-                }
                 if (permittedCalls != null) {
                     behavior.instrument(new RestrictionsAdder());
+                }
+                if (makeInterruptible) {
+                    makeInterruptible(behavior);
                 }
             }
         }

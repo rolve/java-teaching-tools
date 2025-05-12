@@ -47,8 +47,6 @@ public interface Whitelist {
                 java.lang.System.lineSeparator
                 java.lang.System.nanoTime
                 
-                java.lang.Thread.interrupted
-                
                 java.lang.Class.toGenericString
                 java.lang.Class.isInstance
                 java.lang.Class.isAssignableFrom
