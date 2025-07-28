@@ -16,6 +16,7 @@ public interface Whitelist {
                 java.lang.Boolean.*
                 java.lang.Character.*
                 
+                java.lang.Number.*
                 java.lang.CharSequence.*
                 java.lang.String.*
                 java.lang.StringBuilder.*
@@ -103,6 +104,13 @@ public interface Whitelist {
                 java.util.HashMap.*
                 java.util.LinkedHashMap.*
                 java.util.TreeMap.*
+                java.util.Queue.*
+                java.util.Deque.*
+                java.util.ArrayDeque.*
+                java.util.Stack.*
+                java.util.Vector.*
+                java.util.EnumSet.*
+                java.util.EnumMap.*
                 java.util.NoSuchElementException.*
                 
                 java.util.Optional.*
