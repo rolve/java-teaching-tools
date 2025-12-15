@@ -20,22 +20,19 @@ public class GraderTest {
     static final Path TEST_SRC_DIR = Path.of("tests");
     static final Path SUBM_ROOT = Path.of("test-submissions");
 
-    static List<InMemSource> correct;
-    static List<InMemSource> failsTest;
-    static List<InMemSource> compileError;
-    static List<InMemSource> missingClass;
+    static List<InMemSource> correctSubm;
+    static List<InMemSource> failsTestSubm;
+    static List<InMemSource> compileErrorSubm;
     static Grader grader;
 
     @BeforeAll
     static void setup() throws IOException {
-        correct = InMemSource.fromDirectory(
+        correctSubm = InMemSource.fromDirectory(
                 SUBM_ROOT.resolve("eclipse-structure/correct/src"), null);
-        failsTest = InMemSource.fromDirectory(
+        failsTestSubm = InMemSource.fromDirectory(
                 SUBM_ROOT.resolve("eclipse-structure/fails-test/src"), null);
-        compileError = InMemSource.fromDirectory(
+        compileErrorSubm = InMemSource.fromDirectory(
                 SUBM_ROOT.resolve("eclipse-structure/compile-error/src"), null);
-        missingClass = InMemSource.fromDirectory(
-                SUBM_ROOT.resolve("eclipse-structure/missing-class/src"), null);
         grader = new Grader();
     }
 
@@ -43,19 +40,19 @@ public class GraderTest {
     void results() throws IOException {
         var task = Task.fromClassName("AddTest", TEST_SRC_DIR).compiler(JAVAC);
 
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertTrue(result.testResults().get(0).passed());
         assertTrue(result.testResults().get(1).passed());
 
-        result = grader.grade(task, failsTest);
+        result = grader.grade(task, failsTestSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertTrue(result.testResults().get(0).passed());
         assertFalse(result.testResults().get(1).passed());
 
-        result = grader.grade(task, compileError);
+        result = grader.grade(task, compileErrorSubm);
         assertFalse(result.compiled());
         assertNotEquals(emptyList(), result.compileErrors());
         assertNull(result.testResults());
@@ -64,7 +61,7 @@ public class GraderTest {
     @Test
     void noTests() throws IOException {
         var task = Task.fromClassName("NoTests", TEST_SRC_DIR);
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertEquals(emptyList(), result.passedTests());
         assertEquals(emptyList(), result.failedTests());
     }
@@ -76,11 +73,11 @@ public class GraderTest {
                 new TestMethod("NestedTestClass.MultiplyTest", "multiply1"),
                 new TestMethod("NestedTestClass.MultiplyTest", "multiply2")); // note alphabetical order
 
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertEquals(allTests, result.passedTests());
         assertEquals(emptyList(), result.failedTests());
 
-        result = grader.grade(task, compileError);
+        result = grader.grade(task, compileErrorSubm);
         assertEquals(emptyList(), result.passedTests());
         assertEquals(allTests, result.failedTests());
     }
@@ -88,7 +85,7 @@ public class GraderTest {
     @Test
     void assumptions() throws IOException {
         var task = Task.fromClassName("TestWithAssumption", TEST_SRC_DIR);
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertTrue(result.testResultFor("normal").passed());
         assertFalse(result.testResultFor("failedAssumption").passed());
     }
@@ -96,7 +93,7 @@ public class GraderTest {
     @Test
     void disabled() throws IOException {
         var task = Task.fromClassName("DisabledTest", TEST_SRC_DIR);
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertTrue(result.testResultFor("normal").passed());
         assertTrue(result.testResultFor("disabled").passed());
 
@@ -108,7 +105,7 @@ public class GraderTest {
         var task = Task.fromClassName("TestWithScore", TEST_SRC_DIR).repetitions(20);
 
         // "correct" passes all tests
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertTrue(result.testResultFor("withScore").passed());
         var scores = result.testResultFor("withScore").scores();
         assertEquals(20, scores.size());
@@ -128,7 +125,7 @@ public class GraderTest {
         assertEquals(Set.of(100.0), Set.copyOf(scores));
 
         // "fails-test" fails all tests
-        result = grader.grade(task, failsTest);
+        result = grader.grade(task, failsTestSubm);
         assertFalse(result.testResultFor("withScore").passed());
         assertTrue(result.testResultFor("withScore").scores().isEmpty());
 
@@ -147,13 +144,13 @@ public class GraderTest {
     @Test
     void params() throws IOException {
         var task = Task.fromClassName("TestWithParams", TEST_SRC_DIR);
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertEquals(emptyList(), result.testCompileErrors());
         assertTrue(result.testResultFor("add(int)").passed());
 
-        result = grader.grade(task, failsTest);
+        result = grader.grade(task, failsTestSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertEquals(emptyList(), result.testCompileErrors());
@@ -163,7 +160,7 @@ public class GraderTest {
     @Test
     void testMethodOverloading() throws IOException {
         var task = Task.fromClassName("TestWithOverloading", TEST_SRC_DIR);
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertEquals(emptyList(), result.testCompileErrors());
@@ -171,7 +168,7 @@ public class GraderTest {
         assertTrue(result.testResultFor("add").passed());
         assertTrue(result.testResultFor("add(int)").passed());
 
-        result = grader.grade(task, failsTest);
+        result = grader.grade(task, failsTestSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertEquals(emptyList(), result.testCompileErrors());
@@ -183,13 +180,13 @@ public class GraderTest {
     @Test
     void paramsMethodSource() throws IOException {
         var task = Task.fromClassName("TestWithMethodSource", TEST_SRC_DIR);
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertEquals(emptyList(), result.testCompileErrors());
         assertTrue(result.testResultFor("add(int, int)").passed());
 
-        result = grader.grade(task, failsTest);
+        result = grader.grade(task, failsTestSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertEquals(emptyList(), result.testCompileErrors());
@@ -199,14 +196,16 @@ public class GraderTest {
     @Test
     void testWithLambda() throws IOException {
         var task = Task.fromClassName("TestWithLambda", TEST_SRC_DIR);
-        var result = grader.grade(task, correct);
+        var result = grader.grade(task, correctSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertEquals(emptyList(), result.testCompileErrors());
         assertTrue(result.testResultFor("add").passed());
         assertTrue(result.testResultFor("multiply").passed());
 
-        result = grader.grade(task, missingClass);
+        var missingClassSubm = InMemSource.fromDirectory(
+                SUBM_ROOT.resolve("eclipse-structure/missing-class/src"), null);
+        result = grader.grade(task, missingClassSubm);
         assertTrue(result.compiled());
         assertEquals(emptyList(), result.compileErrors());
         assertNotEquals(emptyList(), result.testCompileErrors());
