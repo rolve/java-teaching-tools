@@ -88,19 +88,27 @@ public interface Whitelist {
                 java.util.Collections.*
                 java.util.Comparator.*
                 java.util.StringTokenizer.*
+                java.util.Date.*
                 
                 java.util.Collection.*
+                java.util.SequencedCollection.*
                 java.util.Iterator.*
                 java.util.List.*
                 java.util.ListIterator.*
                 java.util.ArrayList.*
                 java.util.LinkedList.*
                 java.util.Set.*
+                java.util.SequencedSet.*
+                java.util.SortedSet.*
+                java.util.NavigableSet.*
                 java.util.HashSet.*
                 java.util.LinkedHashSet.*
                 java.util.TreeSet.*
                 java.util.Map.*
                 java.util.Map$Entry.*
+                java.util.SequencedMap.*
+                java.util.SortedMap.*
+                java.util.NavigableMap.*
                 java.util.HashMap.*
                 java.util.LinkedHashMap.*
                 java.util.TreeMap.*
